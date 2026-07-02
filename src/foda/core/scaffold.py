@@ -7,24 +7,28 @@ from pathlib import Path
 
 
 _TOP_LEVEL_DIRS = ("010_inputs", "020_outputs", "data", "models")
+_MEDALLION_DIRS = ("bronze", "silver", "gold")
 
 
 def create_client(name: str, clients_root: Path) -> Path:
     """Crea clients_root/<name>/ y devuelve el Path a la carpeta creada.
 
-    Implementacion minima (TDD, caso 2 / CA-02): agrega, sobre el tracer
-    bullet del caso 1, las entradas de primer nivel del arbol
-    (010_inputs/, 020_outputs/, data/, models/) y el archivo client.yaml
-    (vacio por ahora). El contenido de client.yaml (name, created_at), las
-    subcarpetas medallion de data/, la validacion del nombre y la
-    comprobacion de duplicado se agregan en casos posteriores del bucle
-    TDD.
+    Implementacion minima (TDD, hasta caso 4 / CA-02, CA-03): agrega, sobre
+    el tracer bullet del caso 1, las entradas de primer nivel del arbol
+    (010_inputs/, 020_outputs/, data/, models/), las subcarpetas medallion
+    de data/ (bronze/, silver/, gold/) y el archivo client.yaml (vacio por
+    ahora). El contenido de client.yaml (name, created_at), la validacion
+    del nombre y la comprobacion de duplicado se agregan en casos
+    posteriores del bucle TDD.
     """
     client_dir = clients_root / name
     client_dir.mkdir(parents=True)
 
     for dir_name in _TOP_LEVEL_DIRS:
         (client_dir / dir_name).mkdir()
+
+    for layer_name in _MEDALLION_DIRS:
+        (client_dir / "data" / layer_name).mkdir()
 
     (client_dir / "client.yaml").touch()
 
