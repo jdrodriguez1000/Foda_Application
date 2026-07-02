@@ -2,7 +2,7 @@
   "feature": "client_scaffold",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "tdd_tester",
+  "current_stage": "tdd_coder",
   "stages": {
     "feature_definer": {
       "status": "done",
@@ -24,8 +24,8 @@
     },
     "tdd": {
       "status": "in_progress",
-      "current_stage": "tdd_tester",
-      "next_case": 10,
+      "current_stage": "tdd_coder",
+      "next_case": 11,
       "cases": [
         {
           "id": 1,
@@ -122,9 +122,13 @@
         {
           "id": 10,
           "desc": "Nombre solo-espacios \"   \" y con espacio interior \"ab c\" lanzan ValueError; nada creado (AC8, AC11)",
-          "status": "red",
+          "status": "green",
           "test": "tests/core/test_scaffold.py::test_create_client_nombre_con_espacios_lanza_valueerror_y_no_crea_nada",
-          "red_evidence": "2 failed, 11 passed en tests/core/test_scaffold.py. Parametrizacion [ab c]: 'Failed: DID NOT RAISE ValueError' (create_client crea la carpeta 'ab c' sin problema porque _validate_name aun no rechaza espacios interiores). Parametrizacion [   ]: FileExistsError [WinError 183] en client_dir.mkdir(parents=True) porque Windows recorta los espacios finales del nombre de carpeta '   ' y este colisiona con la carpeta padre 'root' ya existente; no es un typo/import roto sino consecuencia directa de que _validate_name no rechaza el nombre solo-espacios antes de tocar el filesystem. Ambos casos son rojo por la razon esperada: falta la regla de validacion de espacios (casos 10-16 pendientes en _validate_name)."
+          "red_evidence": "2 failed, 11 passed en tests/core/test_scaffold.py. Parametrizacion [ab c]: 'Failed: DID NOT RAISE ValueError' (create_client crea la carpeta 'ab c' sin problema porque _validate_name aun no rechaza espacios interiores). Parametrizacion [   ]: FileExistsError [WinError 183] en client_dir.mkdir(parents=True) porque Windows recorta los espacios finales del nombre de carpeta '   ' y este colisiona con la carpeta padre 'root' ya existente; no es un typo/import roto sino consecuencia directa de que _validate_name no rechaza el nombre solo-espacios antes de tocar el filesystem. Ambos casos son rojo por la razon esperada: falta la regla de validacion de espacios (casos 10-16 pendientes en _validate_name).",
+          "green_files": [
+            "src/foda/core/scaffold.py"
+          ],
+          "green_evidence": "2 passed (caso 10) y 13 passed (suite completa, sin regresiones). Se agrego la regla ' ' in name a _validate_name, que rechaza tanto el nombre solo-espacios como el nombre con espacio interior, sin adelantar las reglas de los casos 11-16 (NC-2/NC-3)."
         },
         {
           "id": 11,
