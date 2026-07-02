@@ -134,7 +134,9 @@
         {
           "id": 11,
           "desc": "Nombre que empieza por - (\"-abc\") o por _ (\"_abc\") lanza ValueError; nada creado (AC8, AC11)",
-          "status": "pending"
+          "status": "red",
+          "test": "tests/core/test_scaffold.py::test_create_client_nombre_inicia_guion_o_underscore_lanza_valueerror_y_no_crea_nada",
+          "red_evidence": "2 failed, 13 passed en tests/core/test_scaffold.py. Ambas parametrizaciones ([-abc] y [_abc]): 'Failed: DID NOT RAISE ValueError' porque _validate_name aun no rechaza el primer caracter guion/underscore (solo rechaza vacio y espacios); create_client procede a crear la carpeta con normalidad. Rojo por la razon esperada (falta la regla DS-1 de primer caracter alfanumerico), no por error de import/sintaxis."
         },
         {
           "id": 12,

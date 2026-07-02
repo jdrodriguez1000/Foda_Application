@@ -140,6 +140,25 @@ def test_create_client_nombre_con_espacios_lanza_valueerror_y_no_crea_nada(
     assert list(clients_root.iterdir()) == []
 
 
+@pytest.mark.parametrize("name", ["-abc", "_abc"])
+def test_create_client_nombre_inicia_guion_o_underscore_lanza_valueerror_y_no_crea_nada(
+    tmp_path: Path, name: str
+) -> None:
+    """Caso 11 (CA-08, CA-11): create_client(nombre, tmp) lanza ValueError
+    para un nombre que empieza por guion ("-abc") o por underscore ("_abc")
+    (DS-1: el primer caracter debe ser alfanumerico), y no crea ninguna
+    carpeta bajo tmp (tmp queda tal cual estaba antes de la llamada, sin
+    entradas nuevas). Cada nombre usa su propia clients_root (subcarpeta de
+    tmp_path) para evitar interferencia entre parametrizaciones."""
+    clients_root = tmp_path / "root"
+    clients_root.mkdir()
+
+    with pytest.raises(ValueError):
+        create_client(name, clients_root)
+
+    assert list(clients_root.iterdir()) == []
+
+
 @pytest.mark.parametrize("name", ["X", "9lives", "Client_1-a"])
 def test_create_client_nombres_validos_representativos_crean_arbol_completo(
     tmp_path: Path, name: str
