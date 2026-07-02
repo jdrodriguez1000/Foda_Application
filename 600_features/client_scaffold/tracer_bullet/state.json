@@ -24,7 +24,7 @@
     },
     "tdd": {
       "status": "in_progress",
-      "current_stage": "tdd_coder",
+      "current_stage": "tdd_tester",
       "next_case": 13,
       "cases": [
         {
@@ -146,13 +146,14 @@
         {
           "id": 12,
           "desc": "Nombre con separador de ruta \"a/b\" o \"a\\\\b\" lanza ValueError; nada creado (AC8, AC11)",
-          "status": "green",
+          "status": "done",
           "test": "tests/core/test_scaffold.py::test_create_client_nombre_con_separador_de_ruta_lanza_valueerror_y_no_crea_nada",
           "red_evidence": "2 failed, 15 passed en tests/core/test_scaffold.py. Ambas parametrizaciones ([a/b] y [a\\\\b]): 'Failed: DID NOT RAISE ValueError' porque _validate_name aun no rechaza separadores de ruta; Path trata tanto '/' como '\\\\' como separador en Windows, por lo que clients_root / name resuelve a una subruta anidada (p.ej. root/a/b) y client_dir.mkdir(parents=True) la crea sin problema en vez de fallar. Rojo por la razon esperada (falta la regla DS-1 de rechazo de separadores de ruta), no por error de import/sintaxis.",
           "green_files": [
             "src/foda/core/scaffold.py"
           ],
-          "green_evidence": "2 passed (caso 12) y 17 passed (suite completa, sin regresiones). Se agrego la regla \"/\" in name or \"\\\\\" in name a _validate_name, que rechaza separadores de ruta antes de tocar el filesystem, sin adelantar las reglas de los casos 13-16 (NC-2/NC-3). No se rompe el caso 8 (nombres validos no contienen separadores)."
+          "green_evidence": "2 passed (caso 12) y 17 passed (suite completa, sin regresiones). Se agrego la regla \"/\" in name or \"\\\\\" in name a _validate_name, que rechaza separadores de ruta antes de tocar el filesystem, sin adelantar las reglas de los casos 13-16 (NC-2/NC-3). No se rompe el caso 8 (nombres validos no contienen separadores).",
+          "refactor_note": "Sin refactor aplicado (NC-2/NC-3): _validate_name tiene hoy cuatro guardas (vacio, espacios, primer caracter -/_, separador de ruta), cada una de 2 lineas, con nombre claro, mensajes de error especificos y un unico punto de llamada al inicio de create_client; no hay duplicacion que extraer. Introducir una tabla de reglas, regex o whitelist sigue siendo prematuro con solo 4 de las 7 reglas de DS-1 implementadas (mismo razonamiento que los casos 10 y 11: el diseno final de _validate_name se decide mejor una vez agregadas las reglas 13-16, para no adivinar la forma correcta ni anadir indireccion no solicitada). Suite completa en verde (17 passed) sin cambios de codigo."
         },
         {
           "id": 13,
