@@ -264,6 +264,26 @@ def test_create_client_nombre_muy_largo_lanza_valueerror_y_no_crea_nada(
     assert list(clients_root.iterdir()) == []
 
 
+def test_create_client_duplicado_lanza_fileexistserror_y_preserva_contenido(
+    tmp_path: Path,
+) -> None:
+    """Caso 17 (CA-10, CA-11): create_client("ABC", tmp) cuando tmp/ABC/ ya
+    existe (con un archivo centinela dentro) lanza FileExistsError y deja el
+    contenido preexistente intacto: el centinela sigue existiendo con su
+    contenido original, sin sobrescribirse ni borrarse."""
+    client_dir = tmp_path / "ABC"
+    client_dir.mkdir()
+    sentinel = client_dir / "sentinel.txt"
+    sentinel.write_text("contenido preexistente", encoding="utf-8")
+
+    with pytest.raises(FileExistsError):
+        create_client("ABC", tmp_path)
+
+    assert sentinel.is_file()
+    assert sentinel.read_text(encoding="utf-8") == "contenido preexistente"
+    assert list(client_dir.iterdir()) == [sentinel]
+
+
 @pytest.mark.parametrize("name", ["X", "9lives", "Client_1-a"])
 def test_create_client_nombres_validos_representativos_crean_arbol_completo(
     tmp_path: Path, name: str

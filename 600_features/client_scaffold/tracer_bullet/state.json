@@ -25,7 +25,7 @@
     "tdd": {
       "status": "in_progress",
       "current_stage": "tdd_tester",
-      "next_case": 17,
+      "next_case": 18,
       "cases": [
         {
           "id": 1,
@@ -200,7 +200,9 @@
         {
           "id": 17,
           "desc": "create_client(\"ABC\", tmp) con tmp/ABC/ ya existente (archivo centinela dentro) lanza FileExistsError y deja el contenido preexistente intacto (AC10, AC11)",
-          "status": "pending"
+          "status": "done",
+          "test": "tests/core/test_scaffold.py::test_create_client_duplicado_lanza_fileexistserror_y_preserva_contenido",
+          "tdd_note": "NO hubo fase red: el test paso en verde de inmediato (1 passed; 26 passed en la suite completa, sin regresiones) porque create_client ya hace client_dir.mkdir(parents=True) SIN exist_ok=True (linea unica de creacion de la carpeta raiz del cliente, previa a cualquier otra escritura). Cuando tmp/ABC/ ya existe, ese mkdir() falla de inmediato con FileExistsError -- antes de tocar el arbol interno (010_inputs/, data/, client.yaml, etc.) -- por lo que el archivo centinela preexistente (tmp/ABC/sentinel.txt) queda intacto de forma natural, sin necesidad de logica de deteccion de duplicado ni de rollback explicito. Se verifico explicitamente en el test que el centinela sigue existiendo con su contenido original (read_text == 'contenido preexistente') y que client_dir.iterdir() no contiene ninguna entrada nueva ademas del centinela. Por instruccion explicita del orquestador no se forzo un rojo artificial. El test se conserva como cobertura de regresion de CA-10/CA-11 (garantiza que un futuro cambio en create_client -- p.ej. agregar exist_ok=True o reordenar la creacion del arbol -- no rompa el contrato de duplicado ni la preservacion de contenido preexistente), y el caso se marca done sin pasar por tdd_coder ni tdd_refactor, ya que no hay codigo de produccion pendiente para este caso. Sin cambios en scaffold.py."
         },
         {
           "id": 18,
