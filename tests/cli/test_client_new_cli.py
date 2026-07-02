@@ -134,7 +134,14 @@ def test_main_nombre_invalido_devuelve_1_y_no_crea_nada(
     assert captured.err.strip() != ""
     assert "Traceback" not in captured.out
     assert "Traceback" not in captured.err
-    assert not (tmp_path / "clients" / nombre_invalido).exists()
+    # No se usa (tmp_path / "clients" / nombre_invalido).exists() porque para
+    # nombre_invalido == ".." esa ruta se resuelve a tmp_path (que siempre
+    # existe), haciendo la asercion trivialmente falsa sin importar el
+    # comportamiento de main. Se verifica en su lugar que no se creo ninguna
+    # entrada con ese nombre dentro de clients/.
+    clients_root = tmp_path / "clients"
+    if clients_root.exists():
+        assert nombre_invalido not in [p.name for p in clients_root.iterdir()]
 
 
 def test_main_camino_feliz_devuelve_0(tmp_path, monkeypatch):

@@ -48,8 +48,22 @@ def _find_project_root(start: Path) -> Path | None:
 
 def main(argv: list[str] | None = None) -> int:
     """Punto de entrada de la CLI `foda`. Ver spec.md para el contrato completo."""
+    raw_argv = list(sys.argv[1:] if argv is None else argv)
+    # Un NAME que empieza con "-" (p. ej. "-x") no debe interpretarse como una
+    # opcion desconocida de argparse: se marca el fin de opciones con "--"
+    # para que llegue como valor posicional y sea create_client quien lo
+    # rechace como nombre invalido (CA-07/DS-CLI-3).
+    if (
+        len(raw_argv) >= 3
+        and raw_argv[0] == "client"
+        and raw_argv[1] == "new"
+        and raw_argv[2].startswith("-")
+        and raw_argv[2] != "--"
+    ):
+        raw_argv = raw_argv[:2] + ["--"] + raw_argv[2:]
+
     parser = _build_parser()
-    args = parser.parse_args(argv)
+    args = parser.parse_args(raw_argv)
 
     project_root = _find_project_root(Path.cwd())
     if project_root is None:
@@ -63,6 +77,11 @@ def main(argv: list[str] | None = None) -> int:
     clients_root = project_root / "clients"
     clients_root.mkdir(parents=True, exist_ok=True)
 
-    created_path = create_client(args.name, clients_root)
+    try:
+        created_path = create_client(args.name, clients_root)
+    except ValueError as exc:
+        print(f"foda: nombre de cliente invalido: {exc}", file=sys.stderr)
+        return 1
+
     print(created_path)
     return 0
