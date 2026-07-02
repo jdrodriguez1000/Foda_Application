@@ -2,15 +2,16 @@
   "feature": "client_scaffold",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "tdd_coder",
+  "current_stage": "tdd_tester",
   "stages": {
     "feature_definer":    { "status": "done",    "artifact": "definition.md" },
     "spec_writer":        { "status": "done", "artifact": "spec.md",  "gate": "human", "awaiting_approval": false, "approved": true },
     "plan_builder":       { "status": "done", "artifact": "plan.md",  "gate": "human", "awaiting_approval": false, "approved": true },
     "tdd":                {
       "status": "in_progress",
+      "next_case": 2,
       "cases": [
-        { "id": 1,  "desc": "create_client(\"ABC\", tmp) crea el directorio tmp/ABC/ y devuelve un Path que apunta a él (AC1, AC7)", "status": "green", "test": "tests/core/test_scaffold.py::test_create_client_crea_directorio_y_devuelve_su_path", "green_files": ["pyproject.toml", "src/foda/__init__.py", "src/foda/core/__init__.py", "src/foda/core/scaffold.py"] },
+        { "id": 1,  "desc": "create_client(\"ABC\", tmp) crea el directorio tmp/ABC/ y devuelve un Path que apunta a él (AC1, AC7)", "status": "done", "test": "tests/core/test_scaffold.py::test_create_client_crea_directorio_y_devuelve_su_path", "green_files": ["pyproject.toml", "src/foda/__init__.py", "src/foda/core/__init__.py", "src/foda/core/scaffold.py"], "refactor_note": "Sin refactor aplicado: codigo minimo y claro (NC-2/NC-3), nada que mejorar de forma justificada." },
         { "id": 2,  "desc": "Bajo tmp/ABC/ existen exactamente: archivo client.yaml y carpetas 010_inputs/, 020_outputs/, data/, models/ (AC2)", "status": "pending" },
         { "id": 3,  "desc": "tmp/ABC/010_inputs/ y tmp/ABC/020_outputs/ existen y estan vacias (AC5)", "status": "pending" },
         { "id": 4,  "desc": "tmp/ABC/data/ contiene bronze/, silver/, gold/ y las tres estan vacias (AC3)", "status": "pending" },
