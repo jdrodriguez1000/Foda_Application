@@ -2,7 +2,7 @@
   "feature": "client_scaffold",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "integration_tester",
+  "current_stage": "spec_verifier",
   "stages": {
     "feature_definer": {
       "status": "done",
@@ -214,7 +214,17 @@
       ]
     },
     "integration_tester": {
-      "status": "pending"
+      "status": "done",
+      "tests": [
+        "tests/integration/test_client_scaffold_integration.py::test_arbol_producido_coincide_exactamente_con_system_design_seccion_7",
+        "tests/integration/test_client_scaffold_integration.py::test_multiples_clientes_bajo_mismo_clients_root_quedan_aislados",
+        "tests/integration/test_client_scaffold_integration.py::test_client_yaml_es_consumible_como_contrato_por_un_lector_externo",
+        "tests/integration/test_client_scaffold_integration.py::test_lector_externo_falla_temprano_y_claro_si_el_cliente_no_existe",
+        "tests/integration/test_client_scaffold_integration.py::test_creacion_secuencial_de_varios_clientes_no_deja_estado_compartido",
+        "tests/integration/test_client_scaffold_integration.py::test_colision_con_archivo_preexistente_en_clients_root_lanza_fileexistserror"
+      ],
+      "evidence": "python -m pytest tests/integration -q -> 6 passed. python -m pytest -q (suite completa) -> 32 passed (26 unit de tests/core/test_scaffold.py + 6 integracion), sin regresiones.",
+      "scope_note": "Flow.run(ctx) y ClientContext no aplican a esta feature (plan.md SS1: create_client es bootstrap previo al pipeline, no un Flow; ClientContext es la feature futura client_context/T-014 por spec SS No-Objetivos). La capa CLI (foda client new) tampoco existe aun en el repo (src/foda/cli.py no creado; TSK-07 pendiente), por lo que no hay integracion CLI que testear en esta etapa. Puntos de integracion cubiertos en su lugar: arbol completo vs system_design SS7 en un clients_root realista, aislamiento multi-tenant SS13 entre varios clientes bajo el mismo clients_root, contrato de artefacto client.yaml (SS8) consumido por un lector externo al modulo scaffold, fallo temprano y claro (FileNotFoundError) cuando un consumidor busca un cliente inexistente, creacion secuencial batch sin estado compartido entre llamadas, y colision con archivo preexistente (no solo carpeta) en clients_root."
     },
     "spec_verifier": {
       "status": "pending",
