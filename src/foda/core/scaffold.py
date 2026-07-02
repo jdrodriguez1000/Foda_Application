@@ -9,11 +9,21 @@ from pathlib import Path
 def create_client(name: str, clients_root: Path) -> Path:
     """Crea clients_root/<name>/ y devuelve el Path a la carpeta creada.
 
-    Implementacion minima (TDD, caso 1 / CA-01, CA-07): solo cubre el
-    tracer bullet (creacion del directorio y retorno del Path). La
-    validacion del nombre, el arbol completo y client.yaml se agregan en
-    casos posteriores del bucle TDD.
+    Implementacion minima (TDD, caso 2 / CA-02): agrega, sobre el tracer
+    bullet del caso 1, las entradas de primer nivel del arbol
+    (010_inputs/, 020_outputs/, data/, models/) y el archivo client.yaml
+    (vacio por ahora). El contenido de client.yaml (name, created_at), las
+    subcarpetas medallion de data/, la validacion del nombre y la
+    comprobacion de duplicado se agregan en casos posteriores del bucle
+    TDD.
     """
     client_dir = clients_root / name
     client_dir.mkdir(parents=True)
+
+    (client_dir / "010_inputs").mkdir()
+    (client_dir / "020_outputs").mkdir()
+    (client_dir / "data").mkdir()
+    (client_dir / "models").mkdir()
+    (client_dir / "client.yaml").touch()
+
     return client_dir
