@@ -3,6 +3,7 @@
 Fuente: 600_features/client_scaffold/tracer_bullet/spec.md.
 """
 
+from datetime import date
 from pathlib import Path
 
 import yaml
@@ -15,13 +16,13 @@ _MEDALLION_DIRS = ("bronze", "silver", "gold")
 def create_client(name: str, clients_root: Path) -> Path:
     """Crea clients_root/<name>/ y devuelve el Path a la carpeta creada.
 
-    Implementacion minima (TDD, hasta caso 6 / CA-02, CA-03, CA-06): agrega,
+    Implementacion minima (TDD, hasta caso 7 / CA-02, CA-03, CA-06): agrega,
     sobre el tracer bullet del caso 1, las entradas de primer nivel del
     arbol (010_inputs/, 020_outputs/, data/, models/), las subcarpetas
     medallion de data/ (bronze/, silver/, gold/) y el archivo client.yaml
-    con contenido YAML valido que incluye name. La validacion del nombre y
-    la comprobacion de duplicado se agregan en casos posteriores del bucle
-    TDD.
+    con contenido YAML valido que incluye name y created_at (fecha ISO
+    YYYY-MM-DD del dia de creacion). La validacion del nombre y la
+    comprobacion de duplicado se agregan en casos posteriores del bucle TDD.
     """
     client_dir = clients_root / name
     client_dir.mkdir(parents=True)
@@ -33,6 +34,12 @@ def create_client(name: str, clients_root: Path) -> Path:
         (client_dir / "data" / layer_name).mkdir()
 
     client_yaml = client_dir / "client.yaml"
-    client_yaml.write_text(yaml.safe_dump({"name": name}), encoding="utf-8")
+    yaml_content = {"name": name, "created_at": date.today().isoformat()}
+    # default_style="'" fuerza comillas en los escalares para que created_at
+    # (p.ej. "2026-07-02") se relea como str y no como date via el resolver
+    # implicito de YAML.
+    client_yaml.write_text(
+        yaml.safe_dump(yaml_content, default_style="'"), encoding="utf-8"
+    )
 
     return client_dir

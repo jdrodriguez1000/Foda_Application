@@ -24,8 +24,8 @@
     },
     "tdd": {
       "status": "in_progress",
-      "current_stage": "tdd_tester",
-      "next_case": 7,
+      "current_stage": "tdd_refactor",
+      "next_case": 8,
       "cases": [
         {
           "id": 1,
@@ -90,9 +90,13 @@
         {
           "id": 7,
           "desc": "tmp/ABC/client.yaml tiene created_at que cumple el patron ^\\d{4}-\\d{2}-\\d{2}$ (AC6)",
-          "status": "red",
+          "status": "green",
           "test": "tests/core/test_scaffold.py::test_create_client_yaml_created_at_cumple_patron_iso",
-          "red_evidence": "KeyError: 'created_at' (client.yaml solo contiene name; create_client no escribe la clave created_at). 1 failed, 6 passed en tests/core/test_scaffold.py."
+          "red_evidence": "KeyError: 'created_at' (client.yaml solo contiene name; create_client no escribe la clave created_at). 1 failed, 6 passed en tests/core/test_scaffold.py.",
+          "green_files": [
+            "src/foda/core/scaffold.py"
+          ],
+          "green_evidence": "1 passed (caso 7) y 7 passed (suite completa, sin regresiones). Se agrego created_at = date.today().isoformat() al dict escrito con yaml.safe_dump(..., default_style=\"'\"); el estilo de comillas forzado evita que el resolver implicito de YAML relea la fecha como date en vez de str al hacer safe_load."
         },
         {
           "id": 8,
