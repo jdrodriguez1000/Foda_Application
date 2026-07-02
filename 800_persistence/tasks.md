@@ -39,12 +39,12 @@
 ## 3. Tareas En Progreso
 | ID | Tarea | Prioridad | Notas |
 |---|---|---|---|
-| — | _Ninguna._ | — | — |
+| T-013 | Construir la primera feature real del sistema: `client_scaffold` (`foda client new <NAME>`), ejecutando la cadena de 8 agentes de punta a punta | 🔴 Alta | Valida A-005. Alcance acordado con el usuario (ver D-016). Etapas completadas: 1) `feature_definer` ✅ (`definition.md`, commit `453a386`); 2) `spec_writer` ✅ (`spec.md`, commit `bb3b60a`, GATE humano APROBADO — resolvió DS-1/D-023, DS-2/D-024, DS-3/D-025, 11 criterios de aceptación); 3) `plan_builder` ✅ (`plan.md` con 18 casos TDD, commit `0c2d682`, GATE humano APROBADO — confirmó PA-1/D-026 adoptar PyYAML, PA-2/D-027 bootstrap del paquete dentro de la feature, PA-3/D-028 caso 18 sin test en tracer_bullet). Sesión SUSPENDIDA antes de arrancar el bucle TDD. **Próximo paso:** invocar `tdd_tester` con el caso TDD #1 (crea `tmp/ABC/` y devuelve su Path). |
 
 ## 4. Tareas Pendientes
 | ID | Tarea | Prioridad | Notas |
 |---|---|---|---|
-| T-013 | Construir la primera feature real del sistema: `client_scaffold` (`foda client new <NAME>`), ejecutando la cadena de 8 agentes de punta a punta | 🔴 Alta | Valida A-005. Alcance acordado con el usuario (ver D-016): crear árbol de carpetas de cliente nuevo (`client.yaml`, `010_inputs/`, `020_outputs/`, `data/{bronze,silver,gold}/`, `models/`), validar nombre (patrón seguro, sin normalización), fallar si el cliente ya existe (sin `--force` por ahora), función core `create_client(...)` con capa CLI fina encima. Fuera de alcance: `ClientContext`, flujos, sub-carpetas por flujo. Próximo paso: invocar `feature_definer`. Andamiaje completo (T-009/T-010/T-011), sin bloqueos. |
+| — | _Ninguna._ | — | — |
 
 ## 5. Backlog
 | ID | Tarea | Notas |

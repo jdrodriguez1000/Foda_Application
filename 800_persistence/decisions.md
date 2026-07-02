@@ -39,6 +39,12 @@ Cada decisión sigue el formato: **ID**, **título**, **estado** (Propuesta / Ac
 | D-020 | Runtime NO agéntico: se descarta A/B/C-runtime y MOTOR/INSTANCIA de la metodología; `methodology.md` recortado a metodología de desarrollo | Aceptada | 2026-07-02 |
 | D-021 | Single Writer Rule como norma de persistencia; no se adoptan los 3 archivos `fda-*` de la metodología | Aceptada | 2026-07-02 |
 | D-022 | Rúbrica de evaluación calibrada solo para salidas NO deterministas (LLM/ML); el código determinista sigue con tests + veredicto binario | Aceptada | 2026-07-02 |
+| D-023 | `client_scaffold` — patrón de validación de nombre de cliente (DS-1) | Aceptada | 2026-07-02 |
+| D-024 | `client_scaffold` — estrategia de atomicidad: validación-primero + limpieza best-effort (DS-2) | Aceptada | 2026-07-02 |
+| D-025 | `client_scaffold` — ubicación y firma del core, capa CLI fina, tipos de error (DS-3) | Aceptada | 2026-07-02 |
+| D-026 | Adoptar PyYAML como dependencia del proyecto | Aceptada | 2026-07-02 |
+| D-027 | Bootstrap del paquete `foda` (`pyproject.toml`, layout `src/`) dentro de la feature `client_scaffold` | Aceptada | 2026-07-02 |
+| D-028 | Caso TDD #18 (rollback de filesystem) implementado sin test en la banda `tracer_bullet` | Aceptada | 2026-07-02 |
 
 ## 3. Detalle de Decisiones
 
@@ -195,3 +201,45 @@ Cada decisión sigue el formato: **ID**, **título**, **estado** (Propuesta / Ac
 - **Contexto:** Hoy `spec_verifier` evalúa de forma **binaria** (CONFORME/NO CONFORME) con matriz de trazabilidad + suite `pytest`, y `integration_tester` valida integración: adecuado y suficiente para **código determinista** (los tests son objetivos). Pero Discovery y Exploration producen **salidas de LLM** (documentos, propuesta de features) **sin ningún control de calidad**, y ahí es donde se juega la **reducción de varianza** (objetivo de negocio del proyecto).
 - **Decisión:** (a) El **código determinista** sigue evaluándose con **tests + veredicto binario** de `spec_verifier` (evaluación independiente, P3); **no** se le añade rúbrica (sería overkill). (b) Para las **salidas NO deterministas** (documentos de Discovery, propuesta de features de Exploration) y como **evaluación temprana** de la calidad ML se adopta una **rúbrica calibrada 0.0–1.0** con dimensiones+pesos, **few-shot** (≥2 ejemplos, uno ≥0.7 y uno <0.5) y **anclas** (1.0/0.5/0.0), más **evaluación temprana** con ~20 casos representativos (E9). Es el espejo del Principio 1: *"evaluación con rúbrica solo donde el LLM aporta"*. La ubicación y el contenido concretos de cada rúbrica se definen al construir Discovery/Exploration.
 - **Consecuencias:** Control de calidad donde de verdad se necesita (lo no determinista), sin sobre-ingeniería en el código. Queda como trabajo futuro diseñar las rúbricas concretas al construir esos flujos.
+
+### D-023 — `client_scaffold`: patrón de validación de nombre de cliente (DS-1)
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-02
+- **Contexto:** `spec_writer` necesitaba resolver, para `create_client(name, ...)`, qué nombres de cliente son válidos como nombre de carpeta en disco, dejado abierto por D-016 ("patrón seguro, sin normalización").
+- **Decisión:** El nombre de cliente debe cumplir `^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$`: solo ASCII, el primer carácter debe ser alfanumérico, longitud 1–64, case-sensitive y sin normalización automática (no se recorta espacios ni se cambia mayúsculas/minúsculas).
+- **Consecuencias:** Nombre de carpeta predecible y determinista a partir del nombre lógico del cliente. Deja fuera de alcance del tracer_bullet el manejo de filesystems case-insensitive y nombres reservados de Windows (ver A-007, A-008).
+
+### D-024 — `client_scaffold`: atomicidad por validación-primero + limpieza best-effort (DS-2)
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-02
+- **Contexto:** Había que decidir cómo evitar dejar un árbol de carpetas a medio crear si el filesystem falla a mitad de `create_client(...)`. Se evaluó también un patrón temp-dir + rename atómico.
+- **Decisión:** Se valida todo lo posible antes de tocar el filesystem (nombre válido, cliente no existe ya); si de todos modos ocurre un fallo de filesystem a mitad de la creación del árbol, se hace una limpieza best-effort del árbol parcial creado hasta ese punto. Se descarta el patrón temp+rename por ser sobre-complejidad para el tracer_bullet (NC-2).
+- **Consecuencias:** Comportamiento simple y suficiente para la banda tracer_bullet; no hay garantía de atomicidad estricta ante fallos de filesystem a mitad de escritura (aceptado como límite conocido de esta banda).
+
+### D-025 — `client_scaffold`: ubicación/firma del core, capa CLI fina, tipos de error (DS-3)
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-02
+- **Contexto:** D-016 ya pedía "core reutilizable + capa CLI fina encima"; faltaba fijar la ubicación exacta del módulo, la firma de la función y los tipos de excepción a usar.
+- **Decisión:** El core vive en `src/foda/core/scaffold.py` con firma `create_client(name: str, clients_root: Path) -> Path`. Errores: `ValueError` para nombre inválido (no cumple DS-1), `FileExistsError` para cliente duplicado. La CLI fina vive en `src/foda/cli.py` y expone `foda client new <NAME>`.
+- **Consecuencias:** Core testeable de forma aislada con `tmp_path` (sin acoplar a rutas reales); la CLI solo traduce argumentos/errores a códigos de salida y mensajes, sin lógica propia.
+
+### D-026 — Adoptar PyYAML como dependencia del proyecto (PA-1)
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-02
+- **Contexto:** `client_scaffold` necesita generar `client.yaml` con identidad mínima del cliente. `system_design.md` (R3) ya establecía YAML como formato de entrada/configuración, pero el proyecto no tenía aún una dependencia YAML concreta.
+- **Decisión:** Se adopta PyYAML como dependencia del proyecto para leer/escribir YAML, coherente con R3.
+- **Consecuencias:** Primera dependencia externa declarada del proyecto; debe listarse en `pyproject.toml` (ver D-027).
+
+### D-027 — Bootstrap del paquete `foda` dentro de la feature `client_scaffold` (PA-2)
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-02
+- **Contexto:** El proyecto aún no tenía `pyproject.toml` ni estructura de paquete Python instalable. Se evaluó crear una tarea de bootstrap separada antes de `client_scaffold` versus hacerlo dentro de la propia feature.
+- **Decisión:** El bootstrap mínimo del paquete (`pyproject.toml`: paquete `foda`, layout `src/`, pytest, `python >= 3.13` conforme a D-010, dependencia PyYAML de D-026) se hace **dentro** de `plan.md` de `client_scaffold`, como parte de sus pasos de implementación, en vez de como tarea separada previa.
+- **Consecuencias:** `client_scaffold` es el primer slice vertical legítimo (NC-4) que deja el proyecto con un paquete Python funcional de punta a punta (bootstrap + primera feature), evitando una tarea de "andamiaje" sin valor de negocio propio.
+
+### D-028 — Caso TDD #18 (rollback de filesystem) sin test en `tracer_bullet` (PA-3)
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-02
+- **Contexto:** El plan de `client_scaffold` incluye 18 casos TDD; el caso 18 cubre la limpieza best-effort de DS-2 (D-024) ante fallo de filesystem a mitad de creación, un escenario difícil de testear de forma simple (requiere simular fallos de I/O).
+- **Decisión:** El caso 18 se **implementa sin test** en la banda `tracer_bullet`, respetando NC-2 (simplicidad primero); se endurecerá con test en una banda posterior.
+- **Consecuencias:** Excepción explícita y documentada a NC-5 ("toda tarea tiene un test que la respalda") para este caso puntual, aprobada por el humano en el GATE del plan. Queda como trabajo pendiente de banda futura escribir el test de este caso.
