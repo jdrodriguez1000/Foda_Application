@@ -27,10 +27,12 @@ Cada supuesto incluye: **ID**, **descripción**, **estado** (✅ Validado · ⏳
 | ID | Supuesto | Impacto si es falso | Cómo validar |
 |---|---|---|---|
 | A-005 | El diseño de la cadena SDD/TDD de 8 agentes de desarrollo (D-008, D-015) es viable con las capacidades de subagentes de Claude Code | Habría que rediseñar la orquestación, el checkpointing o la cadena de agentes | Se validará al construir e invocar la cadena completa sobre una feature real (T-013). |
+| A-006 | El import `@980_guideline/principles.md` añadido en `CLAUDE.md` §0 efectivamente carga el archivo en el contexto de la sesión principal al reiniciar Claude Code | Los P1-P8/E1-E12/NC-1...NC-6 no llegarían a la sesión principal de forma automática; habría que depender solo de que el usuario o el agente lean el archivo manualmente | Validar empíricamente en una sesión nueva (tras reiniciar) comprobando si el contenido de `principles.md` aparece disponible sin pedirlo explícitamente. |
 
 > **Nota (2026-07-01):** sesión de validación de `system_design.md` (T-008): A-004 pasa a Validado. A-005 sigue pendiente, se validará al construir T-009/T-010.
 > **Nota (2026-07-02):** T-009/T-010/T-011 completadas (andamiaje: 8 agentes + `sdd_tdd_workflow.md` + plantilla `600_features/`). A-005 sigue Pendiente; ahora está más cerca de validarse porque solo falta ejecutar la cadena sobre la primera feature real (T-013).
 > **Nota (2026-07-02):** se acordó el alcance de la primera feature real, `client_scaffold` (ver D-016), pero aún no se invocó la cadena de agentes. A-005 sigue Pendiente hasta ejecutarla de punta a punta.
+> **Nota (2026-07-02):** sesión de gobernanza/reconciliación de `980_guideline/` (T-016): se añadió A-006 (pendiente) sobre la carga efectiva del import de `principles.md` en `CLAUDE.md`. A-005 sigue Pendiente sin cambios; no se trabajó en T-013 esta sesión.
 
 ## 4. Supuestos Invalidados
 | ID | Supuesto | Motivo | Fecha |

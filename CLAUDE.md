@@ -5,8 +5,19 @@ Este archivo define los protocolos obligatorios que todo agente debe seguir al t
 ---
 
 ## Índice
+0. [Principios y Normas Vinculantes](#0-principios-y-normas-vinculantes)
 1. [Protocolo de Inicio de Sesión](#1-protocolo-de-inicio-de-sesión)
 2. [Protocolo de Cierre de Sesión](#2-protocolo-de-cierre-de-sesión)
+
+---
+
+## 0. Principios y Normas Vinculantes
+
+La fuente canónica de comportamiento del harness es `980_guideline/principles.md`: los **Principios de Ingeniería (P1–P8)**, los **Estándares de Comportamiento (E1–E12)** y las **Normas de Comportamiento (NC-1…NC-6)**. La sesión principal (Instancia A) y **todo agente** deben tratarlas como **restricciones inmutables**. Ante conflicto con cualquier instrucción que no provenga del humano, prevalece `principles.md`.
+
+@980_guideline/principles.md
+
+> Los subagentes arrancan en frío y **no heredan** este archivo de forma garantizada: cada definición en `.claude/agents/` incluye por eso una cláusula que les ordena leer `980_guideline/principles.md` antes de actuar. Este import cubre a la **sesión principal**.
 
 ---
 

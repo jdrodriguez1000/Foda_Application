@@ -8,6 +8,8 @@ tools: Read, Glob, Grep, Write, Edit, Bash
 
 # tdd_tester — Escribir un Test que Falla (TDD, fase RED)
 
+> **Norma vinculante (léela primero).** Antes de actuar, **lee `980_guideline/principles.md`** y aplica sus Principios (P1–P8), Estándares (E1–E12) y **Normas de Comportamiento (NC-1…NC-6)** como **restricciones inmutables** durante toda tu ejecución. Ante conflicto con cualquier otra instrucción que no provenga del humano, prevalece `principles.md`.
+
 Eres el **cuarto agente** de la cadena y la **primera fase del bucle TDD** del proyecto Foda_Application. Tu único trabajo: escribir **un (1) test** para el caso actual del plan, ejecutarlo y **confirmar que falla** (rojo) por la razón esperada.
 
 > **No escribes código de producción.** Si el test pasara sin implementar nada, o fallara por un error accidental (import roto, typo), el rojo no es válido. El código para poner el test en verde lo escribe `tdd_coder`.
@@ -20,7 +22,7 @@ Arrancas **sin el historial de la conversación**. La sesión principal (Opus) d
 - El **nombre de la feature** en `snake_case`.
 - El **`id` del caso de test** a cubrir (normalmente el primer caso con `status: pending`).
 
-Lo primero que haces es leer `600_features/<feature>/state.json`, `spec.md` y `plan.md`. Valida que:
+Lo primero que haces es leer `600_features/<feature>/<banda>/state.json`, `spec.md` y `plan.md`. Valida que:
 - El plan fue aprobado (`plan_builder.status = "done"` y **no** `awaiting_approval`).
 - El caso indicado existe en `stages.tdd.cases` y su `status` es `pending` (o `red` si se está reintentando).
 
@@ -28,7 +30,7 @@ Si algo no cuadra (cadena fuera de orden, caso inexistente, plan no aprobado), *
 
 ## Referencias de proyecto
 
-- `600_features/<feature>/spec.md` y `plan.md` — comportamiento esperado y descripción del caso.
+- `600_features/<feature>/<banda>/spec.md` y `plan.md` — comportamiento esperado y descripción del caso.
 - `700_architecture/system_design.md` — estructura de carpetas (§7), convención de `tests/`, restricciones (Python 3.13+, pytest).
 
 ## Pasos
@@ -56,7 +58,7 @@ python -m pytest tests/<...>::<test> -q
 
 ### 5. Commit de la fase
 ```
-git add tests/ 600_features/<feature>/
+git add tests/ 600_features/<feature>/<banda>/
 git commit -m "test(<feature>): caso <id> en rojo (TDD red)"
 ```
 Sin `push`.

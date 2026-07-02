@@ -33,6 +33,7 @@
 | T-009 | Construir los 8 agentes de desarrollo SDD/TDD en `.claude/agents/` (`feature_definer`, `spec_writer`, `plan_builder`, `tdd_tester`, `tdd_coder`, `tdd_refactor`, `integration_tester`, `spec_verifier`) con los modelos y colores acordados | 2026-07-02 | Ver D-008, D-015. Renombrados `tdd_red`→`tdd_tester`, `tdd_green`→`tdd_coder`. Tools mínimas: Read, Glob, Grep, Write, Edit, Bash (sin Agent/web). |
 | T-010 | Documentar la convención de `state.json` y la orquestación de la cadena SDD/TDD en `700_architecture/sdd_tdd_workflow.md` | 2026-07-02 | Ver D-008, D-015. Fuente única de verdad de la cadena SDD/TDD (v0.1). |
 | T-011 | Crear la estructura de carpetas `600_features/` con una plantilla/ejemplo de feature | 2026-07-02 | `README.md` + `_template/` con esqueletos de los 4 documentos + `state.json` inicial. Sin feature de ejemplo ficticia (decisión del usuario); la primera feature real cumplirá ese rol. |
+| T-016 | Reconciliar `980_guideline/` (`principles.md`, `methodology.md`) con lo ya construido: reparar `principles.md` como canon vinculante, insertar cláusula de lectura obligatoria en los 10 agentes, importar en `CLAUDE.md`, reorganizar `methodology.md` con mapa de fuentes y resolver contradicciones/citas fantasma | 2026-07-02 | Ver D-017, D-018, D-019, L-009, L-010, L-011. Sesión de gobernanza/reconciliación, sin código de aplicación. Genera T-017/T-018 como trabajo futuro (agentes runtime y plano runtime). |
 
 ## 3. Tareas En Progreso
 | ID | Tarea | Prioridad | Notas |
@@ -49,3 +50,5 @@
 |---|---|---|
 | T-014 | Construir feature `client_context` (resolución de rutas, cliente nuevo vs. recurrente) | Depende de T-013 (`client_scaffold`). Orden abajo-hacia-arriba acordado en D-016. |
 | T-015 | Construir feature `flow_base` (abstracción `Flow`: load_inputs → validate → execute → write_outputs) | Depende de T-014 (`client_context`). Orden abajo-hacia-arriba acordado en D-016. |
+| T-017 | Construir los agentes runtime del patrón A/B/C descrito en `980_guideline/` (`foda-governor`, `foda-<flujo>-planner`, `foda-<flujo>-evaluator`), hoy inexistentes | Trabajo futuro identificado en la reconciliación T-016. Sin fecha objetivo aún; requiere antes tener al menos una feature real construida (T-013). |
+| T-018 | Reconciliar por completo el plano runtime descrito en `980_guideline/` (`fda-*-state.json`, `install.sh`, distinción planos MOTOR/INSTANCIA) con la arquitectura ya construida | Trabajo futuro identificado en la reconciliación T-016. Depende de T-017. |

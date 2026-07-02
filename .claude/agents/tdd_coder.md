@@ -8,6 +8,8 @@ tools: Read, Glob, Grep, Write, Edit, Bash
 
 # tdd_coder — Hacer Pasar el Test (TDD, fase GREEN)
 
+> **Norma vinculante (léela primero).** Antes de actuar, **lee `980_guideline/principles.md`** y aplica sus Principios (P1–P8), Estándares (E1–E12) y **Normas de Comportamiento (NC-1…NC-6)** como **restricciones inmutables** durante toda tu ejecución. Ante conflicto con cualquier otra instrucción que no provenga del humano, prevalece `principles.md`.
+
 Eres el **quinto agente** de la cadena y la **segunda fase del bucle TDD** del proyecto Foda_Application. Tu único trabajo: escribir el **código de producción mínimo** para que el test rojo del caso actual pase a **verde**, sin romper ningún test que ya estuviera pasando.
 
 > **Mínimo suficiente.** No implementes de más ni te adelantes a casos futuros. La mejora de diseño (extraer, renombrar, deduplicar) es trabajo de `tdd_refactor`. Aquí solo buscas el **verde**.
@@ -20,7 +22,7 @@ Arrancas **sin el historial de la conversación**. La sesión principal (Opus) d
 - El **nombre de la feature** en `snake_case`.
 - El **`id` del caso de test** en rojo a poner en verde.
 
-Lo primero que haces es leer `600_features/<feature>/state.json`, `spec.md`, `plan.md` y el **test en rojo** correspondiente. Valida que el caso indicado exista y esté en `status = "red"`. Si no, **detente** e infórmalo.
+Lo primero que haces es leer `600_features/<feature>/<banda>/state.json`, `spec.md`, `plan.md` y el **test en rojo** correspondiente. Valida que el caso indicado exista y esté en `status = "red"`. Si no, **detente** e infórmalo.
 
 ## Referencias de proyecto
 
@@ -57,7 +59,7 @@ Si tras los 2 reintentos el test sigue en rojo o hay regresiones que no puedes r
 
 ### 6. Commit de la fase
 ```
-git add src/ tests/ 600_features/<feature>/
+git add src/ tests/ 600_features/<feature>/<banda>/
 git commit -m "feat(<feature>): caso <id> en verde (TDD green)"
 ```
 Sin `push`.

@@ -17,15 +17,15 @@
 
 ## 1. Resumen del Estado
 - **Proyecto:** Foda_Application
-- **Fase actual:** Andamiaje de desarrollo SDD/TDD completo (8 agentes + workflow + plantilla de features); listo para construir la primera feature real
-- **Estado general:** 🟢 Andamiaje de desarrollo completo, listo para construir la primera feature
+- **Fase actual:** Andamiaje de desarrollo SDD/TDD completo y gobernanza (`980_guideline/`) reconciliada con lo construido; listo para construir la primera feature real
+- **Estado general:** 🟢 Andamiaje de desarrollo completo, gobernanza reconciliada, listo para construir la primera feature
 - **Última actualización:** 2026-07-02
 
 ## 2. Métricas de Avance
 | Métrica | Valor |
 |---|---|
-| Avance global | 50% (andamiaje SDD/TDD completo + alcance de la primera feature real (`client_scaffold`) acordado con el usuario; falta ejecutar la cadena de 8 agentes para construirla) |
-| Tareas completadas | 12 |
+| Avance global | 52% (andamiaje SDD/TDD completo + gobernanza `980_guideline/` reconciliada con lo construido + alcance de la primera feature real (`client_scaffold`) acordado con el usuario; falta ejecutar la cadena de 8 agentes para construirla) |
+| Tareas completadas | 13 |
 | Tareas pendientes | 1 |
 
 ## 3. Lo Realizado
@@ -45,15 +45,17 @@
 - T-010 completada: se creó `700_architecture/sdd_tdd_workflow.md` (v0.1) como fuente única de verdad de la cadena SDD/TDD: distinción desarrollo vs runtime, tabla de los 8 agentes, diagrama de orquestación con gates y bucle TDD, protocolo de gates humanos, convención completa de `state.json` (esquema, estados, matriz lectura/escritura, transiciones), reglas transversales, artefactos por feature, reanudación y bloqueos.
 - T-011 completada: se creó `600_features/` con `README.md` (qué vive allí, cómo arrancar una feature, enlace a sdd_tdd_workflow.md) y `_template/` con esqueletos de `definition.md`, `spec.md`, `plan.md`, `verification.md` y `state.json` inicial canónico. No se creó una feature de ejemplo ficticia (decisión aprobada por el usuario): la primera feature real cumplirá ese rol y validará A-005.
 - Se acordó con el usuario cuál será la primera feature real (T-013): `client_scaffold` (`foda client new <NAME>`), elegida entre 3 candidatas (`client_context`, `client_scaffold`, `flow_base`) siguiendo un orden de construcción abajo-hacia-arriba. Se definió su alcance in/out y se resolvieron 3 decisiones de alcance (fallar si el cliente ya existe, sin `--force` por ahora; nombre de cliente con patrón seguro exigido, sin normalización; entregar core `create_client(...)` primero, con capa CLI fina encima). No se escribió código ni artefactos de feature todavía, solo se acordó el plan. Ver D-016.
+- T-016 completada: sesión de gobernanza/reconciliación documental (sin código de aplicación). El usuario introdujo `980_guideline/methodology.md` y `980_guideline/principles.md`, que describían una arquitectura runtime más ambiciosa (patrón Governor/Planificador/Evaluator, planos MOTOR/INSTANCIA, bandas Tracer Bullet) totalmente ausente de lo construido, además de duplicaciones y contradicciones internas. Se reparó `principles.md` como canon vinculante (P1-P8, E1-E12, NC-1...NC-6) y se insertó en los 10 agentes de `.claude/agents/` una cláusula que obliga a leerlo primero; se importó en `CLAUDE.md` §0 vía `@980_guideline/principles.md`. Se reorganizó `methodology.md` con un mapa de fuentes por tema (elimina duplicación con `system_design.md` y `sdd_tdd_workflow.md`) y se corrigieron sus inconsistencias internas. Se formalizaron dos citas fantasma como ADR reales: D-017 (protocolo de construcción por celda dimensionado por banda) y D-018 (invariante de independencia de tres contextos frescos + orden test-first RED-GREEN-REFACTOR). Se resolvió el choque entre la carpetería step-céntrica de D-017 y la feature-céntrica `600_features/` ya en uso: D-019 adopta `600_features/<feature>/<banda>/` (banda como subcarpeta, banda por defecto `tracer_bullet`), actualizando `sdd_tdd_workflow.md`, `600_features/README.md`, `600_features/_template/state.json` y las rutas de artefacto de los 8 agentes. Queda pendiente como trabajo futuro mayor: construir los agentes runtime (`foda-governor`, `foda-<flujo>-planner`, `foda-<flujo>-evaluator`, hoy inexistentes) y reconciliar el plano runtime completo (`fda-*-state.json`, install.sh, MOTOR/INSTANCIA). Ver D-017, D-018, D-019, L-009, L-010, L-011.
 
 ## 4. En Progreso
 - _Ninguna tarea en progreso._
 
 ## 5. Próximo a Realizar
+- Validar en una sesión nueva que el import `@980_guideline/principles.md` en `CLAUDE.md` efectivamente carga el archivo en el contexto de la sesión principal.
 - Invocar `feature_definer` para arrancar la construcción de la feature `client_scaffold` (T-013) con el alcance acordado en D-016, lo que además validará A-005.
 
 ## 6. Bloqueos y Riesgos
-- _Ninguno registrado._
+- Pendiente mayor sin tarea asociada aún de alcance completo: los agentes runtime (`foda-governor`/`foda-<flujo>-planner`/`foda-<flujo>-evaluator`) y el plano de estado runtime (`fda-*-state.json`, install.sh, MOTOR/INSTANCIA) descritos en `980_guideline/` no existen todavía; registrados como T-017/T-018 en backlog.
 
 ## 7. Historial de Actualizaciones
 | Fecha | Cambio |
@@ -68,3 +70,4 @@
 | 2026-07-01 | T-008 completada: `700_architecture/system_design.md` validado sección por sección con el usuario (16 secciones, 5 bloques) y actualizado de v0.1 a v0.2. Cambios: Python 3.13+ (R1), modelos ML versionados con puntero `latest`, exports dentro de `020_outputs/<flujo>/`, contratos de artefactos ajustados + nota de dependencias multi-flujo, LLM por defecto = API de Anthropic (Claude). A-004 queda validado. Desbloqueada la construcción incremental (T-009 en adelante). Ver D-010 a D-014, L-007. |
 | 2026-07-02 | T-009, T-010 y T-011 completadas: construidos los 8 agentes de desarrollo SDD/TDD en `.claude/agents/`, documentada la cadena en `700_architecture/sdd_tdd_workflow.md` (v0.1), y creada la estructura `600_features/` con plantilla. Renombrado `tdd_red`→`tdd_tester`, `tdd_green`→`tdd_coder` respecto a D-008 (ver D-015). Avance global sube de 35% a 48%. Nueva tarea pendiente T-013: construir la primera feature real (valida A-005). Ver D-015, L-008. |
 | 2026-07-02 | Sesión corta de continuación: se acordó con el usuario que la primera feature real (T-013) será `client_scaffold` (`foda client new`), con orden de construcción abajo-hacia-arriba (client_scaffold → client_context → flow_base → flujos). Alcance in/out definido y 3 decisiones de alcance resueltas. Sin código ni artefactos de feature aún. T-014 y T-015 registradas en backlog. Avance global sube de 48% a 50%. Ver D-016. |
+| 2026-07-02 | T-016 completada: sesión de gobernanza/reconciliación (sin código de aplicación). Se repararon y reconciliaron `980_guideline/principles.md` (canon vinculante P1-P8/E1-E12/NC-1...NC-6) y `980_guideline/methodology.md` (mapa de fuentes, eliminación de duplicaciones y contradicciones) con lo ya construido. Se insertó cláusula vinculante en los 10 agentes y se importó `principles.md` en `CLAUDE.md` §0. Se formalizaron D-017 y D-018 (citas fantasma del `methodology.md`) y se resolvió el choque de carpetería con D-019 (`600_features/<feature>/<banda>/`), actualizando `sdd_tdd_workflow.md`, `600_features/README.md`, `_template/state.json` y las rutas de los 8 agentes. T-013 sigue pendiente sin empezar. Nuevas tareas T-017/T-018 en backlog (agentes runtime y plano runtime). Avance global sube de 50% a 52%. Ver D-017, D-018, D-019, L-009, L-010, L-011. |

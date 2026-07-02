@@ -1,5 +1,6 @@
 {
   "feature": "<feature>",
+  "band": "<banda>",
   "status": "pending",
   "current_stage": "feature_definer",
   "stages": {

@@ -120,14 +120,15 @@ El bucle **no tiene gates humanos internos**: fluye automático hasta agotar los
 
 ## 6. Convención de `state.json`
 
-Un archivo por feature en `600_features/<feature>/state.json`. Es la máquina de estado que todos los agentes leen al arrancar y actualizan al terminar.
+Un archivo por **celda** (feature × banda) en `600_features/<feature>/<banda>/state.json` (`D-019`). Es la máquina de estado que todos los agentes leen al arrancar y actualizan al terminar.
 
 ### 6.1 Esquema
 
 ```json
 {
   "feature": "<feature>",              // snake_case, identidad de la feature
-  "status": "in_progress",             // estado global de la feature
+  "band": "<banda>",                   // banda de construcción (p. ej. tracer_bullet) — D-019
+  "status": "in_progress",             // estado global de la celda
   "current_stage": "spec_writer",      // etapa actual o siguiente a ejecutar
   "stages": {
     "feature_definer":    { "status": "done",    "artifact": "definition.md" },
@@ -189,25 +190,27 @@ Un archivo por feature en `600_features/<feature>/state.json`. Es la máquina de
 
 ## 7. Reglas Transversales
 
-- **Arranque en frío:** cada agente recibe en el prompt lo que necesita (nombre de la feature, id de caso, resultado previo) y **relee `state.json`** para partir del estado real.
+- **Unidad = celda (feature × banda):** cada agente recibe en el prompt `<feature>` y `<banda>` (por defecto `tracer_bullet`) y opera sobre `600_features/<feature>/<banda>/`; el código y los tests van a `src/foda/…` y `tests/…` (`D-019`).
+- **Arranque en frío:** cada agente recibe en el prompt lo que necesita (feature, banda, id de caso, resultado previo) y **relee `state.json`** para partir del estado real.
 - **Validación del gate previo:** cada agente verifica que la etapa anterior esté `done` (y no `awaiting_approval` cuando aplica) antes de trabajar; si la cadena está fuera de orden, se detiene e informa.
 - **Commit por etapa, sin push:** cada agente cierra con `git add` + `git commit` usando prefijo convencional (`feat`/`spec`/`plan`/`test`/`refactor`/`verify`) y `(<feature>)` en el mensaje. **El `push` se hace solo en el cierre de sesión** (D-003).
-- **Separación de artefactos:** el código va a `src/foda/…`, los tests a `tests/…`; en `600_features/<feature>/` solo viven los `.md` SDD y `state.json`.
+- **Separación de artefactos:** el código va a `src/foda/…`, los tests a `tests/…`; en `600_features/<feature>/<banda>/` solo viven los `.md` SDD y `state.json`.
 - **Herramientas mínimas:** los 8 agentes usan `Read, Glob, Grep, Write, Edit, Bash` (sin `Agent` ni herramientas web); la orquestación de subagentes la hace la sesión principal.
 
 ---
 
 ## 8. Artefactos por Feature
 
-Estructura esperada en `600_features/<feature>/` (ver también T-011):
+Estructura esperada en `600_features/<feature>/<banda>/` (celda = feature × banda; `D-019`):
 
 ```
 600_features/<feature>/
-├── definition.md       # feature_definer — qué y por qué
-├── spec.md             # spec_writer — comportamiento, contratos, criterios de aceptación
-├── plan.md             # plan_builder — cómo + lista de casos de test
-├── verification.md     # spec_verifier — veredicto y trazabilidad
-└── state.json          # máquina de estado de la cadena
+└── <banda>/                # p. ej. tracer_bullet (banda por defecto de la primera pasada)
+    ├── definition.md       # feature_definer — qué y por qué
+    ├── spec.md             # spec_writer — comportamiento, contratos, criterios de aceptación
+    ├── plan.md             # plan_builder — cómo + lista de casos de test
+    ├── verification.md     # spec_verifier — veredicto y trazabilidad
+    └── state.json          # máquina de estado de la celda
 ```
 
 El **código y los tests NO viven aquí**: `src/foda/…` y `tests/…` respectivamente.
