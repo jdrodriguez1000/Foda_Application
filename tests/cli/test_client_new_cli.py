@@ -57,6 +57,21 @@ def test_main_camino_exito_stdout_contiene_ruta_del_cliente(tmp_path, monkeypatc
     assert str(expected_path) in captured.out
 
 
+def test_main_crea_clients_root_inexistente_primer_cliente(tmp_path, monkeypatch):
+    """Caso 5 (CA-05): cuando <raiz>/clients/ no existe todavia,
+    main(["client","new","ABC"]) la crea y crea ABC/ dentro, terminando con
+    codigo 0 (primer cliente del proyecto)."""
+    (tmp_path / "pyproject.toml").write_text("", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    assert not (tmp_path / "clients").exists()
+
+    result = main(["client", "new", "ABC"])
+
+    assert result == 0
+    assert (tmp_path / "clients").is_dir()
+    assert (tmp_path / "clients" / "ABC").is_dir()
+
+
 def test_main_camino_feliz_devuelve_0(tmp_path, monkeypatch):
     """Caso 1 (CA-01, CA-10): con el cwd dentro de un proyecto temporal
     (existe <raiz>/pyproject.toml), main(["client","new","ABC"]) devuelve
