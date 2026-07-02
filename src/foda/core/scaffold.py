@@ -41,6 +41,8 @@ def _validate_name(name: str) -> None:
         raise ValueError(
             "name solo puede contener letras, digitos, '-' y '_'"
         )
+    if len(name) > 64:
+        raise ValueError("name no puede tener mas de 64 caracteres")
 
 
 def create_client(name: str, clients_root: Path) -> Path:
