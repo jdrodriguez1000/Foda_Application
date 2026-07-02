@@ -48,6 +48,7 @@ Cada decisión sigue el formato: **ID**, **título**, **estado** (Propuesta / Ac
 | D-029 | Taxonomía de bandas y ejes de crecimiento del producto (vertical feature vs. horizontal producto) | Aceptada | 2026-07-02 |
 | D-030 | Contratos en dos niveles: `feature_contract` (adoptado) + `slice_contract` (diferido) | Aceptada | 2026-07-02 |
 | D-031 | Cadena de trazabilidad codificada HU→CA→TSK y tareas atómicas del plan | Aceptada | 2026-07-02 |
+| D-032 | GATE PA-3 (opción c): posponer el rollback best-effort DS-2.2 (caso TDD 18) a banda `stab_n`; refina D-028 | Aceptada | 2026-07-02 |
 
 ## 3. Detalle de Decisiones
 
@@ -260,6 +261,13 @@ Cada decisión sigue el formato: **ID**, **título**, **estado** (Propuesta / Ac
 - **Contexto:** D-017 mencionaba un `slice_contract "nivel banda"` que nunca se definió ni creó. Al formalizar el modelo de bandas (D-029) se vio la necesidad de un contrato explícito por feature (materializa P5 — contratos explícitos antes de ejecutar). El usuario decidió DOS artefactos separados.
 - **Decisión:** (1) **`feature_contract` (por feature):** es la "estrella polar" / definición de "terminado" total de la feature. Es OBLIGATORIO y debe existir ANTES de iniciar la primera banda. Vive a NIVEL FEATURE, por encima de las bandas: `600_features/<feature>/feature_contract.md`. Lo crea el agente `feature_definer` (decisión del usuario). Materializa P5. (2) **`slice_contract` (por celda/banda):** define qué entrega cada banda como slice hacia el `feature_contract`. Su ADOPCIÓN queda DIFERIDA (no se construye ni se exige todavía; E4/NC-2). (3) **Nota abierta:** cuando se adopte el `slice_contract`, podría FUSIONARSE con `spec.md` (que ya captura comportamiento + criterios de aceptación por celda) para evitar duplicación (E4); queda como decisión futura, sin resolver ahora. (4) **Retro-ajuste pendiente:** `client_scaffold` ejecutó su `tracer_bullet` SIN `feature_contract`, por lo que queda temporalmente no-conforme; debe retro-escribirse su `feature_contract` como parte de la tarea nueva.
 - **Consecuencias:** Contratos explícitos alineados con P5; el `feature_definer` gana la responsabilidad de crear el `feature_contract`. Pendiente de aplicar en docs, plantilla y agente (ver tarea nueva en `tasks.md`). No se editó ningún documento en esta sesión; queda para la próxima.
+
+### D-032 — GATE PA-3 (opción c): posponer el rollback best-effort DS-2.2 (caso 18) a banda `stab_n`
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-02
+- **Contexto:** El plan de `client_scaffold` reservaba el caso TDD #18 (rollback best-effort ante fallo de filesystem a mitad de creación, DS-2.2) como GATE humano opcional (D-028 preveía "implementar sin test"). Al llegar al caso 18 tras cerrar en verde los casos 1-17 (26 tests), se presentaron al humano 3 opciones: (a) implementar sin test como preveía D-028, (b) implementar con un test que simule el fallo de I/O, (c) posponer el rollback por completo a una banda de estabilización posterior.
+- **Decisión:** El humano eligió la opción **(c) POSPONER**. No se implementa ni testea DS-2.2 en la banda `tracer_bullet`. `client_scaffold` cierra su tracer_bullet solo con la estrategia validación-primero (DS-2.1, D-024), que ya cubre los escenarios realistas (nombre inválido, cliente duplicado) sin llegar a mutar disco antes de fallar. El error raro de filesystem a mitad de creación del árbol se acepta como limitación conocida y documentada de esta banda. Esta decisión **refina D-028**: en vez de "implementar sin test", el caso 18 queda `deferred` en `state.json` con el campo `gate_decision` registrando la justificación, para una banda `stab_n` futura.
+- **Consecuencias:** El core `create_client(...)` no implementa rollback/limpieza best-effort; un fallo de I/O a mitad de creación puede dejar un árbol parcial en disco (límite conocido, análogo a A-007/A-008). El bucle TDD de `client_scaffold` (casos 1-17) queda cerrado con 26 tests en verde sin este caso. Trabajo pendiente explícito para una banda `stab_n` de `client_scaffold`: escribir el test que simule el fallo de I/O e implementar DS-2.2.
 
 ### D-031 — Cadena de trazabilidad codificada HU→CA→TSK y tareas atómicas del plan
 - **Estado:** Aceptada

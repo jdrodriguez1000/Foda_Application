@@ -41,16 +41,19 @@
 ## 3. Tareas En Progreso
 | ID | Tarea | Prioridad | Notas |
 |---|---|---|---|
-| T-013 | Construir la primera feature real del sistema: `client_scaffold` (`foda client new <NAME>`), ejecutando la cadena de 8 agentes de punta a punta | 🔴 Alta | Valida A-005. Alcance acordado con el usuario (ver D-016). Etapas completadas: 1) `feature_definer` ✅ (`definition.md`, commit `453a386`); 2) `spec_writer` ✅ (`spec.md`, commit `bb3b60a`, GATE humano APROBADO — resolvió DS-1/D-023, DS-2/D-024, DS-3/D-025, 11 criterios de aceptación); 3) `plan_builder` ✅ (`plan.md` con 18 casos TDD, commit `0c2d682`, GATE humano APROBADO — confirmó PA-1/D-026 adoptar PyYAML, PA-2/D-027 bootstrap del paquete dentro de la feature, PA-3/D-028 caso 18 sin test en tracer_bullet). T-021 y T-022 ya completadas: `definition.md`/`spec.md`/`plan.md` fueron retro-ajustados con `feature_contract` (D-030) y trazabilidad HU→CA→TSK (D-031); el contenido de los 18 casos no cambió. **Próximo paso:** re-confirmar con el humano el GATE de plan retro-ajustado (A-009) y luego invocar `tdd_tester` con el caso TDD #1 (crea `tmp/ABC/` y devuelve su Path). |
+| T-013 | Construir la primera feature real del sistema: `client_scaffold` (`foda client new <NAME>`), ejecutando la cadena de 8 agentes de punta a punta | 🔴 Alta | Valida A-005 (validado en gran medida). Alcance acordado con el usuario (ver D-016). Etapas completadas: 1) `feature_definer` ✅; 2) `spec_writer` ✅ (GATE APROBADO); 3) `plan_builder` ✅ (GATE APROBADO, retro-ajustado con trazabilidad D-031, GATE re-confirmado A-009 validado); 4) **bucle TDD del core cerrado** — casos 1-17 recorridos con tdd_tester→tdd_coder→tdd_refactor (varios "verde directo": 3, 5, 8, 15, 17, ver L-020), 26 tests en verde sin regresiones; caso 18 (rollback DS-2.2) **diferido** por GATE PA-3 opción (c) (D-032), no entra en esta banda. Bootstrap del paquete `foda` hecho dentro de la feature (`pyproject.toml`, src-layout, `src/foda/core/scaffold.py` con `create_client`+`_validate_name`, `tests/core/test_scaffold.py`). **Falta:** etapa `integration_tester`, etapa `spec_verifier` (`verification.md`), y cablear la capa CLI (TSK-07: `foda client new <NAME>` sobre el core, sin test en esta banda). **Próximo paso:** invocar `integration_tester` con el nombre de la feature. |
 
 ## 4. Tareas Pendientes
-_Ninguna pendiente sin iniciar; ver Tareas En Progreso (T-013)._
+| ID | Tarea | Prioridad | Notas |
+|---|---|---|---|
+| T-023 | Cablear la capa CLI `foda client new <NAME>` (TSK-07) sobre el core `create_client` de `client_scaffold` | 🟡 Media | Sin test en esta banda (según plan). Decidir en la próxima sesión si entra en el cierre de la banda `tracer_bullet` de T-013 o si se difiere a una banda posterior; coordinar con `integration_tester`/`spec_verifier`. |
 
 ## 5. Backlog
 | ID | Tarea | Notas |
 |---|---|---|
 | T-014 | Construir feature `client_context` (resolución de rutas, cliente nuevo vs. recurrente) | Depende de T-013 (`client_scaffold`). Orden abajo-hacia-arriba acordado en D-016. |
 | T-015 | Construir feature `flow_base` (abstracción `Flow`: load_inputs → validate → execute → write_outputs) | Depende de T-014 (`client_context`). Orden abajo-hacia-arriba acordado en D-016. |
+| T-024 | `client_scaffold` banda `stab_n`: escribir test que simule fallo de I/O e implementar el rollback best-effort DS-2.2 (caso 18) | Trabajo diferido por GATE PA-3 opción (c), ver D-032. |
 | ~~T-017~~ | ~~Construir los agentes runtime del patrón A/B/C descrito en `980_guideline/` (`foda-governor`, `foda-<flujo>-planner`, `foda-<flujo>-evaluator`)~~ | **Cancelada por D-020** (2026-07-02): el runtime NO es agéntico; lo define exclusivamente `system_design.md`. |
 | ~~T-018~~ | ~~Reconciliar por completo el plano runtime descrito en `980_guideline/` (`fda-*-state.json`, `install.sh`, distinción planos MOTOR/INSTANCIA) con la arquitectura ya construida~~ | **Cancelada por D-020** (2026-07-02): se descartan MOTOR/INSTANCIA y `fda-*-state.json`; no hay plano runtime que reconciliar. |
 | T-020 | Diseñar las rúbricas calibradas concretas (dimensiones+pesos, few-shot, anclas) para las salidas no deterministas de Discovery y Exploration | Trabajo futuro identificado en D-022. Se hará al construir esos flujos, después de T-013/T-014/T-015. |
