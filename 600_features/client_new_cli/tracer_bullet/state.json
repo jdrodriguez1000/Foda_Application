@@ -2,11 +2,11 @@
   "feature": "client_new_cli",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "tdd_tester",
+  "current_stage": "tdd_coder",
   "suspension": {
     "suspended": false,
     "reason": "Plan y 12 casos TDD aprobados por el humano; ejecucion del bucle TDD suspendida por decision del humano.",
-    "resume_at": "Invocar tdd_tester con el caso 1 (primer caso pendiente)."
+    "resume_at": "Invocar tdd_refactor con el caso 1 (mismo caso, fase refactor)."
   },
   "stages": {
     "feature_definer":   { "status": "done",    "artifact": "definition.md" },
@@ -15,7 +15,7 @@
     "tdd": {
       "status": "pending",
       "cases": [
-        { "id": 1,  "desc": "main([\"client\",\"new\",\"ABC\"]) con cwd dentro de un proyecto temporal (existe <raiz>/pyproject.toml) devuelve el int 0 (camino feliz, invocabilidad).", "status": "red", "test": "tests/cli/test_client_new_cli.py::test_main_camino_feliz_devuelve_0", "red_evidence": "NotImplementedError: main() aun no implementado (esqueleto TDD, pendiente TSK-02/03/04)" },
+        { "id": 1,  "desc": "main([\"client\",\"new\",\"ABC\"]) con cwd dentro de un proyecto temporal (existe <raiz>/pyproject.toml) devuelve el int 0 (camino feliz, invocabilidad).", "status": "green", "test": "tests/cli/test_client_new_cli.py::test_main_camino_feliz_devuelve_0", "green_evidence": "pytest tests/cli/test_client_new_cli.py::test_main_camino_feliz_devuelve_0 -q -> 1 passed; pytest -q (suite completa) -> 33 passed, sin regresiones", "src_files": ["src/foda/cli.py"] },
         { "id": 2,  "desc": "En el camino de exito, main(...) crea el arbol de cliente en <raiz>/clients/ABC/ (existe <raiz>/clients/ABC/client.yaml y las carpetas del scaffold).", "status": "pending" },
         { "id": 3,  "desc": "En el camino de exito, la salida capturada en stdout contiene la ruta de <raiz>/clients/ABC.", "status": "pending" },
         { "id": 4,  "desc": "Con create_client espiado/monkeypatcheado, main([\"client\",\"new\",\"ABC\"]) lo invoca exactamente una vez con name == \"ABC\" y clients_root == <raiz>/clients.", "status": "pending" },
