@@ -188,7 +188,9 @@
         {
           "id": 16,
           "desc": "Nombre de longitud > 64 (65 caracteres validos) lanza ValueError; nada creado (AC8, AC11)",
-          "status": "pending"
+          "status": "red",
+          "test": "tests/core/test_scaffold.py::test_create_client_nombre_muy_largo_lanza_valueerror_y_no_crea_nada",
+          "red_evidence": "1 failed, 24 passed en tests/core/test_scaffold.py. Failed: DID NOT RAISE ValueError, porque _validate_name aun no valida longitud (solo vacio, primer caracter -/_, y whitelist de caracteres); create_client crea la carpeta 'a'*65 sin problema. Rojo por la razon esperada (falta la regla DS-1 de longitud maxima 64), no por error de import/sintaxis."
         },
         {
           "id": 17,

@@ -245,6 +245,25 @@ def test_create_client_nombre_no_ascii_lanza_valueerror_y_no_crea_nada(
     assert list(clients_root.iterdir()) == []
 
 
+def test_create_client_nombre_muy_largo_lanza_valueerror_y_no_crea_nada(
+    tmp_path: Path,
+) -> None:
+    """Caso 16 (CA-08, CA-11): create_client(nombre, tmp) lanza ValueError
+    para un nombre de 65 caracteres validos (DS-1: la longitud maxima
+    permitida es 64; 65 caracteres validos, "a" * 65, ya excede el limite
+    aunque cada caracter individual pertenezca al conjunto permitido). No
+    debe crearse ninguna carpeta nueva bajo clients_root (tmp queda tal cual
+    estaba antes de la llamada, sin entradas nuevas)."""
+    clients_root = tmp_path / "root"
+    clients_root.mkdir()
+    name = "a" * 65
+
+    with pytest.raises(ValueError):
+        create_client(name, clients_root)
+
+    assert list(clients_root.iterdir()) == []
+
+
 @pytest.mark.parametrize("name", ["X", "9lives", "Client_1-a"])
 def test_create_client_nombres_validos_representativos_crean_arbol_completo(
     tmp_path: Path, name: str
