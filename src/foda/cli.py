@@ -2,14 +2,15 @@
 
 Fuente: 600_features/client_new_cli/tracer_bullet/spec.md.
 
-Implementacion parcial (TDD, casos 1-7 en verde / TSK-02, TSK-03, TSK-04):
-parser argparse minimo, resolucion de la raiz del proyecto (marcador
-pyproject.toml) hacia arriba desde el cwd (D-C) con su fallo controlado
-(DS-CLI-1: raiz no encontrada -> stderr + codigo 1, sin tocar disco),
-aseguramiento de clients_root, delegacion en create_client y traduccion del
-camino de exito a consola. La traduccion de errores del core (ValueError /
-FileExistsError) y los errores de parseo de argparse las agregan los casos
-siguientes del bucle TDD (TSK-05).
+Implementacion parcial (TDD, casos 1-8 en verde / TSK-02, TSK-03, TSK-04,
+TSK-05 parcial): parser argparse minimo, resolucion de la raiz del proyecto
+(marcador pyproject.toml) hacia arriba desde el cwd (D-C) con su fallo
+controlado (DS-CLI-1: raiz no encontrada -> stderr + codigo 1, sin tocar
+disco), aseguramiento de clients_root, delegacion en create_client,
+traduccion del camino de exito a consola y traduccion de ValueError (nombre
+invalido) a stderr + codigo 1. La traduccion de FileExistsError (duplicado)
+y los errores de parseo de argparse los agregan los casos siguientes del
+bucle TDD.
 """
 
 from __future__ import annotations
@@ -46,21 +47,25 @@ def _find_project_root(start: Path) -> Path | None:
         current = current.parent
 
 
+def _protect_dash_prefixed_name(argv: list[str]) -> list[str]:
+    """Si argv es 'client new <NAME>' y NAME empieza con "-" (p. ej. "-x"),
+    inserta un separador "--" antes de NAME para que argparse lo trate como
+    valor posicional en vez de opcion desconocida, dejando que create_client
+    lo rechace como nombre invalido (CA-07/DS-CLI-3)."""
+    if (
+        len(argv) >= 3
+        and argv[0] == "client"
+        and argv[1] == "new"
+        and argv[2].startswith("-")
+        and argv[2] != "--"
+    ):
+        return argv[:2] + ["--"] + argv[2:]
+    return argv
+
+
 def main(argv: list[str] | None = None) -> int:
     """Punto de entrada de la CLI `foda`. Ver spec.md para el contrato completo."""
-    raw_argv = list(sys.argv[1:] if argv is None else argv)
-    # Un NAME que empieza con "-" (p. ej. "-x") no debe interpretarse como una
-    # opcion desconocida de argparse: se marca el fin de opciones con "--"
-    # para que llegue como valor posicional y sea create_client quien lo
-    # rechace como nombre invalido (CA-07/DS-CLI-3).
-    if (
-        len(raw_argv) >= 3
-        and raw_argv[0] == "client"
-        and raw_argv[1] == "new"
-        and raw_argv[2].startswith("-")
-        and raw_argv[2] != "--"
-    ):
-        raw_argv = raw_argv[:2] + ["--"] + raw_argv[2:]
+    raw_argv = _protect_dash_prefixed_name(list(sys.argv[1:] if argv is None else argv))
 
     parser = _build_parser()
     args = parser.parse_args(raw_argv)
