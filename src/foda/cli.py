@@ -2,12 +2,14 @@
 
 Fuente: 600_features/client_new_cli/tracer_bullet/spec.md.
 
-Implementacion parcial (TDD, caso 1 en verde / TSK-02, TSK-03, TSK-04): parser
-argparse minimo, resolucion de la raiz del proyecto (marcador pyproject.toml)
-hacia arriba desde el cwd (D-C), aseguramiento de clients_root, delegacion en
-create_client y traduccion del camino de exito a consola. La traduccion de
-errores del core (ValueError / FileExistsError) y del caso de raiz no
-encontrada la agregan los casos siguientes del bucle TDD (TSK-03, TSK-05).
+Implementacion parcial (TDD, casos 1-7 en verde / TSK-02, TSK-03, TSK-04):
+parser argparse minimo, resolucion de la raiz del proyecto (marcador
+pyproject.toml) hacia arriba desde el cwd (D-C) con su fallo controlado
+(DS-CLI-1: raiz no encontrada -> stderr + codigo 1, sin tocar disco),
+aseguramiento de clients_root, delegacion en create_client y traduccion del
+camino de exito a consola. La traduccion de errores del core (ValueError /
+FileExistsError) y los errores de parseo de argparse las agregan los casos
+siguientes del bucle TDD (TSK-05).
 """
 
 from __future__ import annotations
