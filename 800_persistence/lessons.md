@@ -25,6 +25,7 @@ Cada lección incluye: **ID**, **contexto** (qué pasó), **lección** (qué apr
 | ID | Contexto | Lección | Acción |
 |---|---|---|---|
 | L-001 | Arranque del proyecto | Definir persistencia y protocolos desde el inicio da trazabilidad y continuidad entre sesiones. | Mantener disciplina: ejecutar `foda-next` al iniciar y `foda-status` al cerrar. |
+| L-004 | Se diseñó `700_architecture/system_design.md` definiendo primero principios (determinista por defecto, LLM aislado, artefactos como contrato entre flujos) antes de codificar. | Definir principios de diseño antes de codificar produce una arquitectura testeable y reproducible. | Mantener el documento de diseño como referencia obligatoria antes de iniciar cualquier construcción de código. |
 
 ## 4. Lecciones de Producto/Negocio
 | ID | Contexto | Lección | Acción |

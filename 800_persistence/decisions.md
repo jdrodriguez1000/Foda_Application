@@ -22,6 +22,8 @@ Cada decisión sigue el formato: **ID**, **título**, **estado** (Propuesta / Ac
 | D-003 | Cierre de sesión finaliza con commit y push a Git | Aceptada | 2026-07-01 |
 | D-004 | Skills de proyecto para inicio y cierre de sesión | Reemplazada por D-005 | 2026-07-01 |
 | D-005 | Migrar protocolos de inicio/cierre de skills a subagentes | Aceptada | 2026-07-01 |
+| D-006 | Arquitectura del sistema como pipeline de flujos deterministas con artefactos como contrato | Aceptada | 2026-07-01 |
+| D-007 | Crear carpeta `700_architecture/` para documentación de arquitectura | Aceptada | 2026-07-01 |
 
 ## 3. Detalle de Decisiones
 
@@ -59,3 +61,17 @@ Cada decisión sigue el formato: **ID**, **título**, **estado** (Propuesta / Ac
 - **Contexto:** Las skills invocadas con slash command corren inline en el modelo de la sesión principal; el frontmatter `model:` de la skill no tiene efecto. Esto impedía fijar un modelo económico (Haiku) para el inicio de sesión y uno más capaz (Sonnet) para el cierre.
 - **Decisión:** Reemplazar las skills `foda-next` y `foda-status` por dos subagentes en `.claude/agents/`: `session_starter` (model `haiku`, color amarillo, ejecuta el protocolo de inicio) y `session_closer` (model `sonnet`, color verde, ejecuta el protocolo de cierre). La sesión principal pasa a ejecutarse en Opus. Se eliminaron las skills antiguas y la carpeta `.claude/skills/`.
 - **Consecuencias:** Se gana control del modelo por protocolo (economía en el inicio, capacidad en el cierre). Se pierde la invocación directa por slash command; ahora se invocan vía la herramienta Agent. Como los subagentes arrancan en frío, el cierre de sesión depende de que la sesión principal le entregue un resumen completo de lo trabajado.
+
+### D-006 — Arquitectura del sistema como pipeline de flujos deterministas con artefactos como contrato
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-01
+- **Contexto:** Triple S necesita replicar la lógica del científico de datos de forma escalable, migrando de un modelo manual a un modelo Service as a Software (SaaSw) que automatice 85-95% del trabajo, dejando al científico de datos como revisor/aprobador.
+- **Decisión:** CLI en Python; multi-tenant por carpeta-por-cliente en disco (sin BD); capas medallion (bronze/silver/gold); YAML como entrada (config/decisión humana) y JSON como salida (resultado máquina); LLM encapsulado y usado solo en los flujos Discovery y Exploration; el resto del pipeline es determinista; abstracción común `Flow` (load_inputs → validate → execute → write_outputs) y `ClientContext`; caminos de ejecución diferenciados para cliente nuevo (genera modelo) vs cliente recurrente (reutiliza modelo). Documentado en `700_architecture/system_design.md`.
+- **Consecuencias:** Core reproducible y testeable al aislar el LLM en dos flujos concretos. El documento es vivo y se afinará iterativamente. La persistencia en archivos (sin BD) puede migrar a base de datos en el futuro detrás de la abstracción `ClientContext` sin afectar al resto del sistema.
+
+### D-007 — Crear carpeta `700_architecture/` para documentación de arquitectura
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-01
+- **Contexto:** Se necesitaba un lugar para la documentación técnica de arquitectura, separado de `990_documents/` que guarda los documentos de negocio entregados por el usuario.
+- **Decisión:** Crear `700_architecture/` y ubicar allí `system_design.md`.
+- **Consecuencias:** Separación clara entre documentos de negocio (entrada) y documentos de diseño técnico (producidos por el equipo/agentes).
