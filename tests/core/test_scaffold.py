@@ -159,6 +159,28 @@ def test_create_client_nombre_inicia_guion_o_underscore_lanza_valueerror_y_no_cr
     assert list(clients_root.iterdir()) == []
 
 
+@pytest.mark.parametrize("name", ["a/b", "a\\b"])
+def test_create_client_nombre_con_separador_de_ruta_lanza_valueerror_y_no_crea_nada(
+    tmp_path: Path, name: str
+) -> None:
+    """Caso 12 (CA-08, CA-11): create_client(nombre, tmp) lanza ValueError
+    para un nombre con separador de ruta, ya sea "/" ("a/b") o "\\" ("a\\b")
+    (DS-1: el conjunto permitido es solo letras/digitos/_/-; los separadores
+    de ruta quedan fuera y deben rechazarse antes de tocar el filesystem,
+    para evitar escritura fuera de clients_root). No debe crearse ninguna
+    carpeta bajo clients_root (tmp queda tal cual estaba antes de la
+    llamada, sin entradas nuevas). Cada nombre usa su propia clients_root
+    (subcarpeta de tmp_path) para evitar interferencia entre
+    parametrizaciones."""
+    clients_root = tmp_path / "root"
+    clients_root.mkdir()
+
+    with pytest.raises(ValueError):
+        create_client(name, clients_root)
+
+    assert list(clients_root.iterdir()) == []
+
+
 @pytest.mark.parametrize("name", ["X", "9lives", "Client_1-a"])
 def test_create_client_nombres_validos_representativos_crean_arbol_completo(
     tmp_path: Path, name: str

@@ -146,7 +146,9 @@
         {
           "id": 12,
           "desc": "Nombre con separador de ruta \"a/b\" o \"a\\\\b\" lanza ValueError; nada creado (AC8, AC11)",
-          "status": "pending"
+          "status": "red",
+          "test": "tests/core/test_scaffold.py::test_create_client_nombre_con_separador_de_ruta_lanza_valueerror_y_no_crea_nada",
+          "red_evidence": "2 failed, 15 passed en tests/core/test_scaffold.py. Ambas parametrizaciones ([a/b] y [a\\\\b]): 'Failed: DID NOT RAISE ValueError' porque _validate_name aun no rechaza separadores de ruta; Path trata tanto '/' como '\\\\' como separador en Windows, por lo que clients_root / name resuelve a una subruta anidada (p.ej. root/a/b) y client_dir.mkdir(parents=True) la crea sin problema en vez de fallar. Rojo por la razon esperada (falta la regla DS-1 de rechazo de separadores de ruta), no por error de import/sintaxis."
         },
         {
           "id": 13,
