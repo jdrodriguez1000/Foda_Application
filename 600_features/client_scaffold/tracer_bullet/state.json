@@ -2,7 +2,7 @@
   "feature": "client_scaffold",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "tdd_coder",
+  "current_stage": "tdd_tester",
   "stages": {
     "feature_definer": {
       "status": "done",
@@ -24,7 +24,7 @@
     },
     "tdd": {
       "status": "in_progress",
-      "current_stage": "tdd_coder",
+      "current_stage": "tdd_tester",
       "next_case": 14,
       "cases": [
         {
@@ -158,13 +158,14 @@
         {
           "id": 13,
           "desc": "Nombres de ruta especiales \".\" y \"..\" lanzan ValueError; nada creado (AC8, AC11)",
-          "status": "green",
+          "status": "done",
           "test": "tests/core/test_scaffold.py::test_create_client_nombre_ruta_especial_lanza_valueerror_y_no_crea_nada",
           "red_evidence": "2 failed, 17 passed en tests/core/test_scaffold.py. Ambas parametrizaciones ([.] y [..]): FileExistsError [WinError 183] en client_dir.mkdir(parents=True) en vez de ValueError, porque _validate_name aun no rechaza \".\"/\"..\"; clients_root / \".\" resuelve a la propia clients_root (ya existente) y clients_root / \"..\" resuelve a su carpeta padre (tambien ya existente), por lo que mkdir(parents=True) falla con FileExistsError antes de que create_client pueda validar el nombre. Rojo por la razon esperada (falta la regla DS-1 de rechazo de nombres de ruta especiales), no por error de import/sintaxis.",
           "green_files": [
             "src/foda/core/scaffold.py"
           ],
-          "green_evidence": "2 passed (caso 13) y 19 passed (suite completa, sin regresiones). Se agrego la regla name in (\".\", \"..\") a _validate_name, que rechaza los nombres de ruta especiales antes de tocar el filesystem, sin adelantar las reglas de los casos 14-16 (NC-2/NC-3). No se rompe el caso 8 (nombres validos no son \".\" ni \"..\")."
+          "green_evidence": "2 passed (caso 13) y 19 passed (suite completa, sin regresiones). Se agrego la regla name in (\".\", \"..\") a _validate_name, que rechaza los nombres de ruta especiales antes de tocar el filesystem, sin adelantar las reglas de los casos 14-16 (NC-2/NC-3). No se rompe el caso 8 (nombres validos no son \".\" ni \"..\").",
+          "refactor_note": "Sin refactor aplicado (NC-2/NC-3): _validate_name tiene hoy cinco guardas (vacio, espacios, primer caracter -/_, separador de ruta, \".\"/\"..\"), cada una de 2 lineas, con nombre claro, mensajes de error especificos y un unico punto de llamada al inicio de create_client; no hay duplicacion que extraer. Introducir una tabla de reglas, regex o whitelist sigue siendo prematuro con solo 5 de las 7 reglas de DS-1 implementadas (mismo razonamiento que los casos 10-12: el diseno final de _validate_name se decide mejor una vez agregadas las reglas 14-16, para no adivinar la forma correcta ni anadir indireccion no solicitada). Suite completa en verde (19 passed) sin cambios de codigo."
         },
         {
           "id": 14,
