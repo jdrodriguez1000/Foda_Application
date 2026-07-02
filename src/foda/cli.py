@@ -2,15 +2,15 @@
 
 Fuente: 600_features/client_new_cli/tracer_bullet/spec.md.
 
-Implementacion parcial (TDD, casos 1-8 en verde / TSK-02, TSK-03, TSK-04,
-TSK-05 parcial): parser argparse minimo, resolucion de la raiz del proyecto
+Implementacion parcial (TDD, casos 1-9 en verde / TSK-02, TSK-03, TSK-04,
+TSK-05): parser argparse minimo, resolucion de la raiz del proyecto
 (marcador pyproject.toml) hacia arriba desde el cwd (D-C) con su fallo
 controlado (DS-CLI-1: raiz no encontrada -> stderr + codigo 1, sin tocar
 disco), aseguramiento de clients_root, delegacion en create_client,
 traduccion del camino de exito a consola y traduccion de ValueError (nombre
-invalido) a stderr + codigo 1. La traduccion de FileExistsError (duplicado)
-y los errores de parseo de argparse los agregan los casos siguientes del
-bucle TDD.
+invalido) / FileExistsError (duplicado) a stderr + codigo 1. Los errores de
+parseo de argparse (NAME ausente, subcomando desconocido) los agregan los
+casos siguientes del bucle TDD.
 """
 
 from __future__ import annotations
@@ -86,6 +86,9 @@ def main(argv: list[str] | None = None) -> int:
         created_path = create_client(args.name, clients_root)
     except ValueError as exc:
         print(f"foda: nombre de cliente invalido: {exc}", file=sys.stderr)
+        return 1
+    except FileExistsError as exc:
+        print(f"foda: el cliente ya existe: {exc}", file=sys.stderr)
         return 1
 
     print(created_path)
