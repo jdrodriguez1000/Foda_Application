@@ -24,8 +24,8 @@
     },
     "tdd": {
       "status": "in_progress",
-      "current_stage": "tdd_tester",
-      "next_case": 14,
+      "current_stage": "tdd_coder",
+      "next_case": 15,
       "cases": [
         {
           "id": 1,
@@ -170,9 +170,13 @@
         {
           "id": 14,
           "desc": "Nombre con punto interior \"ab.c\" o caracter no permitido (\"a!b\", \"a@b\") lanza ValueError; nada creado (AC8, AC11)",
-          "status": "red",
+          "status": "green",
           "test": "tests/core/test_scaffold.py::test_create_client_nombre_con_caracter_no_permitido_lanza_valueerror_y_no_crea_nada",
-          "red_evidence": "3 failed, 19 passed en tests/core/test_scaffold.py. Las tres parametrizaciones ([ab.c], [a!b], [a@b]): 'Failed: DID NOT RAISE ValueError' porque _validate_name aun no rechaza el punto interior ni caracteres fuera de la whitelist alfanumerico-ASCII/_/- (DS-1); create_client procede a crear la carpeta con normalidad (Path acepta esos caracteres sin problema en Windows). Rojo por la razon esperada (falta la regla DS-1 de whitelist de caracteres permitidos), no por error de import/sintaxis."
+          "red_evidence": "3 failed, 19 passed en tests/core/test_scaffold.py. Las tres parametrizaciones ([ab.c], [a!b], [a@b]): 'Failed: DID NOT RAISE ValueError' porque _validate_name aun no rechaza el punto interior ni caracteres fuera de la whitelist alfanumerico-ASCII/_/- (DS-1); create_client procede a crear la carpeta con normalidad (Path acepta esos caracteres sin problema en Windows). Rojo por la razon esperada (falta la regla DS-1 de whitelist de caracteres permitidos), no por error de import/sintaxis.",
+          "green_files": [
+            "src/foda/core/scaffold.py"
+          ],
+          "green_evidence": "3 passed (caso 14) y 22 passed (suite completa, sin regresiones). Se agrego la regla de whitelist _ALLOWED_CHARS = re.compile(r\"[A-Za-z0-9_-]+\") a _validate_name (guarda final: `if not _ALLOWED_CHARS.fullmatch(name): raise ValueError(...)`), que rechaza cualquier caracter fuera de alfanumerico-ASCII/-/_  antes de tocar el filesystem, sin adelantar la regla de longitud>64 (caso 16). Como efecto colateral legitimo de la whitelist (no un adelanto artificial), tambien cubre el caso 15 (nombres no-ASCII/acentuados), ya que esos caracteres tampoco matchean la whitelist. No se elimino ninguna de las 5 guardas previas (vacio, espacios, -/_ inicial, separadores, \".\"/\"..\"): siguen siendo redundantes-pero-coherentes con la whitelist; su eliminacion es decision de tdd_refactor. No se rompe el caso 8 (\"X\", \"9lives\", \"Client_1-a\" matchean la whitelist)."
         },
         {
           "id": 15,

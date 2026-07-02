@@ -3,10 +3,13 @@
 Fuente: 600_features/client_scaffold/tracer_bullet/spec.md.
 """
 
+import re
 from datetime import date
 from pathlib import Path
 
 import yaml
+
+_ALLOWED_CHARS = re.compile(r"[A-Za-z0-9_-]+")
 
 
 _TOP_LEVEL_DIRS = ("010_inputs", "020_outputs", "data", "models")
@@ -35,6 +38,10 @@ def _validate_name(name: str) -> None:
         raise ValueError("name no puede contener separadores de ruta")
     if name in (".", ".."):
         raise ValueError("name no puede ser \".\" ni \"..\"")
+    if not _ALLOWED_CHARS.fullmatch(name):
+        raise ValueError(
+            "name solo puede contener letras, digitos, '-' y '_'"
+        )
 
 
 def create_client(name: str, clients_root: Path) -> Path:
