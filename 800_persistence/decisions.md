@@ -26,6 +26,11 @@ Cada decisión sigue el formato: **ID**, **título**, **estado** (Propuesta / Ac
 | D-007 | Crear carpeta `700_architecture/` para documentación de arquitectura | Aceptada | 2026-07-01 |
 | D-008 | Adoptar metodología SDD + TDD mediante una cadena de 8 agentes de desarrollo | Aceptada | 2026-07-01 |
 | D-009 | Fuente única de verdad de los protocolos de sesión en los archivos de los subagentes; CLAUDE.md delega e invoca por frase-gatillo | Aceptada | 2026-07-01 |
+| D-010 | Python 3.13+ como versión obligatoria (R1) | Aceptada | 2026-07-01 |
+| D-011 | Versionado de modelos ML en disco con puntero `latest`, en vez de sobrescribir un único `best_model.pkl` | Aceptada | 2026-07-01 |
+| D-012 | Exports/descargables ubicados dentro de `020_outputs/<flujo>/`, sin carpeta `exports/` separada | Aceptada | 2026-07-01 |
+| D-013 | API de Anthropic (Claude) como proveedor LLM por defecto, tras la abstracción `src/foda/llm/` | Aceptada | 2026-07-01 |
+| D-014 | Los contratos de flujo permiten dependencias multi-flujo (no solo del flujo inmediatamente anterior) | Aceptada | 2026-07-01 |
 
 ## 3. Detalle de Decisiones
 
@@ -91,3 +96,38 @@ Cada decisión sigue el formato: **ID**, **título**, **estado** (Propuesta / Ac
 - **Contexto:** El protocolo de sesión estaba escrito 3 veces (`CLAUDE.md`, `session_starter.md`, `session_closer.md`), lo que causó una referencia colgante a las skills `foda-next`/`foda-status` ya eliminadas (ver T-006/D-005) dentro de los agentes, y riesgo de desincronización futura entre los tres documentos. Además, nada ordenaba invocar `session_starter`/`session_closer`, por lo que no se ejecutaban automáticamente al iniciar/cerrar sesión.
 - **Decisión:** (a) el detalle paso a paso del protocolo vive únicamente en `.claude/agents/session_starter.md` y `.claude/agents/session_closer.md`, cada uno declarado explícitamente como fuente única de verdad; (b) `CLAUDE.md` §1/§2 se reduce a una política corta que delega en los subagentes, sin repetir pasos ni detalle de git ni de lectura por índice; (c) la invocación se dispara por frase-gatillo dicha por el usuario a la sesión principal: "iniciemos la sesión" invoca `session_starter`, "cerremos la sesión" invoca `session_closer` (con el resumen de la sesión en el prompt). No se usan hooks.
 - **Consecuencias:** Se elimina la duplicación y la referencia colgante a skills eliminadas. `CLAUDE.md` queda más corto y estable; los agentes son autosuficientes al arrancar en frío. La invocación depende de que el usuario (o la sesión principal) use la frase-gatillo; se descartó por ahora un hook `SessionStart` automático por simplicidad, quedando como opción futura. Complementa/continúa D-005.
+
+### D-010 — Python 3.13+ como versión obligatoria (R1)
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-01
+- **Contexto:** Al validar la sección 3 (restricciones) de `system_design.md` con el usuario, la restricción R1 decía solo "Python" sin versión mínima.
+- **Decisión:** Fijar Python 3.13+ como versión mínima obligatoria para todo el proyecto.
+- **Consecuencias:** Se puede usar sintaxis y librerías compatibles solo con 3.13+; hay que verificar disponibilidad de esa versión en los entornos de despliegue/cliente.
+
+### D-011 — Versionado de modelos ML en disco con puntero `latest`
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-01
+- **Contexto:** El diseño original (v0.1) de la sección 7 (estructura de carpetas) guardaba un único `models/best_model.pkl`, sobrescribiéndolo en cada reentrenamiento, sin trazabilidad de versiones anteriores.
+- **Decisión:** `models/` pasa a tener subcarpetas por versión (ej. `2026-07_v1/best_model.pkl` + metadatos) y un puntero `latest` que señala a la versión vigente.
+- **Consecuencias:** Se gana trazabilidad y capacidad de rollback entre versiones de modelo; Inferences y otros flujos consumidores deben resolver el modelo vigente vía `models/latest` en lugar de una ruta fija. Aumenta ligeramente la complejidad de gestión de archivos.
+
+### D-012 — Exports/descargables dentro de `020_outputs/<flujo>/`
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-01
+- **Contexto:** El diseño original (v0.1) contemplaba una carpeta `exports/` separada para artefactos descargables (csv/xlsx de Profiling, Reporting, etc.).
+- **Decisión:** Los artefactos descargables se guardan dentro de `020_outputs/<flujo>/`, junto con el resto de las salidas de ese flujo, sin carpeta `exports/` separada.
+- **Consecuencias:** Estructura de carpetas más simple y consistente (todo lo que produce un flujo vive bajo su propio `020_outputs/<flujo>/`); no hay una ubicación centralizada única para todos los descargables del cliente.
+
+### D-013 — API de Anthropic (Claude) como proveedor LLM por defecto
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-01
+- **Contexto:** La sección 14 (encapsulamiento LLM) de `system_design.md` dejaba abierto qué proveedor LLM se usaría tras la abstracción `src/foda/llm/`.
+- **Decisión:** Definir la API de Anthropic (Claude) como proveedor LLM por defecto, manteniendo la abstracción de `src/foda/llm/` para poder cambiar de proveedor/modelo sin tocar los flujos (Discovery, Exploration) que lo consumen.
+- **Consecuencias:** Se simplifica la implementación inicial al fijar un proveedor concreto; el cambio a otro proveedor en el futuro requiere solo tocar la capa de abstracción, no los flujos.
+
+### D-014 — Contratos de flujo con dependencias multi-flujo
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-01
+- **Contexto:** El diseño original (v0.1) de la tabla de contratos de artefactos (sección 8) asumía implícitamente que cada flujo solo depende de los artefactos del flujo inmediatamente anterior. Al validar con el usuario se identificó que, por ejemplo, Reporting necesitará `contract_data.json` (de un flujo más atrás) además de la salida de Simulation.
+- **Decisión:** Los contratos de flujo permiten declarar dependencias (`requires`) de artefactos de más de un flujo atrás, no solo del inmediatamente anterior. El conjunto exacto de `requires` se declarará al construir cada flujo concreto.
+- **Consecuencias:** Mayor flexibilidad y realismo en el modelo de dependencias entre flujos; se pospone la declaración exacta de `requires` por flujo hasta la etapa de construcción (T-009 en adelante), lo que exige revisarlo cuidadosamente al implementar cada flujo.

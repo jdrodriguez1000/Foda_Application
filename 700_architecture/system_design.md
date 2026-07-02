@@ -2,7 +2,7 @@
 
 > Documento de diseño de arquitectura del sistema. Describe **qué** construimos y **cómo** se organiza, antes de escribir código. Es un documento vivo: el flujo y el alcance se irán afinando.
 
-**Versión:** 0.1 (borrador inicial) · **Fecha:** 2026-07-01
+**Versión:** 0.2 (validado con el usuario sección por sección) · **Fecha:** 2026-07-01
 
 ---
 
@@ -53,7 +53,7 @@
 
 | # | Restricción / Decisión | Valor |
 |---|---|---|
-| R1 | Lenguaje | Python |
+| R1 | Lenguaje | Python 3.13+ |
 | R2 | Interfaz | CLI (sin frontend) |
 | R3 | Entrada de configuración | Archivos **YAML** |
 | R4 | Salida de resultados | Archivos **JSON** |
@@ -161,16 +161,17 @@ Foda_Application/
 │       │   ├── 010_discovery/     #   cuestionarios respondidos
 │       │   ├── 050_cleaning/      #   data_cleaner.yaml
 │       │   └── 070_exploration/   #   ajustes humanos a features
-│       ├── 020_outputs/           # salidas por flujo (JSON: resultados de máquina)
+│       ├── 020_outputs/           # salidas por flujo (JSON: resultados de máquina + descargables csv/xlsx)
 │       │   ├── 010_discovery/     #   contract_data.json, client_register.yaml, business_hypothesis.md
-│       │   ├── 040_profiling/     #   informe de salud
+│       │   ├── 040_profiling/     #   informe de salud (+ export csv/xlsx)
 │       │   └── …
 │       ├── data/                  # capas medallion (datasets)
 │       │   ├── bronze/            #   csv/xlsx originales del cliente, INALTERABLES
 │       │   ├── silver/            #   datos limpios
 │       │   └── gold/              #   derivados / features / inferencias / simulación
-│       └── models/
-│           └── best_model.pkl
+│       └── models/                # modelos VERSIONADOS (no se sobrescriben)
+│           ├── 2026-07_v1/        #   best_model.pkl + metadatos de esa versión
+│           └── latest → 2026-07_v1  #   puntero a la versión vigente
 │
 ├── 700_architecture/              # este documento y diseño
 ├── 800_persistence/               # seguimiento del proyecto
@@ -195,14 +196,18 @@ Cada flujo declara qué **requiere** (inputs) y qué **produce** (outputs). Un f
 | Derivation | datos `silver/`, `contract_data.json` (periodicidad) | datos en `gold/`, `data_derivation.json` |
 | Exploration | datos `gold/`, `business_hypothesis.md` | `exploration.json`, `feature_engineering.yaml` |
 | Featuring | datos `gold/`, `feature_engineering.yaml` | datos en `gold/`, `feature_engineering.json` |
-| Modelling | datos `gold/` (features) | `modelling.json`, `best_model.pkl` |
-| Inferences | `best_model.pkl`, features `gold/` | `inferences.json` (+ MAPE), predicciones `gold/` |
+| Modelling | datos `gold/` (features) | `modelling.json`, modelo versionado en `models/<versión>/best_model.pkl` |
+| Inferences | modelo vigente (`models/latest`), features `gold/` | `inferences.json` (+ MAPE), predicciones `gold/` |
 | Simulation | `inferences.json`, `simulation.json` (reglas) | demanda simulada `gold/`, escenarios |
 | Reporting | resultados de simulation | `reporting.json` |
 | Monitoring | predicciones vs demanda real | `monitoring.json` |
 | Alerting | `monitoring.json`, umbrales | `alerting.json` |
 
 > **Ciclo propuesta → aprobación:** artefactos YAML como `data_cleaner.yaml` y `feature_engineering.yaml` pueden ser **propuestos por un agente** y luego **revisados/editados por el DS** antes de convertirse en input del siguiente flujo. Este es el punto donde vive el "human-in-the-loop".
+
+> **Dependencias multi-flujo:** la tabla anterior muestra la dependencia principal de cada flujo, pero un flujo **puede requerir artefactos de más de un flujo atrás** (p. ej. Reporting necesitará `contract_data.json` para precios/costos, no solo la salida de Simulation). El conjunto exacto de `requires` se declarará y validará formalmente al construir cada flujo.
+
+> **Descargables (`export`):** los artefactos exportables a csv/xlsx (Profiling, Reporting, etc.) se guardan **dentro de `020_outputs/<flujo>/`**, junto al JSON del flujo. No hay carpeta `exports/` separada.
 
 ---
 
@@ -291,6 +296,7 @@ El `ClientContext` marca el modo; el orquestador selecciona la secuencia de fluj
 ## 14. Encapsulamiento del LLM
 
 - Todo acceso a LLM pasa por el módulo `src/foda/llm/` detrás de una interfaz estable (p. ej. `generate_document(prompt, context) -> str/dict`).
+- **Proveedor por defecto: API de Anthropic (Claude).** La elección de proveedor/modelo queda detrás de la interfaz de `src/foda/llm/`, de modo que pueda cambiarse sin tocar los flujos.
 - Los flujos deterministas **no** conocen al LLM; los flujos que lo usan (Discovery, Exploration) invocan la interfaz y **validan la salida** antes de escribir artefactos.
 - Beneficios: el core es testeable sin LLM; se puede cambiar de proveedor/modelo sin tocar los flujos; las salidas del LLM se normalizan a los contratos YAML/JSON.
 
