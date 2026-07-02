@@ -1,8 +1,8 @@
 {
   "feature": "client_scaffold",
   "band": "tracer_bullet",
-  "status": "in_progress",
-  "current_stage": "spec_verifier",
+  "status": "done",
+  "current_stage": "completed",
   "stages": {
     "feature_definer": {
       "status": "done",
@@ -227,8 +227,11 @@
       "scope_note": "Flow.run(ctx) y ClientContext no aplican a esta feature (plan.md SS1: create_client es bootstrap previo al pipeline, no un Flow; ClientContext es la feature futura client_context/T-014 por spec SS No-Objetivos). La capa CLI (foda client new) tampoco existe aun en el repo (src/foda/cli.py no creado; TSK-07 pendiente), por lo que no hay integracion CLI que testear en esta etapa. Puntos de integracion cubiertos en su lugar: arbol completo vs system_design SS7 en un clients_root realista, aislamiento multi-tenant SS13 entre varios clientes bajo el mismo clients_root, contrato de artefacto client.yaml (SS8) consumido por un lector externo al modulo scaffold, fallo temprano y claro (FileNotFoundError) cuando un consumidor busca un cliente inexistente, creacion secuencial batch sin estado compartido entre llamadas, y colision con archivo preexistente (no solo carpeta) en clients_root."
     },
     "spec_verifier": {
-      "status": "pending",
-      "artifact": "verification.md"
+      "status": "done",
+      "artifact": "verification.md",
+      "verdict": "CONFORME",
+      "suite_result": "32 passed (26 unit + 6 integracion), verde",
+      "coverage_note": "11/11 criterios de aceptacion (CA-01..CA-11) cubiertos con test verde. Hallazgos no bloqueantes documentados en verification.md: F-1 runtime Python 3.12.10 vs R1 3.13+ (pyproject declara >=3.13 correctamente), F-2 capa CLI TSK-07 no construida (fuera del set de CA; spec sin test de CLI), F-3 created_at usa fecha local en vez de UTC (CA-06 solo verifica patron, cumplido). Caso 18/DS-2.2 diferido por D-032 no afecta ningun CA. Feature/banda cerrada."
     }
   }
 }
