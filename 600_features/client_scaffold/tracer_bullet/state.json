@@ -2,7 +2,7 @@
   "feature": "client_scaffold",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "tdd_coder",
+  "current_stage": "tdd_tester",
   "stages": {
     "feature_definer": {
       "status": "done",
@@ -24,7 +24,7 @@
     },
     "tdd": {
       "status": "in_progress",
-      "current_stage": "tdd_coder",
+      "current_stage": "tdd_tester",
       "next_case": 12,
       "cases": [
         {
@@ -134,13 +134,14 @@
         {
           "id": 11,
           "desc": "Nombre que empieza por - (\"-abc\") o por _ (\"_abc\") lanza ValueError; nada creado (AC8, AC11)",
-          "status": "green",
           "test": "tests/core/test_scaffold.py::test_create_client_nombre_inicia_guion_o_underscore_lanza_valueerror_y_no_crea_nada",
           "red_evidence": "2 failed, 13 passed en tests/core/test_scaffold.py. Ambas parametrizaciones ([-abc] y [_abc]): 'Failed: DID NOT RAISE ValueError' porque _validate_name aun no rechaza el primer caracter guion/underscore (solo rechaza vacio y espacios); create_client procede a crear la carpeta con normalidad. Rojo por la razon esperada (falta la regla DS-1 de primer caracter alfanumerico), no por error de import/sintaxis.",
           "green_files": [
             "src/foda/core/scaffold.py"
           ],
-          "green_evidence": "2 passed (caso 11) y 15 passed (suite completa, sin regresiones). Se agrego la regla name[0] in (\"-\", \"_\") a _validate_name, que rechaza el primer caracter guion/underscore sin adelantar las reglas de los casos 12-16 (NC-2/NC-3). No se rompe el caso 8 (\"Client_1-a\" sigue siendo valido: contiene \"-\" y \"_\" pero no al inicio)."
+          "green_evidence": "2 passed (caso 11) y 15 passed (suite completa, sin regresiones). Se agrego la regla name[0] in (\"-\", \"_\") a _validate_name, que rechaza el primer caracter guion/underscore sin adelantar las reglas de los casos 12-16 (NC-2/NC-3). No se rompe el caso 8 (\"Client_1-a\" sigue siendo valido: contiene \"-\" y \"_\" pero no al inicio).",
+          "status": "done",
+          "refactor_note": "Sin refactor aplicado (NC-2/NC-3): _validate_name tiene hoy tres guardas (vacio, espacios, primer caracter -/_), cada una de 2 lineas, con nombre claro, mensajes de error especificos y un unico punto de llamada al inicio de create_client; no hay duplicacion que extraer. Introducir una tabla de reglas o un patron mas generico sigue siendo prematuro con solo 3 de las 7 reglas de DS-1 implementadas (el mismo razonamiento del caso 10 aplica: el diseno final de _validate_name se decide mejor una vez agregadas las reglas 12-16, para no adivinar la forma correcta ni anadir indireccion no solicitada). Suite completa en verde (15 passed) sin cambios de codigo."
         },
         {
           "id": 12,
