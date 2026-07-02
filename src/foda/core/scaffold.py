@@ -19,25 +19,24 @@ _MEDALLION_DIRS = ("bronze", "silver", "gold")
 def _validate_name(name: str) -> None:
     """Valida name antes de tocar el filesystem (CA-08, CA-11).
 
-    Implementacion minima (casos 9-12): rechaza el nombre vacio,
-    cualquier nombre que contenga espacios (solo-espacios o espacio
-    interior), cualquier nombre cuyo primer caracter sea "-" o "_"
-    (DS-1: el primer caracter debe ser alfanumerico), y cualquier nombre
-    que contenga un separador de ruta ("/" o "\\"), para evitar que
-    clients_root / name resuelva a una subruta anidada fuera de
-    clients_root. Las demas reglas ("." / "..", caracteres no permitidos,
-    no-ASCII, longitud>64) se agregan en los casos 13-16 del bucle TDD.
+    Refactor (consolidacion tras caso 14): la whitelist _ALLOWED_CHARS ya
+    rechaza por si sola los espacios, los separadores de ruta ("/", "\\")
+    y los nombres de ruta especiales ("." y ".."), porque ninguno de esos
+    caracteres pertenece al conjunto permitido [A-Za-z0-9_-]; tambien
+    rechaza el nombre vacio, ya que "+" exige al menos un caracter. Esas
+    guardas explicitas se retiraron por ser redundantes (mismo resultado,
+    sin aportar mensaje ni comportamiento distinto), salvo dos que SI se
+    conservan porque la whitelist no las cubre:
+    - name == "": se mantiene por claridad del mensaje de error.
+    - name[0] in ("-", "_"): "-" y "_" SI pertenecen al conjunto permitido,
+      por lo que "-abc"/"_abc" pasarian la whitelist; DS-1 exige que el
+      primer caracter sea alfanumerico, asi que esta regla debe evaluarse
+      aparte. La regla de longitud>64 (caso 16) queda pendiente.
     """
     if name == "":
         raise ValueError("name no puede ser vacio")
-    if " " in name:
-        raise ValueError("name no puede contener espacios")
     if name[0] in ("-", "_"):
         raise ValueError("name no puede empezar por - ni _")
-    if "/" in name or "\\" in name:
-        raise ValueError("name no puede contener separadores de ruta")
-    if name in (".", ".."):
-        raise ValueError("name no puede ser \".\" ni \"..\"")
     if not _ALLOWED_CHARS.fullmatch(name):
         raise ValueError(
             "name solo puede contener letras, digitos, '-' y '_'"

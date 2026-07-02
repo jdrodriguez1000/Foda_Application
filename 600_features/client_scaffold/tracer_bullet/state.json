@@ -24,7 +24,7 @@
     },
     "tdd": {
       "status": "in_progress",
-      "current_stage": "tdd_coder",
+      "current_stage": "tdd_tester",
       "next_case": 15,
       "cases": [
         {
@@ -96,8 +96,7 @@
           "green_files": [
             "src/foda/core/scaffold.py"
           ],
-          "green_evidence": "1 passed (caso 7) y 7 passed (suite completa, sin regresiones). Se agrego created_at = date.today().isoformat() al dict escrito con yaml.safe_dump(..., default_style=\"'\"); el estilo de comillas forzado evita que el resolver implicito de YAML relea la fecha como date en vez de str al hacer safe_load."
-          ,
+          "green_evidence": "1 passed (caso 7) y 7 passed (suite completa, sin regresiones). Se agrego created_at = date.today().isoformat() al dict escrito con yaml.safe_dump(..., default_style=\"'\"); el estilo de comillas forzado evita que el resolver implicito de YAML relea la fecha como date en vez de str al hacer safe_load.",
           "refactor_note": "Sin refactor aplicado (NC-2/NC-3): el bloque de escritura de client.yaml sigue siendo 4 lineas con un unico punto de llamada; el comentario que explica default_style=\"'\" ya se agrego en la fase verde. Extraer un helper (p.ej. _write_client_yaml) no elimina duplicacion real (no hay otro call site) y solo anadiria indireccion no solicitada. Suite completa en verde (7 passed) sin cambios de codigo."
         },
         {
@@ -170,13 +169,14 @@
         {
           "id": 14,
           "desc": "Nombre con punto interior \"ab.c\" o caracter no permitido (\"a!b\", \"a@b\") lanza ValueError; nada creado (AC8, AC11)",
-          "status": "green",
+          "status": "done",
           "test": "tests/core/test_scaffold.py::test_create_client_nombre_con_caracter_no_permitido_lanza_valueerror_y_no_crea_nada",
           "red_evidence": "3 failed, 19 passed en tests/core/test_scaffold.py. Las tres parametrizaciones ([ab.c], [a!b], [a@b]): 'Failed: DID NOT RAISE ValueError' porque _validate_name aun no rechaza el punto interior ni caracteres fuera de la whitelist alfanumerico-ASCII/_/- (DS-1); create_client procede a crear la carpeta con normalidad (Path acepta esos caracteres sin problema en Windows). Rojo por la razon esperada (falta la regla DS-1 de whitelist de caracteres permitidos), no por error de import/sintaxis.",
           "green_files": [
             "src/foda/core/scaffold.py"
           ],
-          "green_evidence": "3 passed (caso 14) y 22 passed (suite completa, sin regresiones). Se agrego la regla de whitelist _ALLOWED_CHARS = re.compile(r\"[A-Za-z0-9_-]+\") a _validate_name (guarda final: `if not _ALLOWED_CHARS.fullmatch(name): raise ValueError(...)`), que rechaza cualquier caracter fuera de alfanumerico-ASCII/-/_  antes de tocar el filesystem, sin adelantar la regla de longitud>64 (caso 16). Como efecto colateral legitimo de la whitelist (no un adelanto artificial), tambien cubre el caso 15 (nombres no-ASCII/acentuados), ya que esos caracteres tampoco matchean la whitelist. No se elimino ninguna de las 5 guardas previas (vacio, espacios, -/_ inicial, separadores, \".\"/\"..\"): siguen siendo redundantes-pero-coherentes con la whitelist; su eliminacion es decision de tdd_refactor. No se rompe el caso 8 (\"X\", \"9lives\", \"Client_1-a\" matchean la whitelist)."
+          "green_evidence": "3 passed (caso 14) y 22 passed (suite completa, sin regresiones). Se agrego la regla de whitelist _ALLOWED_CHARS = re.compile(r\"[A-Za-z0-9_-]+\") a _validate_name (guarda final: `if not _ALLOWED_CHARS.fullmatch(name): raise ValueError(...)`), que rechaza cualquier caracter fuera de alfanumerico-ASCII/-/_  antes de tocar el filesystem, sin adelantar la regla de longitud>64 (caso 16). Como efecto colateral legitimo de la whitelist (no un adelanto artificial), tambien cubre el caso 15 (nombres no-ASCII/acentuados), ya que esos caracteres tampoco matchean la whitelist. No se elimino ninguna de las 5 guardas previas (vacio, espacios, -/_ inicial, separadores, \".\"/\"..\"): siguen siendo redundantes-pero-coherentes con la whitelist; su eliminacion es decision de tdd_refactor. No se rompe el caso 8 (\"X\", \"9lives\", \"Client_1-a\" matchean la whitelist).",
+          "refactor_note": "Refactor aplicado (NC-3, cambio quirurgico): se consolido _validate_name eliminando 3 de las 5 guardas previas (espacios, separadores de ruta, \".\"/\"..\") por ser redundantes con la whitelist _ALLOWED_CHARS (ninguno de esos caracteres pertenece a [A-Za-z0-9_-], asi que la whitelist ya los rechazaba). Se conservaron las 2 guardas que la whitelist NO cubre: name == \"\" (whitelist tambien lo rechaza via \"+\", pero se mantiene explicita por claridad del mensaje) y name[0] in (\"-\", \"_\") (\"-\"/\"_\" SI son caracteres permitidos, por lo que \"-abc\"/\"_abc\" pasarian la whitelist; DS-1 exige primer caracter alfanumerico, regla no cubierta por el fullmatch). Se verificaron mentalmente los 15 inputs de los tests de casos 9-14 antes de borrar guardas; ningun test usa match= sobre el mensaje de ValueError, por lo que unificar mensajes es seguro. No se adelanto la regla de longitud (caso 16). Suite completa en verde (22 passed) sin regresiones."
         },
         {
           "id": 15,
