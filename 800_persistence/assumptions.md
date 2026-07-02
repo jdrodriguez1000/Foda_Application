@@ -30,6 +30,7 @@ Cada supuesto incluye: **ID**, **descripción**, **estado** (✅ Validado · ⏳
 
 > **Nota (2026-07-01):** sesión de validación de `system_design.md` (T-008): A-004 pasa a Validado. A-005 sigue pendiente, se validará al construir T-009/T-010.
 > **Nota (2026-07-02):** T-009/T-010/T-011 completadas (andamiaje: 8 agentes + `sdd_tdd_workflow.md` + plantilla `600_features/`). A-005 sigue Pendiente; ahora está más cerca de validarse porque solo falta ejecutar la cadena sobre la primera feature real (T-013).
+> **Nota (2026-07-02):** se acordó el alcance de la primera feature real, `client_scaffold` (ver D-016), pero aún no se invocó la cadena de agentes. A-005 sigue Pendiente hasta ejecutarla de punta a punta.
 
 ## 4. Supuestos Invalidados
 | ID | Supuesto | Motivo | Fecha |

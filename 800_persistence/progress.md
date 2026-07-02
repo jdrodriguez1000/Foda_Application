@@ -24,7 +24,7 @@
 ## 2. Métricas de Avance
 | Métrica | Valor |
 |---|---|
-| Avance global | 48% (alcance definido + diseño de arquitectura v0.2 validado + los 8 agentes de desarrollo SDD/TDD construidos + workflow documentado + plantilla `600_features/` lista; falta validar la cadena construyendo la primera feature real) |
+| Avance global | 50% (andamiaje SDD/TDD completo + alcance de la primera feature real (`client_scaffold`) acordado con el usuario; falta ejecutar la cadena de 8 agentes para construirla) |
 | Tareas completadas | 12 |
 | Tareas pendientes | 1 |
 
@@ -44,12 +44,13 @@
 - T-009 completada: se construyeron los 8 agentes de desarrollo SDD/TDD en `.claude/agents/` (`feature_definer`, `spec_writer`, `plan_builder`, `tdd_tester`, `tdd_coder`, `tdd_refactor`, `integration_tester`, `spec_verifier`), cada uno con frontmatter (name, description "arranca en frío", model, color) y `tools: Read, Glob, Grep, Write, Edit, Bash` (sin Agent ni web; la orquestación la hace la sesión principal). Renombrado respecto a D-008: `tdd_red` → `tdd_tester`, `tdd_green` → `tdd_coder` (ver D-015). Los agentes validan gate/etapa previa vía `state.json`, hacen commit por etapa sin push, y separan artefactos SDD (`600_features/<feature>/`) de código/tests (`src/foda/`, `tests/`).
 - T-010 completada: se creó `700_architecture/sdd_tdd_workflow.md` (v0.1) como fuente única de verdad de la cadena SDD/TDD: distinción desarrollo vs runtime, tabla de los 8 agentes, diagrama de orquestación con gates y bucle TDD, protocolo de gates humanos, convención completa de `state.json` (esquema, estados, matriz lectura/escritura, transiciones), reglas transversales, artefactos por feature, reanudación y bloqueos.
 - T-011 completada: se creó `600_features/` con `README.md` (qué vive allí, cómo arrancar una feature, enlace a sdd_tdd_workflow.md) y `_template/` con esqueletos de `definition.md`, `spec.md`, `plan.md`, `verification.md` y `state.json` inicial canónico. No se creó una feature de ejemplo ficticia (decisión aprobada por el usuario): la primera feature real cumplirá ese rol y validará A-005.
+- Se acordó con el usuario cuál será la primera feature real (T-013): `client_scaffold` (`foda client new <NAME>`), elegida entre 3 candidatas (`client_context`, `client_scaffold`, `flow_base`) siguiendo un orden de construcción abajo-hacia-arriba. Se definió su alcance in/out y se resolvieron 3 decisiones de alcance (fallar si el cliente ya existe, sin `--force` por ahora; nombre de cliente con patrón seguro exigido, sin normalización; entregar core `create_client(...)` primero, con capa CLI fina encima). No se escribió código ni artefactos de feature todavía, solo se acordó el plan. Ver D-016.
 
 ## 4. En Progreso
 - _Ninguna tarea en progreso._
 
 ## 5. Próximo a Realizar
-- Construir la primera feature real del sistema (p. ej. `client_context` o `flow_base`) ejecutando la cadena de 8 agentes de punta a punta, lo que además validará A-005 (T-013).
+- Invocar `feature_definer` para arrancar la construcción de la feature `client_scaffold` (T-013) con el alcance acordado en D-016, lo que además validará A-005.
 
 ## 6. Bloqueos y Riesgos
 - _Ninguno registrado._
@@ -66,3 +67,4 @@
 | 2026-07-01 | Sesión de mantenimiento (T-012): corregidas referencias colgantes a skills eliminadas en `session_starter`/`session_closer`; eliminada duplicación del protocolo entre `CLAUDE.md` y los agentes (fuente única de verdad en los agentes); invocación por frase-gatillo. Sin cambios de código ni de arquitectura. Ver D-009, L-006. |
 | 2026-07-01 | T-008 completada: `700_architecture/system_design.md` validado sección por sección con el usuario (16 secciones, 5 bloques) y actualizado de v0.1 a v0.2. Cambios: Python 3.13+ (R1), modelos ML versionados con puntero `latest`, exports dentro de `020_outputs/<flujo>/`, contratos de artefactos ajustados + nota de dependencias multi-flujo, LLM por defecto = API de Anthropic (Claude). A-004 queda validado. Desbloqueada la construcción incremental (T-009 en adelante). Ver D-010 a D-014, L-007. |
 | 2026-07-02 | T-009, T-010 y T-011 completadas: construidos los 8 agentes de desarrollo SDD/TDD en `.claude/agents/`, documentada la cadena en `700_architecture/sdd_tdd_workflow.md` (v0.1), y creada la estructura `600_features/` con plantilla. Renombrado `tdd_red`→`tdd_tester`, `tdd_green`→`tdd_coder` respecto a D-008 (ver D-015). Avance global sube de 35% a 48%. Nueva tarea pendiente T-013: construir la primera feature real (valida A-005). Ver D-015, L-008. |
+| 2026-07-02 | Sesión corta de continuación: se acordó con el usuario que la primera feature real (T-013) será `client_scaffold` (`foda client new`), con orden de construcción abajo-hacia-arriba (client_scaffold → client_context → flow_base → flujos). Alcance in/out definido y 3 decisiones de alcance resueltas. Sin código ni artefactos de feature aún. T-014 y T-015 registradas en backlog. Avance global sube de 48% a 50%. Ver D-016. |

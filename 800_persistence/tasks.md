@@ -42,9 +42,10 @@
 ## 4. Tareas Pendientes
 | ID | Tarea | Prioridad | Notas |
 |---|---|---|---|
-| T-013 | Construir la primera feature real del sistema (p. ej. `client_context` o `flow_base`) ejecutando la cadena de 8 agentes de punta a punta | 🔴 Alta | Valida A-005. Andamiaje completo (T-009/T-010/T-011), sin bloqueos. |
+| T-013 | Construir la primera feature real del sistema: `client_scaffold` (`foda client new <NAME>`), ejecutando la cadena de 8 agentes de punta a punta | 🔴 Alta | Valida A-005. Alcance acordado con el usuario (ver D-016): crear árbol de carpetas de cliente nuevo (`client.yaml`, `010_inputs/`, `020_outputs/`, `data/{bronze,silver,gold}/`, `models/`), validar nombre (patrón seguro, sin normalización), fallar si el cliente ya existe (sin `--force` por ahora), función core `create_client(...)` con capa CLI fina encima. Fuera de alcance: `ClientContext`, flujos, sub-carpetas por flujo. Próximo paso: invocar `feature_definer`. Andamiaje completo (T-009/T-010/T-011), sin bloqueos. |
 
 ## 5. Backlog
 | ID | Tarea | Notas |
 |---|---|---|
-| — | _Vacío._ | — |
+| T-014 | Construir feature `client_context` (resolución de rutas, cliente nuevo vs. recurrente) | Depende de T-013 (`client_scaffold`). Orden abajo-hacia-arriba acordado en D-016. |
+| T-015 | Construir feature `flow_base` (abstracción `Flow`: load_inputs → validate → execute → write_outputs) | Depende de T-014 (`client_context`). Orden abajo-hacia-arriba acordado en D-016. |
