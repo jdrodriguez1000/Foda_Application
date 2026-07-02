@@ -6,12 +6,16 @@ con un `pyproject.toml` marcador y `monkeypatch.chdir`).
 Fuente: 600_features/client_new_cli/tracer_bullet/plan.md (caso 1 de 12).
 """
 
+import tomllib
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
 
 import foda.cli
 from foda.cli import main
+
+_REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def test_main_delega_en_create_client_una_vez_con_argumentos_correctos(tmp_path, monkeypatch):
@@ -199,6 +203,26 @@ def test_main_subcomando_desconocido_termina_con_codigo_2(tmp_path, monkeypatch,
     captured = capsys.readouterr()
     assert captured.err.strip() != ""
     assert "Traceback" not in captured.err
+
+
+def test_pyproject_declara_entry_point_y_main_es_invocable(tmp_path, monkeypatch):
+    """Caso 12 (CA-10): pyproject.toml declara [project.scripts] con la
+    entrada foda = "foda.cli:main", y foda.cli.main es invocable con una
+    lista argv devolviendo un int (contrato de invocabilidad del comando)."""
+    pyproject_path = _REPO_ROOT / "pyproject.toml"
+    with pyproject_path.open("rb") as f:
+        pyproject_data = tomllib.load(f)
+
+    assert pyproject_data.get("project", {}).get("scripts", {}).get("foda") == (
+        "foda.cli:main"
+    )
+
+    (tmp_path / "pyproject.toml").write_text("", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    result = main(["client", "new", "ABC"])
+
+    assert isinstance(result, int)
 
 
 def test_main_camino_feliz_devuelve_0(tmp_path, monkeypatch):
