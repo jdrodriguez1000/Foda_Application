@@ -2,7 +2,7 @@
   "feature": "client_scaffold",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "tdd_coder",
+  "current_stage": "tdd_tester",
   "stages": {
     "feature_definer": {
       "status": "done",
@@ -24,6 +24,7 @@
     },
     "tdd": {
       "status": "in_progress",
+      "current_stage": "tdd_tester",
       "next_case": 5,
       "cases": [
         {
@@ -59,12 +60,13 @@
         {
           "id": 4,
           "desc": "tmp/ABC/data/ contiene bronze/, silver/, gold/ y las tres estan vacias (AC3)",
-          "status": "green",
+          "status": "done",
           "test": "tests/core/test_scaffold.py::test_create_client_data_contiene_capas_medallion_vacias",
           "red_evidence": "AssertionError: assert False (bronze_dir.is_dir() -> data/bronze no existe aun; create_client no crea las subcarpetas medallion). 1 failed, 3 passed en tests/core/test_scaffold.py.",
           "green_files": [
             "src/foda/core/scaffold.py"
-          ]
+          ],
+          "refactor_note": "Sin refactor aplicado: el caso 4 reutiliza el mismo patron ya refactorizado en el caso 2 (bucle sobre _MEDALLION_DIRS, analogo a _TOP_LEVEL_DIRS), sin duplicacion ni nombres confusos (NC-2/NC-3). Suite completa en verde (4 passed)."
         },
         {
           "id": 5,
