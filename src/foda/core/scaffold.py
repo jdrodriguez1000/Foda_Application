@@ -6,6 +6,9 @@ Fuente: 600_features/client_scaffold/tracer_bullet/spec.md.
 from pathlib import Path
 
 
+_TOP_LEVEL_DIRS = ("010_inputs", "020_outputs", "data", "models")
+
+
 def create_client(name: str, clients_root: Path) -> Path:
     """Crea clients_root/<name>/ y devuelve el Path a la carpeta creada.
 
@@ -20,10 +23,9 @@ def create_client(name: str, clients_root: Path) -> Path:
     client_dir = clients_root / name
     client_dir.mkdir(parents=True)
 
-    (client_dir / "010_inputs").mkdir()
-    (client_dir / "020_outputs").mkdir()
-    (client_dir / "data").mkdir()
-    (client_dir / "models").mkdir()
+    for dir_name in _TOP_LEVEL_DIRS:
+        (client_dir / dir_name).mkdir()
+
     (client_dir / "client.yaml").touch()
 
     return client_dir
