@@ -49,3 +49,21 @@ def test_create_client_010_inputs_y_020_outputs_existen_y_vacias(tmp_path: Path)
     assert outputs_dir.is_dir()
     assert list(inputs_dir.iterdir()) == []
     assert list(outputs_dir.iterdir()) == []
+
+
+def test_create_client_data_contiene_capas_medallion_vacias(tmp_path: Path) -> None:
+    """Caso 4 (CA-03): tmp/ABC/data/ contiene bronze/, silver/ y gold/, y las
+    tres estan vacias (capa medallion)."""
+    create_client("ABC", tmp_path)
+
+    data_dir = tmp_path / "ABC" / "data"
+    bronze_dir = data_dir / "bronze"
+    silver_dir = data_dir / "silver"
+    gold_dir = data_dir / "gold"
+
+    assert bronze_dir.is_dir()
+    assert silver_dir.is_dir()
+    assert gold_dir.is_dir()
+    assert list(bronze_dir.iterdir()) == []
+    assert list(silver_dir.iterdir()) == []
+    assert list(gold_dir.iterdir()) == []
