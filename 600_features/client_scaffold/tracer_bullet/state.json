@@ -2,7 +2,7 @@
   "feature": "client_scaffold",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "tdd_coder",
+  "current_stage": "tdd_tester",
   "stages": {
     "feature_definer": {
       "status": "done",
@@ -24,7 +24,7 @@
     },
     "tdd": {
       "status": "in_progress",
-      "current_stage": "tdd_coder",
+      "current_stage": "tdd_tester",
       "next_case": 7,
       "cases": [
         {
@@ -78,13 +78,14 @@
         {
           "id": 6,
           "desc": "tmp/ABC/client.yaml es YAML valido que parsea a un mapa con name == \"ABC\" (AC6)",
-          "status": "green",
+          "status": "done",
           "test": "tests/core/test_scaffold.py::test_create_client_yaml_parsea_a_mapa_con_name_abc",
           "red_evidence": "AssertionError: assert None == {'name': 'ABC'} (client.yaml se crea vacio via touch(); yaml.safe_load(vacio) -> None, no un mapa con name). 1 failed, 5 passed en tests/core/test_scaffold.py.",
           "green_files": [
             "src/foda/core/scaffold.py"
           ],
-          "green_evidence": "1 passed (caso 6) y 6 passed (suite completa, sin regresiones)."
+          "green_evidence": "1 passed (caso 6) y 6 passed (suite completa, sin regresiones).",
+          "refactor_note": "Sin refactor aplicado: la escritura de client.yaml via yaml.safe_dump({\"name\": name}) es minima y clara, sin duplicacion (NC-2/NC-3). No se adelanta created_at (caso 7). Suite completa en verde (6 passed)."
         },
         {
           "id": 7,
