@@ -72,6 +72,23 @@ def test_main_crea_clients_root_inexistente_primer_cliente(tmp_path, monkeypatch
     assert (tmp_path / "clients" / "ABC").is_dir()
 
 
+def test_main_resuelve_raiz_real_desde_subcarpeta_anidada(tmp_path, monkeypatch):
+    """Caso 6 (CA-04): con el cwd en una subcarpeta anidada (p. ej.
+    <raiz>/src/foda/), main(["client","new","ABC"]) crea el cliente en
+    <raiz>/clients/ABC/ (raiz real localizada hacia arriba), no relativo
+    al cwd."""
+    (tmp_path / "pyproject.toml").write_text("", encoding="utf-8")
+    nested = tmp_path / "src" / "foda"
+    nested.mkdir(parents=True)
+    monkeypatch.chdir(nested)
+
+    result = main(["client", "new", "ABC"])
+
+    assert result == 0
+    assert (tmp_path / "clients" / "ABC").is_dir()
+    assert not (nested / "clients").exists()
+
+
 def test_main_camino_feliz_devuelve_0(tmp_path, monkeypatch):
     """Caso 1 (CA-01, CA-10): con el cwd dentro de un proyecto temporal
     (existe <raiz>/pyproject.toml), main(["client","new","ABC"]) devuelve
