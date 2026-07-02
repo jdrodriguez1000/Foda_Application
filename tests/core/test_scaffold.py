@@ -181,6 +181,29 @@ def test_create_client_nombre_con_separador_de_ruta_lanza_valueerror_y_no_crea_n
     assert list(clients_root.iterdir()) == []
 
 
+@pytest.mark.parametrize("name", [".", ".."])
+def test_create_client_nombre_ruta_especial_lanza_valueerror_y_no_crea_nada(
+    tmp_path: Path, name: str
+) -> None:
+    """Caso 13 (CA-08, CA-11): create_client(nombre, tmp) lanza ValueError
+    para un nombre de ruta especial, ya sea "." o ".." (DS-1: el conjunto
+    permitido es solo letras/digitos/_/-; estos nombres especiales de
+    filesystem quedan fuera y deben rechazarse antes de tocar el
+    filesystem, para evitar que clients_root / name resuelva a la propia
+    clients_root o a su carpeta padre). No debe crearse ninguna carpeta
+    nueva bajo clients_root (tmp queda tal cual estaba antes de la
+    llamada, sin entradas nuevas). Cada nombre usa su propia clients_root
+    (subcarpeta de tmp_path) para evitar interferencia entre
+    parametrizaciones."""
+    clients_root = tmp_path / "root"
+    clients_root.mkdir()
+
+    with pytest.raises(ValueError):
+        create_client(name, clients_root)
+
+    assert list(clients_root.iterdir()) == []
+
+
 @pytest.mark.parametrize("name", ["X", "9lives", "Client_1-a"])
 def test_create_client_nombres_validos_representativos_crean_arbol_completo(
     tmp_path: Path, name: str

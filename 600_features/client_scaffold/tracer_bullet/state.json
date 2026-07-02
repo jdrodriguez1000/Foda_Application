@@ -158,7 +158,9 @@
         {
           "id": 13,
           "desc": "Nombres de ruta especiales \".\" y \"..\" lanzan ValueError; nada creado (AC8, AC11)",
-          "status": "pending"
+          "status": "red",
+          "test": "tests/core/test_scaffold.py::test_create_client_nombre_ruta_especial_lanza_valueerror_y_no_crea_nada",
+          "red_evidence": "2 failed, 17 passed en tests/core/test_scaffold.py. Ambas parametrizaciones ([.] y [..]): FileExistsError [WinError 183] en client_dir.mkdir(parents=True) en vez de ValueError, porque _validate_name aun no rechaza \".\"/\"..\"; clients_root / \".\" resuelve a la propia clients_root (ya existente) y clients_root / \"..\" resuelve a su carpeta padre (tambien ya existente), por lo que mkdir(parents=True) falla con FileExistsError antes de que create_client pueda validar el nombre. Rojo por la razon esperada (falta la regla DS-1 de rechazo de nombres de ruta especiales), no por error de import/sintaxis."
         },
         {
           "id": 14,
