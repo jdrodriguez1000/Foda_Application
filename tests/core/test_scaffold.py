@@ -204,6 +204,26 @@ def test_create_client_nombre_ruta_especial_lanza_valueerror_y_no_crea_nada(
     assert list(clients_root.iterdir()) == []
 
 
+@pytest.mark.parametrize("name", ["ab.c", "a!b", "a@b"])
+def test_create_client_nombre_con_caracter_no_permitido_lanza_valueerror_y_no_crea_nada(
+    tmp_path: Path, name: str
+) -> None:
+    """Caso 14 (CA-08, CA-11): create_client(nombre, tmp) lanza ValueError
+    para un nombre con punto interior ("ab.c") o con un caracter fuera del
+    conjunto permitido por DS-1 (letras/digitos ASCII, "_", "-"), ya sea "!"
+    ("a!b") o "@" ("a@b"). No debe crearse ninguna carpeta nueva bajo
+    clients_root (tmp queda tal cual estaba antes de la llamada, sin
+    entradas nuevas). Cada nombre usa su propia clients_root (subcarpeta de
+    tmp_path) para evitar interferencia entre parametrizaciones."""
+    clients_root = tmp_path / "root"
+    clients_root.mkdir()
+
+    with pytest.raises(ValueError):
+        create_client(name, clients_root)
+
+    assert list(clients_root.iterdir()) == []
+
+
 @pytest.mark.parametrize("name", ["X", "9lives", "Client_1-a"])
 def test_create_client_nombres_validos_representativos_crean_arbol_completo(
     tmp_path: Path, name: str
