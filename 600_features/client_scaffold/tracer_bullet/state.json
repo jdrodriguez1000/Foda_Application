@@ -24,7 +24,7 @@
     },
     "tdd": {
       "status": "in_progress",
-      "current_stage": "tdd_coder",
+      "current_stage": "tdd_tester",
       "next_case": 10,
       "cases": [
         {
@@ -110,13 +110,15 @@
         {
           "id": 9,
           "desc": "Nombre vacio \"\" lanza ValueError y no crea ninguna carpeta (AC8, AC11)",
-          "status": "green",
+          "status": "done",
           "test": "tests/core/test_scaffold.py::test_create_client_nombre_vacio_lanza_valueerror_y_no_crea_nada",
           "red_evidence": "FileExistsError: [WinError 183] No se puede crear un archivo que ya existe (client_dir = clients_root / \"\" resuelve al propio tmp_path, que ya existe; create_client aun no valida el nombre y mkdir(parents=True) falla con FileExistsError en vez de lanzar ValueError). 1 failed, 10 passed en tests/core/test_scaffold.py.",
           "green_files": [
             "src/foda/core/scaffold.py"
           ],
-          "green_evidence": "1 passed (caso 9) y 11 passed (suite completa, sin regresiones). Se agrego _validate_name(name), llamada al inicio de create_client antes de crear cualquier carpeta, que por ahora solo rechaza name == \"\" con ValueError; las demas reglas (casos 10-16) quedan pendientes (NC-2/NC-3)."
+          "green_evidence": "1 passed (caso 9) y 11 passed (suite completa, sin regresiones). Se agrego _validate_name(name), llamada al inicio de create_client antes de crear cualquier carpeta, que por ahora solo rechaza name == \"\" con ValueError; las demas reglas (casos 10-16) quedan pendientes (NC-2/NC-3).",
+          "refactor_note": "Sin refactor aplicado (NC-2/NC-3): _validate_name(name) ya es minima (2 lineas), con nombre claro y un unico punto de llamada al inicio de create_client; no hay duplicacion que extraer ni indireccion que simplificar. No se adelantan las reglas de los casos 10-16 (espacios, guion/underscore inicial, separadores de ruta, \".\"/\"..\", caracteres no permitidos, no-ASCII, longitud>64): agregarlas ahora violaria el contrato TDD (cobertura sin test que la respalde, NC-5). Suite completa en verde (11 passed) sin cambios de codigo."
+        },
         {
           "id": 10,
           "desc": "Nombre solo-espacios \"   \" y con espacio interior \"ab c\" lanzan ValueError; nada creado (AC8, AC11)",
