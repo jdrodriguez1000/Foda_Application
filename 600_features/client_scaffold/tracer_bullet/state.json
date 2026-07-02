@@ -12,7 +12,7 @@
       "next_case": 2,
       "cases": [
         { "id": 1,  "desc": "create_client(\"ABC\", tmp) crea el directorio tmp/ABC/ y devuelve un Path que apunta a él (AC1, AC7)", "status": "done", "test": "tests/core/test_scaffold.py::test_create_client_crea_directorio_y_devuelve_su_path", "green_files": ["pyproject.toml", "src/foda/__init__.py", "src/foda/core/__init__.py", "src/foda/core/scaffold.py"], "refactor_note": "Sin refactor aplicado: codigo minimo y claro (NC-2/NC-3), nada que mejorar de forma justificada." },
-        { "id": 2,  "desc": "Bajo tmp/ABC/ existen exactamente: archivo client.yaml y carpetas 010_inputs/, 020_outputs/, data/, models/ (AC2)", "status": "pending" },
+        { "id": 2,  "desc": "Bajo tmp/ABC/ existen exactamente: archivo client.yaml y carpetas 010_inputs/, 020_outputs/, data/, models/ (AC2)", "status": "red", "test": "tests/core/test_scaffold.py::test_create_client_crea_arbol_de_primer_nivel_completo", "red_reason": "AssertionError: assert entries == set() en vez de {'client.yaml', '010_inputs', '020_outputs', 'data', 'models'} -- create_client aun no crea el arbol completo ni client.yaml (solo el directorio raiz, caso 1)." },
         { "id": 3,  "desc": "tmp/ABC/010_inputs/ y tmp/ABC/020_outputs/ existen y estan vacias (AC5)", "status": "pending" },
         { "id": 4,  "desc": "tmp/ABC/data/ contiene bronze/, silver/, gold/ y las tres estan vacias (AC3)", "status": "pending" },
         { "id": 5,  "desc": "tmp/ABC/models/ existe y esta vacia, sin subcarpetas de version (AC4)", "status": "pending" },

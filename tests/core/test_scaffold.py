@@ -17,3 +17,20 @@ def test_create_client_crea_directorio_y_devuelve_su_path(tmp_path: Path) -> Non
     expected = tmp_path / "ABC"
     assert expected.is_dir()
     assert result == expected
+
+
+def test_create_client_crea_arbol_de_primer_nivel_completo(tmp_path: Path) -> None:
+    """Caso 2 (CA-02): bajo tmp/ABC/ existen exactamente estas entradas de
+    primer nivel: archivo client.yaml y carpetas 010_inputs/, 020_outputs/,
+    data/, models/ (ni mas ni menos)."""
+    create_client("ABC", tmp_path)
+
+    client_dir = tmp_path / "ABC"
+    entries = {entry.name for entry in client_dir.iterdir()}
+
+    assert entries == {"client.yaml", "010_inputs", "020_outputs", "data", "models"}
+    assert (client_dir / "client.yaml").is_file()
+    assert (client_dir / "010_inputs").is_dir()
+    assert (client_dir / "020_outputs").is_dir()
+    assert (client_dir / "data").is_dir()
+    assert (client_dir / "models").is_dir()
