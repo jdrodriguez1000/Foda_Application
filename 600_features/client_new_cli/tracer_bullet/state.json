@@ -2,11 +2,11 @@
   "feature": "client_new_cli",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "tdd_coder",
+  "current_stage": "tdd_tester",
   "suspension": {
     "suspended": false,
-    "reason": "Plan y 12 casos TDD aprobados por el humano; ejecucion del bucle TDD suspendida por decision del humano.",
-    "resume_at": "Invocar tdd_refactor con el caso 1 (mismo caso, fase refactor)."
+    "reason": "Caso 1 cerrado (red->green->refactor). Bucle TDD continua con el caso 2.",
+    "resume_at": "Invocar tdd_tester con el caso 2 (siguiente caso pendiente)."
   },
   "stages": {
     "feature_definer":   { "status": "done",    "artifact": "definition.md" },
@@ -15,7 +15,7 @@
     "tdd": {
       "status": "pending",
       "cases": [
-        { "id": 1,  "desc": "main([\"client\",\"new\",\"ABC\"]) con cwd dentro de un proyecto temporal (existe <raiz>/pyproject.toml) devuelve el int 0 (camino feliz, invocabilidad).", "status": "green", "test": "tests/cli/test_client_new_cli.py::test_main_camino_feliz_devuelve_0", "green_evidence": "pytest tests/cli/test_client_new_cli.py::test_main_camino_feliz_devuelve_0 -q -> 1 passed; pytest -q (suite completa) -> 33 passed, sin regresiones", "src_files": ["src/foda/cli.py"] },
+        { "id": 1,  "desc": "main([\"client\",\"new\",\"ABC\"]) con cwd dentro de un proyecto temporal (existe <raiz>/pyproject.toml) devuelve el int 0 (camino feliz, invocabilidad).", "status": "done", "test": "tests/cli/test_client_new_cli.py::test_main_camino_feliz_devuelve_0", "green_evidence": "pytest tests/cli/test_client_new_cli.py::test_main_camino_feliz_devuelve_0 -q -> 1 passed; pytest -q (suite completa) -> 33 passed, sin regresiones", "refactor_evidence": "Revision de src/foda/cli.py (tdd_refactor): codigo ya minimo, sin duplicacion, nombres claros, sin manejo anticipado de casos aun no cubiertos (NC-2/NC-3). Sin cambios de codigo. pytest -q -> 33 passed, sin regresiones.", "src_files": ["src/foda/cli.py"] },
         { "id": 2,  "desc": "En el camino de exito, main(...) crea el arbol de cliente en <raiz>/clients/ABC/ (existe <raiz>/clients/ABC/client.yaml y las carpetas del scaffold).", "status": "pending" },
         { "id": 3,  "desc": "En el camino de exito, la salida capturada en stdout contiene la ruta de <raiz>/clients/ABC.", "status": "pending" },
         { "id": 4,  "desc": "Con create_client espiado/monkeypatcheado, main([\"client\",\"new\",\"ABC\"]) lo invoca exactamente una vez con name == \"ABC\" y clients_root == <raiz>/clients.", "status": "pending" },
