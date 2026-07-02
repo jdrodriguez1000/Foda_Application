@@ -2,7 +2,7 @@
   "feature": "client_scaffold",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "tdd_tester",
+  "current_stage": "integration_tester",
   "stages": {
     "feature_definer": {
       "status": "done",
@@ -23,9 +23,10 @@
       "approved": true
     },
     "tdd": {
-      "status": "in_progress",
-      "current_stage": "tdd_tester",
-      "next_case": 18,
+      "status": "done",
+      "current_stage": "done",
+      "next_case": null,
+      "loop_note": "Bucle TDD cerrado. Casos 1-17 en done (26 tests en verde, sin regresiones). Caso 18 diferido por GATE PA-3 opcion (c): rollback DS-2.2 pospuesto a banda stab_n (ver gate_decision del caso 18). Siguiente etapa: integration_tester.",
       "cases": [
         {
           "id": 1,
@@ -207,7 +208,8 @@
         {
           "id": 18,
           "desc": "OPCIONAL (GATE PA-3): ante error de filesystem tras crear parte del arbol, create_client limpia best-effort tmp/<name>/ y relanza la excepcion original (DS-2.2)",
-          "status": "pending"
+          "status": "deferred",
+          "gate_decision": "GATE PA-3 resuelto por el humano con la opcion (c): POSPONER el rollback. No se implementa ni se testea DS-2.2 en la banda tracer_bullet; queda pendiente para una banda de estabilizacion posterior (stab_n). Esta decision refina D-028 (que preveia implementar-sin-test): para tracer_bullet la feature se cierra solo con la estrategia validacion-primero (DS-2.1), que ya cubre los casos realistas (nombre invalido -> ValueError, duplicado -> FileExistsError) sin mutar disco. El error raro de FS a mitad de creacion (unico escenario que exigiria rollback + mocking con monkeypatch) se acepta como limitacion conocida documentada de esta banda. Registrar como nuevo ADR en el cierre de sesion."
         }
       ]
     },
