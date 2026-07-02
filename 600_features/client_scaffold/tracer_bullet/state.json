@@ -2,7 +2,7 @@
   "feature": "client_scaffold",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "tdd_tester",
+  "current_stage": "tdd_coder",
   "stages": {
     "feature_definer": {
       "status": "done",
@@ -24,8 +24,8 @@
     },
     "tdd": {
       "status": "in_progress",
-      "current_stage": "tdd_tester",
-      "next_case": 13,
+      "current_stage": "tdd_coder",
+      "next_case": 14,
       "cases": [
         {
           "id": 1,
@@ -158,9 +158,13 @@
         {
           "id": 13,
           "desc": "Nombres de ruta especiales \".\" y \"..\" lanzan ValueError; nada creado (AC8, AC11)",
-          "status": "red",
+          "status": "green",
           "test": "tests/core/test_scaffold.py::test_create_client_nombre_ruta_especial_lanza_valueerror_y_no_crea_nada",
-          "red_evidence": "2 failed, 17 passed en tests/core/test_scaffold.py. Ambas parametrizaciones ([.] y [..]): FileExistsError [WinError 183] en client_dir.mkdir(parents=True) en vez de ValueError, porque _validate_name aun no rechaza \".\"/\"..\"; clients_root / \".\" resuelve a la propia clients_root (ya existente) y clients_root / \"..\" resuelve a su carpeta padre (tambien ya existente), por lo que mkdir(parents=True) falla con FileExistsError antes de que create_client pueda validar el nombre. Rojo por la razon esperada (falta la regla DS-1 de rechazo de nombres de ruta especiales), no por error de import/sintaxis."
+          "red_evidence": "2 failed, 17 passed en tests/core/test_scaffold.py. Ambas parametrizaciones ([.] y [..]): FileExistsError [WinError 183] en client_dir.mkdir(parents=True) en vez de ValueError, porque _validate_name aun no rechaza \".\"/\"..\"; clients_root / \".\" resuelve a la propia clients_root (ya existente) y clients_root / \"..\" resuelve a su carpeta padre (tambien ya existente), por lo que mkdir(parents=True) falla con FileExistsError antes de que create_client pueda validar el nombre. Rojo por la razon esperada (falta la regla DS-1 de rechazo de nombres de ruta especiales), no por error de import/sintaxis.",
+          "green_files": [
+            "src/foda/core/scaffold.py"
+          ],
+          "green_evidence": "2 passed (caso 13) y 19 passed (suite completa, sin regresiones). Se agrego la regla name in (\".\", \"..\") a _validate_name, que rechaza los nombres de ruta especiales antes de tocar el filesystem, sin adelantar las reglas de los casos 14-16 (NC-2/NC-3). No se rompe el caso 8 (nombres validos no son \".\" ni \"..\")."
         },
         {
           "id": 14,

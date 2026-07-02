@@ -33,6 +33,8 @@ def _validate_name(name: str) -> None:
         raise ValueError("name no puede empezar por - ni _")
     if "/" in name or "\\" in name:
         raise ValueError("name no puede contener separadores de ruta")
+    if name in (".", ".."):
+        raise ValueError("name no puede ser \".\" ni \"..\"")
 
 
 def create_client(name: str, clients_root: Path) -> Path:
