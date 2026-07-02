@@ -26,6 +26,19 @@ def test_main_camino_exito_crea_arbol_de_cliente(tmp_path, monkeypatch):
     assert (client_dir / "models").is_dir()
 
 
+def test_main_camino_exito_stdout_contiene_ruta_del_cliente(tmp_path, monkeypatch, capsys):
+    """Caso 3 (CA-02): en el camino de exito, la salida capturada en stdout
+    contiene la ruta de <raiz>/clients/ABC."""
+    (tmp_path / "pyproject.toml").write_text("", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    main(["client", "new", "ABC"])
+
+    captured = capsys.readouterr()
+    expected_path = tmp_path / "clients" / "ABC"
+    assert str(expected_path) in captured.out
+
+
 def test_main_camino_feliz_devuelve_0(tmp_path, monkeypatch):
     """Caso 1 (CA-01, CA-10): con el cwd dentro de un proyecto temporal
     (existe <raiz>/pyproject.toml), main(["client","new","ABC"]) devuelve
