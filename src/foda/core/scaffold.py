@@ -13,17 +13,33 @@ _TOP_LEVEL_DIRS = ("010_inputs", "020_outputs", "data", "models")
 _MEDALLION_DIRS = ("bronze", "silver", "gold")
 
 
+def _validate_name(name: str) -> None:
+    """Valida name antes de tocar el filesystem (CA-08, CA-11).
+
+    Implementacion minima (caso 9): solo rechaza el nombre vacio. Las
+    demas reglas (espacios, guion/underscore inicial, separadores de
+    ruta, "." / "..", caracteres no permitidos, no-ASCII, longitud>64)
+    se agregan en los casos 10-16 del bucle TDD.
+    """
+    if name == "":
+        raise ValueError("name no puede ser vacio")
+
+
 def create_client(name: str, clients_root: Path) -> Path:
     """Crea clients_root/<name>/ y devuelve el Path a la carpeta creada.
 
-    Implementacion minima (TDD, hasta caso 7 / CA-02, CA-03, CA-06): agrega,
-    sobre el tracer bullet del caso 1, las entradas de primer nivel del
-    arbol (010_inputs/, 020_outputs/, data/, models/), las subcarpetas
-    medallion de data/ (bronze/, silver/, gold/) y el archivo client.yaml
+    Implementacion minima (TDD, hasta caso 9 / CA-02, CA-03, CA-06, CA-08):
+    agrega, sobre el tracer bullet del caso 1, las entradas de primer nivel
+    del arbol (010_inputs/, 020_outputs/, data/, models/), las subcarpetas
+    medallion de data/ (bronze/, silver/, gold/), el archivo client.yaml
     con contenido YAML valido que incluye name y created_at (fecha ISO
-    YYYY-MM-DD del dia de creacion). La validacion del nombre y la
-    comprobacion de duplicado se agregan en casos posteriores del bucle TDD.
+    YYYY-MM-DD del dia de creacion), y una validacion inicial del nombre
+    (por ahora solo rechaza vacio) antes de crear cualquier carpeta. El
+    resto de las reglas de validacion y la comprobacion de duplicado se
+    agregan en casos posteriores del bucle TDD.
     """
+    _validate_name(name)
+
     client_dir = clients_root / name
     client_dir.mkdir(parents=True)
 
