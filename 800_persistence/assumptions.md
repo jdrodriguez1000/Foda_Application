@@ -33,6 +33,7 @@ Cada supuesto incluye: **ID**, **descripción**, **estado** (✅ Validado · ⏳
 > **Nota (2026-07-02):** T-009/T-010/T-011 completadas (andamiaje: 8 agentes + `sdd_tdd_workflow.md` + plantilla `600_features/`). A-005 sigue Pendiente; ahora está más cerca de validarse porque solo falta ejecutar la cadena sobre la primera feature real (T-013).
 > **Nota (2026-07-02):** se acordó el alcance de la primera feature real, `client_scaffold` (ver D-016), pero aún no se invocó la cadena de agentes. A-005 sigue Pendiente hasta ejecutarla de punta a punta.
 > **Nota (2026-07-02):** sesión de gobernanza/reconciliación de `980_guideline/` (T-016): se añadió A-006 (pendiente) sobre la carga efectiva del import de `principles.md` en `CLAUDE.md`. A-005 sigue Pendiente sin cambios; no se trabajó en T-013 esta sesión.
+> **Nota (2026-07-02):** sesión de reversión del runtime agéntico (T-019, D-020/021/022): sin cambios en A-005 ni A-006 (siguen Pendientes); no se trabajó en T-013. La sesión fue de gobernanza/documentación (recorte de `methodology.md`), sin código de aplicación.
 
 ## 4. Supuestos Invalidados
 | ID | Supuesto | Motivo | Fecha |
