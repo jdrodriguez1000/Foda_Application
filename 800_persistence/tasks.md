@@ -38,6 +38,9 @@
 | ID | Tarea | Prioridad | Notas |
 |---|---|---|---|
 | T-008 | Revisar y validar `700_architecture/system_design.md` con el usuario; tras aprobación, iniciar construcción incremental (candidato: bases mínimas + Flujo Discovery) | 🔴 Alta | Aún NO se inicia desarrollo por decisión del usuario. |
+| T-009 | Construir los 8 agentes de desarrollo SDD/TDD en `.claude/agents/` (`feature_definer`, `spec_writer`, `plan_builder`, `tdd_red`, `tdd_green`, `tdd_refactor`, `integration_tester`, `spec_verifier`) con los modelos y colores acordados | 🔴 Alta | Ver D-008. Diseño acordado 2026-07-01, pendiente de construcción. |
+| T-010 | Documentar la convención de `state.json` y la orquestación de la cadena SDD/TDD en `700_architecture/sdd_tdd_workflow.md` | 🔴 Alta | Ver D-008. |
+| T-011 | Crear la estructura de carpetas `600_features/` con una plantilla/ejemplo de feature | 🟡 Media | Depende de T-009/T-010. |
 
 ## 5. Backlog
 | ID | Tarea | Notas |

@@ -26,6 +26,7 @@ Cada supuesto incluye: **ID**, **descripción**, **estado** (✅ Validado · ⏳
 | ID | Supuesto | Impacto si es falso | Cómo validar |
 |---|---|---|---|
 | A-004 | El documento `700_architecture/system_design.md` refleja correctamente la intención del usuario | Rediseño o retrabajo en la fase de construcción | Revisar el documento sección por sección con el usuario en la próxima sesión. |
+| A-005 | El diseño de la cadena SDD/TDD de 8 agentes de desarrollo (D-008) es viable con las capacidades de subagentes de Claude Code | Habría que rediseñar la orquestación, el checkpointing o la cadena de agentes | Se validará al construir e invocar la cadena completa en la sesión siguiente (T-009, T-010, T-011). |
 
 ## 4. Supuestos Invalidados
 | ID | Supuesto | Motivo | Fecha |

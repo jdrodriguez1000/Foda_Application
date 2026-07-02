@@ -24,6 +24,7 @@ Cada decisión sigue el formato: **ID**, **título**, **estado** (Propuesta / Ac
 | D-005 | Migrar protocolos de inicio/cierre de skills a subagentes | Aceptada | 2026-07-01 |
 | D-006 | Arquitectura del sistema como pipeline de flujos deterministas con artefactos como contrato | Aceptada | 2026-07-01 |
 | D-007 | Crear carpeta `700_architecture/` para documentación de arquitectura | Aceptada | 2026-07-01 |
+| D-008 | Adoptar metodología SDD + TDD mediante una cadena de 8 agentes de desarrollo | Aceptada | 2026-07-01 |
 
 ## 3. Detalle de Decisiones
 
@@ -75,3 +76,10 @@ Cada decisión sigue el formato: **ID**, **título**, **estado** (Propuesta / Ac
 - **Contexto:** Se necesitaba un lugar para la documentación técnica de arquitectura, separado de `990_documents/` que guarda los documentos de negocio entregados por el usuario.
 - **Decisión:** Crear `700_architecture/` y ubicar allí `system_design.md`.
 - **Consecuencias:** Separación clara entre documentos de negocio (entrada) y documentos de diseño técnico (producidos por el equipo/agentes).
+
+### D-008 — Adoptar metodología SDD + TDD mediante una cadena de 8 agentes de desarrollo
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-01
+- **Contexto:** Se necesita construir la aplicación de forma disciplinada, trazable y reanudable, distinguiendo los **agentes de desarrollo** (que construyen la app) de los **agentes de runtime** (Discovery, Ingestion, etc., que son la app en sí). Los subagentes de Claude Code son efímeros (ver L-005), por lo que la reanudación de un flujo multi-etapa requiere checkpoint en disco.
+- **Decisión:** Definir una cadena de 8 agentes de desarrollo en inglés snake_case: `feature_definer` (Sonnet, blue, produce `definition.md` e inicializa `state.json`), `spec_writer` (Opus, cyan, produce `spec.md`, GATE humano), `plan_builder` (Opus, purple, produce `plan.md` y enumera `tdd.cases`, GATE humano), `tdd_red` (Sonnet, red), `tdd_green` (Sonnet, green, reintenta máx. 2 veces y escala a humano si falla), `tdd_refactor` (Sonnet, orange), `integration_tester` (Sonnet, yellow) y `spec_verifier` (Opus, pink, produce `verification.md`). Orquestación: la sesión principal (Opus) encadena automáticamente tras `feature_definer`, con gates humanos obligatorios tras `spec_writer` y `plan_builder`. Bucle TDD: un caso de test a la vez, ciclo red→green→refactor hasta agotar los casos del plan. Commit por etapa. Persistencia por feature en `600_features/<feature>/` (`definition.md`, `spec.md`, `plan.md`, `verification.md`, `state.json` como máquina de estado con `feature`, `status`, `current_stage`, `stages{...}`); el código y los tests van a `src/foda/` y `tests/`, no dentro de `600_features/`.
+- **Consecuencias:** Desarrollo estructurado, auditable y con human-in-the-loop antes de codificar. Requiere construir los 8 agentes y documentar la convención de `state.json` en una sesión futura (T-009, T-010, T-011). El diseño no se ha validado aún ejecutándolo (ver A-005).

@@ -26,6 +26,7 @@ Cada lección incluye: **ID**, **contexto** (qué pasó), **lección** (qué apr
 |---|---|---|---|
 | L-001 | Arranque del proyecto | Definir persistencia y protocolos desde el inicio da trazabilidad y continuidad entre sesiones. | Mantener disciplina: ejecutar `foda-next` al iniciar y `foda-status` al cerrar. |
 | L-004 | Se diseñó `700_architecture/system_design.md` definiendo primero principios (determinista por defecto, LLM aislado, artefactos como contrato entre flujos) antes de codificar. | Definir principios de diseño antes de codificar produce una arquitectura testeable y reproducible. | Mantener el documento de diseño como referencia obligatoria antes de iniciar cualquier construcción de código. |
+| L-005 | Se diseñó una cadena de 8 agentes de desarrollo SDD/TDD; los subagentes de Claude Code son efímeros (arranque en frío) y no se pueden pausar/reanudar como procesos vivos. | La resumibilidad de un flujo multi-etapa entre sesiones se logra con checkpointing a disco (artefactos + `state.json`), no con estado en memoria del agente; cada etapa debe ser atómica para poder reanudar limpiamente. | Diseñar todo flujo largo orquestado por subagentes con persistencia en disco por etapa y re-invocación desde el último checkpoint. |
 
 ## 4. Lecciones de Producto/Negocio
 | ID | Contexto | Lección | Acción |
