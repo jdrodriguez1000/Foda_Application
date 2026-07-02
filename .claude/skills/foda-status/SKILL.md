@@ -1,7 +1,7 @@
 ---
 name: foda-status
 description: Ejecuta el Protocolo de Cierre de Sesión del proyecto Foda_Application. Úsalo al finalizar una sesión para actualizar los 5 archivos de persistencia con lo trabajado y, finalmente, hacer commit y push al repositorio remoto.
-model: inherit
+model: sonnet
 ---
 
 # foda-status — Protocolo de Cierre de Sesión

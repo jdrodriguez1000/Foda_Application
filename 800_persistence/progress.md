@@ -49,3 +49,4 @@
 |---|---|
 | 2026-07-01 | Creación inicial del archivo. |
 | 2026-07-01 | Cierre de sesión: andamiaje del proyecto (persistencia, CLAUDE.md, Git, skills). |
+| 2026-07-01 | Sesión de verificación: sin trabajo nuevo, sigue a la espera de que el usuario defina el alcance del proyecto (T-002). |

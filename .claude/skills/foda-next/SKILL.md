@@ -1,7 +1,7 @@
 ---
 name: foda-next
 description: Ejecuta el Protocolo de Inicio de Sesión del proyecto Foda_Application. Úsalo al comenzar una sesión para conocer el estado del proyecto antes de trabajar. Lee de forma obligatoria progress.md y tasks.md usando su índice, y a demanda lessons.md, decisions.md y assumptions.md.
-model: inherit
+model: haiku
 ---
 
 # foda-next — Protocolo de Inicio de Sesión
