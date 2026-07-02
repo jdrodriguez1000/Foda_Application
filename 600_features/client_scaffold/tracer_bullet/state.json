@@ -25,7 +25,7 @@
     "tdd": {
       "status": "in_progress",
       "current_stage": "tdd_tester",
-      "next_case": 15,
+      "next_case": 16,
       "cases": [
         {
           "id": 1,
@@ -181,7 +181,9 @@
         {
           "id": 15,
           "desc": "Nombre no-ASCII / acentuado (\"anez\" con enye, \"cliente\" con tilde) lanza ValueError; nada creado (AC8, AC11)",
-          "status": "pending"
+          "status": "done",
+          "test": "tests/core/test_scaffold.py::test_create_client_nombre_no_ascii_lanza_valueerror_y_no_crea_nada",
+          "tdd_note": "NO hubo fase red: el test parametrizado (\"nanez\" con ene, \"cliente\" con tilde) paso en verde de inmediato (2 passed, 24 passed en la suite completa) porque la whitelist _ALLOWED_CHARS = re.compile(r\"[A-Za-z0-9_-]+\") introducida en el caso 14 ya rechaza cualquier caracter fuera de letras/digitos ASCII/-/_, y tanto \"n\" con ene como \"e\" con tilde caen fuera de ese rango. Por instruccion explicita del orquestador no se forzo un rojo artificial. El test se conserva como cobertura de regresion especifica de CA-08/CA-11 para nombres no-ASCII (garantiza que la whitelist siga rechazando acentos/enies aunque scaffold.py cambie en el futuro), y el caso se marca done sin pasar por tdd_coder ni tdd_refactor, ya que no hay codigo de produccion pendiente para este caso. Sin cambios en scaffold.py. Archivo de test verificado en UTF-8 (decode('utf-8') exitoso, ambos nombres presentes)."
         },
         {
           "id": 16,
