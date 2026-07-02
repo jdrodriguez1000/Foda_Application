@@ -31,6 +31,7 @@ Cada decisión sigue el formato: **ID**, **título**, **estado** (Propuesta / Ac
 | D-012 | Exports/descargables ubicados dentro de `020_outputs/<flujo>/`, sin carpeta `exports/` separada | Aceptada | 2026-07-01 |
 | D-013 | API de Anthropic (Claude) como proveedor LLM por defecto, tras la abstracción `src/foda/llm/` | Aceptada | 2026-07-01 |
 | D-014 | Los contratos de flujo permiten dependencias multi-flujo (no solo del flujo inmediatamente anterior) | Aceptada | 2026-07-01 |
+| D-015 | Renombrar `tdd_red`→`tdd_tester` y `tdd_green`→`tdd_coder`; tools mínimas para los 8 agentes de desarrollo | Aceptada | 2026-07-02 |
 
 ## 3. Detalle de Decisiones
 
@@ -131,3 +132,10 @@ Cada decisión sigue el formato: **ID**, **título**, **estado** (Propuesta / Ac
 - **Contexto:** El diseño original (v0.1) de la tabla de contratos de artefactos (sección 8) asumía implícitamente que cada flujo solo depende de los artefactos del flujo inmediatamente anterior. Al validar con el usuario se identificó que, por ejemplo, Reporting necesitará `contract_data.json` (de un flujo más atrás) además de la salida de Simulation.
 - **Decisión:** Los contratos de flujo permiten declarar dependencias (`requires`) de artefactos de más de un flujo atrás, no solo del inmediatamente anterior. El conjunto exacto de `requires` se declarará al construir cada flujo concreto.
 - **Consecuencias:** Mayor flexibilidad y realismo en el modelo de dependencias entre flujos; se pospone la declaración exacta de `requires` por flujo hasta la etapa de construcción (T-009 en adelante), lo que exige revisarlo cuidadosamente al implementar cada flujo.
+
+### D-015 — Renombrar `tdd_red`→`tdd_tester` y `tdd_green`→`tdd_coder`; tools mínimas para los 8 agentes de desarrollo
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-02
+- **Contexto:** D-008 nombró los agentes del bucle TDD `tdd_red` y `tdd_green` (por el color/estado del ciclo red-green-refactor). Al construirlos en T-009 el usuario pidió nombres que describan el rol del agente en vez del estado del ciclo.
+- **Decisión:** Los agentes se renombran a `tdd_tester` (antes `tdd_red`: escribe un test que falla, rojo limpio, no toca código de producción) y `tdd_coder` (antes `tdd_green`: escribe el código mínimo para pasar a verde, máx. 2 reintentos y escalamiento a humano si falla). Los otros 6 agentes conservan su nombre. Además, se fija la política de `tools` mínima común a los 8 agentes de desarrollo: `Read, Glob, Grep, Write, Edit, Bash` (sin `Agent` ni herramientas web), porque la orquestación entre agentes la realiza la sesión principal, no los agentes de desarrollo entre sí.
+- **Consecuencias:** D-008 queda parcialmente desactualizado en los nombres (el resto de su contenido sigue vigente); `700_architecture/sdd_tdd_workflow.md` y los archivos de agente en `.claude/agents/` usan los nombres nuevos, que son los vigentes. La política de tools mínima reduce la superficie de cada agente y refuerza que la orquestación es responsabilidad exclusiva de la sesión principal.

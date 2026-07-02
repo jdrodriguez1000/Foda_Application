@@ -26,9 +26,10 @@ Cada supuesto incluye: **ID**, **descripción**, **estado** (✅ Validado · ⏳
 ## 3. Supuestos Pendientes de Validar
 | ID | Supuesto | Impacto si es falso | Cómo validar |
 |---|---|---|---|
-| A-005 | El diseño de la cadena SDD/TDD de 8 agentes de desarrollo (D-008) es viable con las capacidades de subagentes de Claude Code | Habría que rediseñar la orquestación, el checkpointing o la cadena de agentes | Se validará al construir e invocar la cadena completa (T-009, T-010, T-011). |
+| A-005 | El diseño de la cadena SDD/TDD de 8 agentes de desarrollo (D-008, D-015) es viable con las capacidades de subagentes de Claude Code | Habría que rediseñar la orquestación, el checkpointing o la cadena de agentes | Se validará al construir e invocar la cadena completa sobre una feature real (T-013). |
 
 > **Nota (2026-07-01):** sesión de validación de `system_design.md` (T-008): A-004 pasa a Validado. A-005 sigue pendiente, se validará al construir T-009/T-010.
+> **Nota (2026-07-02):** T-009/T-010/T-011 completadas (andamiaje: 8 agentes + `sdd_tdd_workflow.md` + plantilla `600_features/`). A-005 sigue Pendiente; ahora está más cerca de validarse porque solo falta ejecutar la cadena sobre la primera feature real (T-013).
 
 ## 4. Supuestos Invalidados
 | ID | Supuesto | Motivo | Fecha |

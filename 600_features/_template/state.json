@@ -1,0 +1,13 @@
+{
+  "feature": "<feature>",
+  "status": "pending",
+  "current_stage": "feature_definer",
+  "stages": {
+    "feature_definer":    { "status": "pending", "artifact": "definition.md" },
+    "spec_writer":        { "status": "pending", "artifact": "spec.md",  "gate": "human", "awaiting_approval": false },
+    "plan_builder":       { "status": "pending", "artifact": "plan.md",  "gate": "human", "awaiting_approval": false },
+    "tdd":                { "status": "pending", "cases": [] },
+    "integration_tester": { "status": "pending" },
+    "spec_verifier":      { "status": "pending", "artifact": "verification.md" }
+  }
+}
