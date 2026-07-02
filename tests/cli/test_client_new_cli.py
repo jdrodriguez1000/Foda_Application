@@ -89,6 +89,31 @@ def test_main_resuelve_raiz_real_desde_subcarpeta_anidada(tmp_path, monkeypatch)
     assert not (nested / "clients").exists()
 
 
+def test_main_sin_pyproject_devuelve_1_y_no_toca_disco(tmp_path, monkeypatch, capsys):
+    """Caso 7 (CA-06, DS-CLI-1): con un cwd sin pyproject.toml ni en el ni
+    en ancestros, main(["client","new","ABC"]) devuelve 1, escribe en
+    stderr un mensaje que menciona que no se encontro la raiz del
+    proyecto, la salida no contiene "Traceback", y no se crea ninguna
+    carpeta clients/ ni de cliente."""
+    # Aislar de cualquier pyproject.toml real de ancestros: raiz de un
+    # filesystem temporal sin marcador.
+    no_project_root = tmp_path / "sin_proyecto"
+    no_project_root.mkdir()
+    monkeypatch.chdir(no_project_root)
+    monkeypatch.setattr(
+        "foda.cli._find_project_root", lambda start: None
+    )
+
+    result = main(["client", "new", "ABC"])
+
+    captured = capsys.readouterr()
+    assert result == 1
+    assert "raiz" in captured.err.lower() or "raíz" in captured.err.lower()
+    assert "Traceback" not in captured.out
+    assert "Traceback" not in captured.err
+    assert not (no_project_root / "clients").exists()
+
+
 def test_main_camino_feliz_devuelve_0(tmp_path, monkeypatch):
     """Caso 1 (CA-01, CA-10): con el cwd dentro de un proyecto temporal
     (existe <raiz>/pyproject.toml), main(["client","new","ABC"]) devuelve
