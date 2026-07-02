@@ -67,3 +67,14 @@ def test_create_client_data_contiene_capas_medallion_vacias(tmp_path: Path) -> N
     assert list(bronze_dir.iterdir()) == []
     assert list(silver_dir.iterdir()) == []
     assert list(gold_dir.iterdir()) == []
+
+
+def test_create_client_models_existe_y_vacia(tmp_path: Path) -> None:
+    """Caso 5 (CA-04): tmp/ABC/models/ existe y esta vacia, sin subcarpetas
+    de version."""
+    create_client("ABC", tmp_path)
+
+    models_dir = tmp_path / "ABC" / "models"
+
+    assert models_dir.is_dir()
+    assert list(models_dir.iterdir()) == []
