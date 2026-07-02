@@ -6,6 +6,9 @@ dependencies = [
     "PyYAML",
 ]
 
+[project.scripts]
+foda = "foda.cli:main"
+
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
