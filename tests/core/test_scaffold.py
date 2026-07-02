@@ -34,3 +34,18 @@ def test_create_client_crea_arbol_de_primer_nivel_completo(tmp_path: Path) -> No
     assert (client_dir / "020_outputs").is_dir()
     assert (client_dir / "data").is_dir()
     assert (client_dir / "models").is_dir()
+
+
+def test_create_client_010_inputs_y_020_outputs_existen_y_vacias(tmp_path: Path) -> None:
+    """Caso 3 (CA-05): tmp/ABC/010_inputs/ y tmp/ABC/020_outputs/ existen y
+    estan vacias (sin subcarpetas por flujo)."""
+    create_client("ABC", tmp_path)
+
+    client_dir = tmp_path / "ABC"
+    inputs_dir = client_dir / "010_inputs"
+    outputs_dir = client_dir / "020_outputs"
+
+    assert inputs_dir.is_dir()
+    assert outputs_dir.is_dir()
+    assert list(inputs_dir.iterdir()) == []
+    assert list(outputs_dir.iterdir()) == []
