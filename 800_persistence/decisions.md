@@ -53,6 +53,8 @@ Cada decisión sigue el formato: **ID**, **título**, **estado** (Propuesta / Ac
 | D-034 | `client_new_cli` entra por la cadena SDD/TDD completa, no por cableado directo | Aceptada | 2026-07-02 |
 | D-035 | `client_new_cli` sí lleva tests propios de la capa CLI (NC-5 prevalece sobre el No-Objetivo previo de `client_scaffold`) | Aceptada | 2026-07-02 |
 | D-036 | `client_new_cli` — resolución de `clients_root` buscando `pyproject.toml` hacia arriba desde el cwd | Aceptada | 2026-07-02 |
+| D-037 | Patrón "verde directo, sin rojo artificial" consolidado como práctica estándar del bucle TDD del harness | Aceptada | 2026-07-02 |
+| D-038 | `client_new_cli` — ramas `except ValueError`/`except FileExistsError` en `cli.py` se mantienen separadas | Aceptada | 2026-07-02 |
 
 ## 3. Detalle de Decisiones
 
@@ -300,6 +302,20 @@ Cada decisión sigue el formato: **ID**, **título**, **estado** (Propuesta / Ac
 - **Contexto:** `spec_writer` de `client_new_cli` necesitaba resolver cómo la CLI localiza la raíz del proyecto (y por tanto `clients/`) al ejecutarse desde cualquier subcarpeta (HU-02), sin asumir que el cwd es siempre la raíz.
 - **Decisión:** La CLI busca `pyproject.toml` hacia arriba desde el cwd hasta encontrar la raíz del proyecto (marcador de raíz); si no lo encuentra en el cwd ni en ningún ancestro, falla con código de salida 1 y mensaje claro en stderr (DS-CLI-1). `clients_root` se resuelve como `<raíz>/clients/`, creado por la CLI con `mkdir` idempotente si no existe (DS-CLI-2), no por el core `create_client`.
 - **Consecuencias:** La CLI es invocable desde cualquier subcarpeta del proyecto (HU-02), reflejado en los casos TDD 6 y 7. `create_client(...)` del core sigue sin conocer la noción de "raíz de proyecto"; esa responsabilidad queda enteramente en la capa CLI (`src/foda/cli.py`), preservando el aislamiento del core (D-025).
+
+### D-037 — Patrón "verde directo, sin rojo artificial" consolidado como práctica estándar del bucle TDD
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-02
+- **Contexto:** En `client_scaffold` (L-020), 5 de 18 casos TDD llegaron "verde directo" (comportamiento ya cubierto por un caso anterior) y se cerraron sin forzar un rojo artificial, documentando la razón. En `client_new_cli`, el mismo patrón se repitió en 7 de 12 casos (2, 3, 4, 5, 6, 10, 11), reforzado por el orquestador (sesión principal) como decisión explícita en vez de tratarse caso a caso.
+- **Decisión:** Se formaliza como práctica estándar de la cadena SDD/TDD del harness (no exclusiva de una feature): cuando el test de un caso posterior del plan pasa en verde de inmediato porque el tracer bullet u otro comportamiento ya construido lo cubre, el caso se cierra como `done` conservando el test como cobertura de regresión, con una nota (`tdd_note`) que documenta explícitamente qué caso/comportamiento previo lo cubre (NC-6), sin invocar `tdd_coder` ni `tdd_refactor` para ese caso.
+- **Consecuencias:** Evita forzar fallos artificiales que violarían NC-2 (simplicidad); reduce trabajo redundante en el bucle TDD sin perder cobertura de regresión ni trazabilidad de la decisión. Aplica a toda feature futura del harness, no solo a `client_scaffold`/`client_new_cli`. Ver L-020, L-024.
+
+### D-038 — `client_new_cli`: ramas `except ValueError`/`except FileExistsError` en `cli.py` se mantienen separadas
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-02
+- **Contexto:** En el refactor del caso 9 (duplicado), se evaluó consolidar las ramas `except ValueError` (nombre inválido, caso 8) y `except FileExistsError` (cliente duplicado, caso 9) de `main()` en `src/foda/cli.py`, ya que ambas envuelven la llamada a `create_client` y devuelven `return 1`.
+- **Decisión:** NO se consolidan. La `spec.md` de `client_new_cli` exige mensajes de error distintos por historia de usuario (CA-07 para nombre inválido, CA-08 para duplicado); fusionar ambas ramas en un único `except (ValueError, FileExistsError)` con un `if/elif` interno para elegir el mensaje degradaría la claridad sin reducir duplicación real.
+- **Consecuencias:** `cli.py` conserva dos bloques `except` explícitos y paralelos, cada uno con su propio mensaje a stderr, priorizando legibilidad y trazabilidad directa a su CA sobre la eliminación de una duplicación menor.
 
 ### D-031 — Cadena de trazabilidad codificada HU→CA→TSK y tareas atómicas del plan
 - **Estado:** Aceptada
