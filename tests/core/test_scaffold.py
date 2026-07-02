@@ -4,11 +4,14 @@ Fuente: 600_features/client_scaffold/tracer_bullet/spec.md (CA-xx) y plan.md (ca
 Bucle TDD: un test por caso, ejecutado en orden (state.json -> stages.tdd.cases).
 """
 
+import re
 from pathlib import Path
 
 import yaml
 
 from foda.core.scaffold import create_client
+
+_CREATED_AT_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
 def test_create_client_crea_directorio_y_devuelve_su_path(tmp_path: Path) -> None:
@@ -92,3 +95,17 @@ def test_create_client_yaml_parsea_a_mapa_con_name_abc(tmp_path: Path) -> None:
 
     assert isinstance(content, dict)
     assert content["name"] == "ABC"
+
+
+def test_create_client_yaml_created_at_cumple_patron_iso(tmp_path: Path) -> None:
+    """Caso 7 (CA-06): tmp/ABC/client.yaml tiene una clave created_at cuyo
+    valor (str) cumple el patron ISO-8601 de fecha ^\\d{4}-\\d{2}-\\d{2}$."""
+    create_client("ABC", tmp_path)
+
+    client_yaml = tmp_path / "ABC" / "client.yaml"
+    content = yaml.safe_load(client_yaml.read_text(encoding="utf-8"))
+
+    assert isinstance(content, dict)
+    created_at = content["created_at"]
+    assert isinstance(created_at, str)
+    assert _CREATED_AT_PATTERN.match(created_at)
