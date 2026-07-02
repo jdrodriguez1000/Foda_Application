@@ -13,6 +13,7 @@ encontrada la agregan los casos siguientes del bucle TDD (TSK-03, TSK-05).
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
 from foda.core.scaffold import create_client
@@ -49,6 +50,14 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     project_root = _find_project_root(Path.cwd())
+    if project_root is None:
+        print(
+            "foda: no se encontro la raiz del proyecto (ningun ancestro "
+            "contiene pyproject.toml)",
+            file=sys.stderr,
+        )
+        return 1
+
     clients_root = project_root / "clients"
     clients_root.mkdir(parents=True, exist_ok=True)
 
