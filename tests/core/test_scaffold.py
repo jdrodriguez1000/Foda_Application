@@ -6,6 +6,8 @@ Bucle TDD: un test por caso, ejecutado en orden (state.json -> stages.tdd.cases)
 
 from pathlib import Path
 
+import yaml
+
 from foda.core.scaffold import create_client
 
 
@@ -78,3 +80,15 @@ def test_create_client_models_existe_y_vacia(tmp_path: Path) -> None:
 
     assert models_dir.is_dir()
     assert list(models_dir.iterdir()) == []
+
+
+def test_create_client_yaml_parsea_a_mapa_con_name_abc(tmp_path: Path) -> None:
+    """Caso 6 (CA-06): tmp/ABC/client.yaml es YAML valido que parsea a un
+    mapa cuya clave name == "ABC"."""
+    create_client("ABC", tmp_path)
+
+    client_yaml = tmp_path / "ABC" / "client.yaml"
+    content = yaml.safe_load(client_yaml.read_text(encoding="utf-8"))
+
+    assert isinstance(content, dict)
+    assert content["name"] == "ABC"
