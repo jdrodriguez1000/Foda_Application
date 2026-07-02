@@ -6,7 +6,25 @@ con un `pyproject.toml` marcador y `monkeypatch.chdir`).
 Fuente: 600_features/client_new_cli/tracer_bullet/plan.md (caso 1 de 12).
 """
 
+from unittest.mock import MagicMock
+
+import foda.cli
 from foda.cli import main
+
+
+def test_main_delega_en_create_client_una_vez_con_argumentos_correctos(tmp_path, monkeypatch):
+    """Caso 4 (CA-03): con create_client espiado/monkeypatcheado,
+    main(["client","new","ABC"]) lo invoca exactamente una vez con
+    name == "ABC" y clients_root == <raiz>/clients."""
+    (tmp_path / "pyproject.toml").write_text("", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    spy = MagicMock(return_value=tmp_path / "clients" / "ABC")
+    monkeypatch.setattr(foda.cli, "create_client", spy)
+
+    main(["client", "new", "ABC"])
+
+    spy.assert_called_once_with("ABC", tmp_path / "clients")
 
 
 def test_main_camino_exito_crea_arbol_de_cliente(tmp_path, monkeypatch):
