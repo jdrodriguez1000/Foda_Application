@@ -2,15 +2,16 @@
 
 Fuente: 600_features/client_new_cli/tracer_bullet/spec.md.
 
-Implementacion parcial (TDD, casos 1-9 en verde / TSK-02, TSK-03, TSK-04,
-TSK-05): parser argparse minimo, resolucion de la raiz del proyecto
-(marcador pyproject.toml) hacia arriba desde el cwd (D-C) con su fallo
-controlado (DS-CLI-1: raiz no encontrada -> stderr + codigo 1, sin tocar
-disco), aseguramiento de clients_root, delegacion en create_client,
-traduccion del camino de exito a consola y traduccion de ValueError (nombre
-invalido) / FileExistsError (duplicado) a stderr + codigo 1. Los errores de
-parseo de argparse (NAME ausente, subcomando desconocido) los agregan los
-casos siguientes del bucle TDD.
+Implementacion completa (TDD, casos 1-12 en verde / TSK-01 a TSK-05): parser
+argparse minimo (delega en argparse el codigo 2 para NAME ausente o
+subcomando desconocido), resolucion de la raiz del proyecto (marcador
+pyproject.toml) hacia arriba desde el cwd (D-C) con su fallo controlado
+(DS-CLI-1: raiz no encontrada -> stderr + codigo 1, sin tocar disco),
+aseguramiento de clients_root, delegacion en create_client, traduccion del
+camino de exito a consola y traduccion de ValueError (nombre invalido) /
+FileExistsError (duplicado) a stderr + codigo 1. El entry point del paquete
+(`foda = "foda.cli:main"`, TSK-01) se declara en pyproject.toml
+([project.scripts]).
 """
 
 from __future__ import annotations
