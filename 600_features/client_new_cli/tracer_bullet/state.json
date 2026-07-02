@@ -2,11 +2,11 @@
   "feature": "client_new_cli",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "tdd_tester",
+  "current_stage": "tdd_tester (casos 2-4)",
   "suspension": {
     "suspended": false,
-    "reason": "Caso 1 cerrado (red->green->refactor). Bucle TDD continua con el caso 2.",
-    "resume_at": "Invocar tdd_tester con el caso 2 (siguiente caso pendiente)."
+    "reason": "Caso 2 cerrado por instruccion explicita del orquestador (opcion (a)): sin fase red, mismo tratamiento que el precedente de client_scaffold. Bucle TDD continua con el caso 3.",
+    "resume_at": "tdd_tester continua con el caso 3 (siguiente caso pendiente)."
   },
   "stages": {
     "feature_definer":   { "status": "done",    "artifact": "definition.md" },
@@ -16,7 +16,7 @@
       "status": "pending",
       "cases": [
         { "id": 1,  "desc": "main([\"client\",\"new\",\"ABC\"]) con cwd dentro de un proyecto temporal (existe <raiz>/pyproject.toml) devuelve el int 0 (camino feliz, invocabilidad).", "status": "done", "test": "tests/cli/test_client_new_cli.py::test_main_camino_feliz_devuelve_0", "green_evidence": "pytest tests/cli/test_client_new_cli.py::test_main_camino_feliz_devuelve_0 -q -> 1 passed; pytest -q (suite completa) -> 33 passed, sin regresiones", "refactor_evidence": "Revision de src/foda/cli.py (tdd_refactor): codigo ya minimo, sin duplicacion, nombres claros, sin manejo anticipado de casos aun no cubiertos (NC-2/NC-3). Sin cambios de codigo. pytest -q -> 33 passed, sin regresiones.", "src_files": ["src/foda/cli.py"] },
-        { "id": 2,  "desc": "En el camino de exito, main(...) crea el arbol de cliente en <raiz>/clients/ABC/ (existe <raiz>/clients/ABC/client.yaml y las carpetas del scaffold).", "status": "pending" },
+        { "id": 2,  "desc": "En el camino de exito, main(...) crea el arbol de cliente en <raiz>/clients/ABC/ (existe <raiz>/clients/ABC/client.yaml y las carpetas del scaffold).", "status": "done", "test": "tests/cli/test_client_new_cli.py::test_main_camino_exito_crea_arbol_de_cliente", "tdd_note": "NO hubo fase red: el test paso en verde de inmediato (1 passed; 34 passed en la suite completa) porque el codigo de produccion ya completo del caso 1 (main delega en create_client, que construye el arbol entero) satisface el caso 2 como efecto colateral necesario, igual que el precedente documentado en 600_features/client_scaffold/tracer_bullet/state.json (casos 3/5/8/15/17). Cerrado por instruccion explicita del orquestador (opcion (a)), sin pasar por tdd_coder/tdd_refactor; test conservado como cobertura de regresion de CA-01. Sin cambios en codigo de produccion." },
         { "id": 3,  "desc": "En el camino de exito, la salida capturada en stdout contiene la ruta de <raiz>/clients/ABC.", "status": "pending" },
         { "id": 4,  "desc": "Con create_client espiado/monkeypatcheado, main([\"client\",\"new\",\"ABC\"]) lo invoca exactamente una vez con name == \"ABC\" y clients_root == <raiz>/clients.", "status": "pending" },
         { "id": 5,  "desc": "Cuando <raiz>/clients/ no existe todavia, main([\"client\",\"new\",\"ABC\"]) la crea y crea ABC/ dentro, terminando con codigo 0 (primer cliente del proyecto).", "status": "pending" },
