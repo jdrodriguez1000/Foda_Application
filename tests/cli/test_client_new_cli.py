@@ -144,6 +144,31 @@ def test_main_nombre_invalido_devuelve_1_y_no_crea_nada(
         assert nombre_invalido not in [p.name for p in clients_root.iterdir()]
 
 
+def test_main_duplicado_devuelve_1_y_preserva_cliente_existente(
+    tmp_path, monkeypatch, capsys
+):
+    """Caso 9 (CA-08): cuando <raiz>/clients/ABC/ ya existe (con un archivo
+    centinela dentro), main(["client","new","ABC"]) devuelve 1, escribe un
+    mensaje legible en stderr (sin "Traceback"), y el archivo centinela del
+    cliente existente permanece intacto."""
+    (tmp_path / "pyproject.toml").write_text("", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    client_dir = tmp_path / "clients" / "ABC"
+    client_dir.mkdir(parents=True)
+    sentinel = client_dir / "sentinel.txt"
+    sentinel.write_text("contenido preexistente", encoding="utf-8")
+
+    result = main(["client", "new", "ABC"])
+
+    captured = capsys.readouterr()
+    assert result == 1
+    assert captured.err.strip() != ""
+    assert "Traceback" not in captured.out
+    assert "Traceback" not in captured.err
+    assert sentinel.read_text(encoding="utf-8") == "contenido preexistente"
+
+
 def test_main_camino_feliz_devuelve_0(tmp_path, monkeypatch):
     """Caso 1 (CA-01, CA-10): con el cwd dentro de un proyecto temporal
     (existe <raiz>/pyproject.toml), main(["client","new","ABC"]) devuelve
