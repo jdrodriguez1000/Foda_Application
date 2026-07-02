@@ -2,8 +2,9 @@
 
 > Documento de arquitectura que describe **cómo funciona la cadena de 8 agentes de desarrollo** (SDD + TDD) como sistema: la máquina de estado `state.json` que gobierna cada feature y la orquestación de las etapas. Es la **fuente única de verdad** de la convención de `state.json` y del encadenamiento; los archivos de cada agente en `.claude/agents/` describen el detalle de *su* etapa y deben ser coherentes con este documento.
 
-**Versión:** 0.2 · **Fecha:** 2026-07-02 · Ver [D-008](../800_persistence/decisions.md).
+**Versión:** 0.3 · **Fecha:** 2026-07-02 · Ver [D-008](../800_persistence/decisions.md).
 
+> **Cambios v0.3:** se añade la **cadena de trazabilidad codificada** `HU-xx → CA-xx → TSK-xx` (definition → spec → plan) y las **tareas atómicas** del plan como regla transversal (§8). Ver [D-031](../800_persistence/decisions.md).
 > **Cambios v0.2:** se añade §6 «Bandas y Ejes de Crecimiento» con la taxonomía de bandas (`tracer_bullet → stab_n`) y la distinción entre eje vertical (madurez de una feature) y eje horizontal (crecimiento del producto: hitos MVP/Final y evolución). Ver [D-029](../800_persistence/decisions.md).
 
 ---
@@ -227,6 +228,7 @@ Un archivo por **celda** (feature × banda, ver §6) en `600_features/<feature>/
 - **Commit por etapa, sin push:** cada agente cierra con `git add` + `git commit` usando prefijo convencional (`feat`/`spec`/`plan`/`test`/`refactor`/`verify`) y `(<feature>)` en el mensaje. **El `push` se hace solo en el cierre de sesión** (D-003).
 - **Separación de artefactos:** el código va a `src/foda/…`, los tests a `tests/…`; en `600_features/<feature>/<banda>/` solo viven los `.md` SDD y `state.json`.
 - **Herramientas mínimas:** los 8 agentes usan `Read, Glob, Grep, Write, Edit, Bash` (sin `Agent` ni herramientas web); la orquestación de subagentes la hace la sesión principal.
+- **Trazabilidad codificada end-to-end (`D-031`):** los artefactos SDD encadenan una traza por códigos: `HU-xx` (historias de usuario en `definition.md`) → `CA-xx` (criterios de aceptación en `spec.md`, cada uno enlazado a su HU + matriz de cobertura) → `TSK-xx` (tareas en `plan.md`, cada una enlazada a su CA). Las **tareas del plan** son **atómicas**: un solo responsable (∈ `{tdd_tester, tdd_coder, tdd_refactor, integration_tester, humano}`), un solo entregable, y **código y test en tareas separadas**. Cada tarea tiene **estado** (`no_implementada` | `implementada` | `cancelada_suspendida`) y su **responsable es el único escritor** de ese estado (Single Writer, `D-021`). El bucle TDD sigue corriendo **por caso** (§5); cada caso agrupa sus `TSK-xx` de test y código —las tareas son la capa de trazabilidad, no cambian el mecanismo del bucle.
 
 ---
 

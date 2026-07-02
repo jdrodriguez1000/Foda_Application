@@ -1,8 +1,10 @@
 # Spec — client_scaffold
 
-> Artefacto de la etapa 2 (`spec_writer`). Especifica el **comportamiento observable**: entradas, salidas, contratos, casos límite y criterios de aceptación verificables. **Requiere aprobación humana** (gate) antes de planear.
+> Artefacto de la etapa 2 (`spec_writer`). Especifica el **comportamiento observable**: entradas, salidas, contratos, casos límite y criterios de aceptación verificables **codificados (`CA-xx`) y enlazados a las historias de usuario (`HU-xx`)** de `definition.md`. **Requiere aprobación humana** (gate) antes de planear.
 >
 > Banda: `tracer_bullet`. Fuentes canónicas: `600_features/client_scaffold/tracer_bullet/definition.md`, `700_architecture/system_design.md` (§7, §10, §11, §13), `800_persistence/decisions.md` (D-016, D-011, D-019).
+>
+> **Nota de retro-ajuste (`D-031`):** los códigos `CA-xx`, la columna de trazabilidad → HU y la matriz de cobertura se añadieron retroactivamente al adoptar la trazabilidad codificada. `CA-0n` conserva el número del criterio original (antes citado como `ACn`).
 
 ## Resumen
 Función core `create_client(name, clients_root)` que crea, de forma atómica y validada, el árbol de carpetas de un cliente nuevo bajo `clients/<NAME>/`, con una capa CLI fina (`foda client new <NAME>`) por encima.
@@ -128,19 +130,32 @@ def create_client(name: str, clients_root: Path) -> Path:
 ---
 
 ## Criterios de Aceptación (verificables)
-Cada criterio es traducible a uno o más tests unitarios sobre `create_client` (usando un `clients_root` temporal).
+Cada criterio es traducible a uno o más tests unitarios sobre `create_client` (usando un `clients_root` temporal) y traza a la(s) historia(s) de usuario que satisface.
 
-1. `create_client("ABC", tmp)` crea el directorio `tmp/ABC/`.
-2. Bajo `tmp/ABC/` existen exactamente estas entradas de primer nivel: archivo `client.yaml` y carpetas `010_inputs/`, `020_outputs/`, `data/`, `models/`.
-3. `tmp/ABC/data/` contiene las subcarpetas `bronze/`, `silver/`, `gold/`, y las tres están vacías.
-4. `tmp/ABC/models/` existe y está vacía (sin subcarpetas de versión).
-5. `tmp/ABC/010_inputs/` y `tmp/ABC/020_outputs/` existen y están vacías (sin subcarpetas por flujo).
-6. `tmp/ABC/client.yaml` es YAML válido que parsea a un mapa con clave `name == "ABC"` y clave `created_at` cuyo valor cumple el patrón `^\d{4}-\d{2}-\d{2}$`.
-7. `create_client("ABC", tmp)` devuelve un `Path` que apunta a `tmp/ABC` (la carpeta creada).
-8. Para cada nombre inválido de la tabla de casos límite (`""`, `"-abc"`, `"a/b"`, `".."`, `"a b"`, `"añez"`, nombre de 65 caracteres, …), `create_client(nombre, tmp)` lanza `ValueError` y `tmp` no contiene ninguna carpeta nueva para ese nombre.
-9. Para cada nombre válido representativo (`"X"`, `"9lives"`, `"Client_1-a"`), `create_client(...)` crea el árbol completo sin error.
-10. Llamar `create_client("ABC", tmp)` cuando `tmp/ABC/` ya existe lanza `FileExistsError` y no modifica ni sobrescribe el contenido preexistente (un archivo centinela previo dentro de `tmp/ABC/` permanece intacto).
-11. Toda comprobación (nombre y existencia) ocurre antes de escribir: tras un `ValueError` o un `FileExistsError`, el estado del filesystem para ese nombre es idéntico al previo a la llamada.
+| ID | Criterio de aceptación | Trazabilidad → HU |
+|---|---|---|
+| CA-01 | `create_client("ABC", tmp)` crea el directorio `tmp/ABC/`. | HU-01 |
+| CA-02 | Bajo `tmp/ABC/` existen exactamente estas entradas de primer nivel: archivo `client.yaml` y carpetas `010_inputs/`, `020_outputs/`, `data/`, `models/`. | HU-01 |
+| CA-03 | `tmp/ABC/data/` contiene las subcarpetas `bronze/`, `silver/`, `gold/`, y las tres están vacías. | HU-01 |
+| CA-04 | `tmp/ABC/models/` existe y está vacía (sin subcarpetas de versión). | HU-01 |
+| CA-05 | `tmp/ABC/010_inputs/` y `tmp/ABC/020_outputs/` existen y están vacías (sin subcarpetas por flujo). | HU-01 |
+| CA-06 | `tmp/ABC/client.yaml` es YAML válido que parsea a un mapa con clave `name == "ABC"` y clave `created_at` cuyo valor cumple el patrón `^\d{4}-\d{2}-\d{2}$`. | HU-02 |
+| CA-07 | `create_client("ABC", tmp)` devuelve un `Path` que apunta a `tmp/ABC` (la carpeta creada). | HU-01, HU-05 |
+| CA-08 | Para cada nombre inválido de la tabla de casos límite (`""`, `"-abc"`, `"a/b"`, `".."`, `"a b"`, `"añez"`, nombre de 65 caracteres, …), `create_client(nombre, tmp)` lanza `ValueError` y `tmp` no contiene ninguna carpeta nueva para ese nombre. | HU-03 |
+| CA-09 | Para cada nombre válido representativo (`"X"`, `"9lives"`, `"Client_1-a"`), `create_client(...)` crea el árbol completo sin error. | HU-01 |
+| CA-10 | Llamar `create_client("ABC", tmp)` cuando `tmp/ABC/` ya existe lanza `FileExistsError` y no modifica ni sobrescribe el contenido preexistente (un archivo centinela previo dentro de `tmp/ABC/` permanece intacto). | HU-04 |
+| CA-11 | Toda comprobación (nombre y existencia) ocurre antes de escribir: tras un `ValueError` o un `FileExistsError`, el estado del filesystem para ese nombre es idéntico al previo a la llamada. | HU-03, HU-04 |
+
+### Trazabilidad HU → Spec (cobertura)
+> Toda `HU-xx` de `definition.md` queda cubierta por ≥ 1 `CA-xx`.
+
+| HU | Cubierta por |
+|---|---|
+| HU-01 | CA-01, CA-02, CA-03, CA-04, CA-05, CA-07, CA-09 |
+| HU-02 | CA-06 |
+| HU-03 | CA-08, CA-11 |
+| HU-04 | CA-10, CA-11 |
+| HU-05 | CA-07 |
 
 ---
 

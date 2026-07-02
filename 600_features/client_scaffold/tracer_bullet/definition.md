@@ -1,6 +1,8 @@
 # Definition — client_scaffold
 
-> Artefacto de la etapa 1 (`feature_definer`). Define **qué** se va a construir y **por qué**. No describe el *cómo*.
+> Artefacto de la etapa 1 (`feature_definer`). Define **qué** se va a construir y **por qué**, expresado como **historias de usuario codificadas** (`HU-xx`). No describe el *cómo*.
+>
+> **Nota de retro-ajuste (`D-031`):** las historias de usuario `HU-xx` se añadieron retroactivamente al adoptar la trazabilidad codificada; se derivan de los criterios de aceptación originales de esta definición.
 
 ## Feature
 - **Nombre:** `client_scaffold` (snake_case)
@@ -32,13 +34,16 @@ Hoy no existe forma automatizada de crear el árbol de carpetas de un cliente nu
 - Flag `--force` / sobrescritura de un cliente existente — trabajo futuro explícitamente pospuesto.
 - Comando `foda client list` u otros subcomandos de `foda client` — fuera de esta feature.
 
-## Criterios de Aceptación (alto nivel)
-1. Ejecutar `foda client new <NAME>` con un nombre válido crea `clients/<NAME>/` con la estructura completa: `client.yaml`, `010_inputs/`, `020_outputs/`, `data/{bronze,silver,gold}/`, `models/`.
-2. `client.yaml` generado contiene al menos el nombre del cliente y la fecha de creación.
-3. Ejecutar el comando con un nombre que no cumple el patrón seguro (alfanumérico + `_`/`-`) falla con un mensaje de error claro y no crea ninguna carpeta.
-4. Ejecutar el comando con un nombre de cliente que ya existe falla con un mensaje de error claro y no modifica/sobrescribe lo existente.
-5. La función core `create_client(...)` es invocable y testeable de forma independiente de la capa CLI.
-6. Los tests unitarios (etapa TDD posterior) cubren: creación exitosa, nombre inválido, cliente duplicado.
+## Historias de Usuario
+> Cada historia lleva un **código `HU-xx`** para trazabilidad end-to-end (`definition → spec → plan`). La spec enlaza cada `CA-xx` a una `HU-xx`.
+
+| ID | Historia de usuario | Criterio(s) de aceptación (alto nivel, verificable) |
+|---|---|---|
+| HU-01 | Como **operador del harness FODA**, quiero crear el andamiaje de carpetas de un cliente nuevo con un solo comando (`foda client new <NAME>`), para disponer de una estructura predecible sobre la cual operen los flujos posteriores. | Un nombre válido crea `clients/<NAME>/` con la estructura completa: `client.yaml`, `010_inputs/`, `020_outputs/`, `data/{bronze,silver,gold}/`, `models/`. |
+| HU-02 | Como **operador**, quiero que el cliente se cree con una identidad mínima, para saber a qué cliente y desde cuándo corresponde la carpeta. | `client.yaml` contiene al menos el nombre del cliente y la fecha de creación. |
+| HU-03 | Como **operador**, quiero que un nombre de cliente inválido sea rechazado con un error claro y sin crear nada, para que los nombres de carpeta sean seguros y predecibles. | Un nombre que no cumple el patrón seguro (alfanumérico + `_`/`-`) falla con mensaje claro y **no crea ninguna carpeta**. |
+| HU-04 | Como **operador**, quiero que no se sobrescriba un cliente existente, para no perder datos por accidente. | Un nombre de cliente que ya existe falla con mensaje claro y **no modifica/sobrescribe** lo existente. |
+| HU-05 | Como **desarrollador de las features posteriores** (`client_context`, flujos), quiero una función core `create_client(...)` reutilizable y testeable de forma aislada, para construir sobre ella sin acoplarme a la CLI. | `create_client(...)` es invocable y testeable de forma independiente de la CLI; los tests unitarios cubren creación exitosa, nombre inválido y cliente duplicado. |
 
 ## Dependencias
 - Ninguna feature previa (es la primera feature real construida con la cadena SDD/TDD; ver D-016). Depende únicamente de la arquitectura ya definida en `system_design.md` §7 (estructura de `clients/`) y §10 (capas medallion).

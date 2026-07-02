@@ -62,6 +62,19 @@ vertical end-to-end, NC-4) Diseñar y Planear son ligeros. Los artefactos viven 
 `600_features/<feature>/<banda>/{definition.md, spec.md, plan.md, verification.md, state.json}`; el código
 y los tests en `src/foda/…` y `tests/…`.
 
+**Contratos explícitos en dos niveles (P5, `D-030`).** "Terminado" se acuerda **antes** de ejecutar
+(P5) en dos planos que no se confunden con las bandas (`D-029`):
+
+- **`feature_contract` (por feature) — ADOPTADO.** Es la "estrella polar" / definición de "terminado"
+  total de la feature. Es **obligatorio** y debe existir **antes de iniciar la primera banda**. Vive a
+  **nivel feature**, por encima de las bandas: `600_features/<feature>/feature_contract.md`. Lo crea
+  `feature_definer` (paso *Definir*). No es un artefacto de celda: una feature tiene **un** `feature_contract`
+  aunque recorra varias bandas.
+- **`slice_contract` (por celda = feature × banda) — DIFERIDO.** Definiría qué entrega cada banda como
+  *slice* hacia el `feature_contract`. Su adopción queda **diferida** (no se construye ni se exige todavía,
+  E4/NC-2). Cuando se adopte, podría **fusionarse con `spec.md`** —que ya captura comportamiento + criterios
+  de aceptación por celda— para evitar duplicación; queda como decisión futura.
+
 **Adaptación según el tipo de artefacto:**
 
 | Paso | Código determinista | Documento | Flujo FODA (datos/ML) |

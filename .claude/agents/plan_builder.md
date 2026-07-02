@@ -35,10 +35,15 @@ Lo primero que haces es leer `600_features/<feature>/<banda>/spec.md` y `state.j
 Lee `spec.md` y `state.json`. Marca `plan_builder.status = "in_progress"` y `current_stage = "plan_builder"`.
 
 ### 2. Escribir `plan.md`
-Plan de implementación en `600_features/<feature>/<banda>/plan.md` con:
+Copia el molde `600_features/_template/plan.md`. Plan de implementación en `600_features/<feature>/<banda>/plan.md` con:
 - **Enfoque técnico**: cómo se implementará (módulos, clases, funciones), respetando la abstracción `Flow` cuando aplique.
 - **Archivos afectados**: rutas concretas a crear/modificar en `src/foda/…` y `tests/…` (recuerda: el código NO va en `600_features/`).
-- **Orden de trabajo**: secuencia de pasos de implementación, del más básico al más completo.
+- **Tareas atómicas codificadas (`TSK-xx`)**: descompón el trabajo en una tabla de tareas con código `TSK-01`, `TSK-02`, … Cada tarea es **atómica** y respeta las **reglas de partición**:
+  1. **Un solo responsable** — si intervienen dos, se parte en dos tareas (uno por responsable).
+  2. **Un solo entregable** — si produce dos entregables, se parte en dos tareas.
+  3. **Codificar ≠ testear** — el código de producción y su test van en tareas separadas (encaja con el bucle: la tarea-test la ejecuta `tdd_tester`, la tarea-código `tdd_coder`).
+
+  Columnas: `ID | Descripción | Entregable | Responsable | Estado | Trazabilidad → CA`. **Responsable** ∈ `{tdd_tester, tdd_coder, tdd_refactor, integration_tester, humano}` (exactamente uno). **Estado** inicial `no_implementada` (valores: `no_implementada` | `implementada` | `cancelada_suspendida`); el **responsable de cada tarea es su único escritor de estado** (`D-021`). Cada tarea **traza a un `CA-xx`** de la spec (o a un entregable de andamiaje justificado, p. ej. `pyproject.toml`).
 - **Dependencias y contratos**: qué artefactos/otras features se consumen o producen.
 - **Estrategia de test**: qué se testea con unit tests vs. integración; datos de prueba/fixtures necesarios.
 
@@ -47,6 +52,7 @@ Deriva de los **criterios de aceptación** de la spec una **lista ordenada** de 
 - Es **una** afirmación verificable (un comportamiento o caso límite).
 - Va ordenado de lo más simple/fundamental a lo más complejo (el bucle TDD los toma en ese orden).
 - Cubre camino feliz **y** casos límite/errores de la spec.
+- **Agrupa sus tareas** (`TSK-xx`): en la tabla de casos de `plan.md`, cada caso enlaza a sus tareas de test y código y al `CA-xx` que verifica. El bucle sigue corriendo **por caso** (`tdd_tester` escribe la tarea-test del caso, `tdd_coder` su tarea-código); las tareas son la **capa de trazabilidad**, no cambian el mecanismo del bucle.
 
 Escríbelos tanto en `plan.md` (legible) como en `state.json`, en `stages.tdd.cases`, con esta forma:
 

@@ -35,16 +35,17 @@ Lo primero que haces es leer `600_features/<feature>/<banda>/definition.md` y `6
 Lee `definition.md` y `state.json`. Marca en `state.json` `spec_writer.status = "in_progress"` y `current_stage = "spec_writer"`.
 
 ### 2. Escribir `spec.md`
-Documento técnico en `600_features/<feature>/<banda>/spec.md` con, al menos:
+Copia el molde `600_features/_template/spec.md`. Documento técnico en `600_features/<feature>/<banda>/spec.md` con, al menos:
 - **Resumen** de lo que la feature debe hacer (una frase).
 - **Contratos de datos / artefactos**: entradas y salidas exactas (nombres de archivo YAML/JSON, esquema de campos, tipos). Alinéate con §8 de `system_design.md`.
 - **Comportamiento esperado**: reglas paso a paso, incluyendo validaciones y qué ocurre cuando un contrato requerido falta o no valida.
 - **Casos límite y errores**: entradas vacías, faltantes, inconsistentes, duplicados; qué error/estado se produce.
 - **Interfaces/firmas públicas** relevantes (p. ej. método `run(ctx)` del `Flow`, funciones expuestas), a nivel de contrato, no de implementación.
-- **Criterios de aceptación verificables**: lista numerada, cada uno redactado como algo que un test puede comprobar (evita ambigüedad; nada de "debería funcionar bien").
+- **Criterios de aceptación verificables codificados**: tabla con **código `CA-xx`** (`CA-01`, `CA-02`, … únicos en la feature), cada uno redactado como algo que un test puede comprobar (evita ambigüedad; nada de "debería funcionar bien") y **enlazado a la(s) `HU-xx`** de `definition.md` que satisface (columna *Trazabilidad → HU*).
+- **Matriz de trazabilidad HU → Spec**: tabla que confirma que **toda `HU-xx` está cubierta por ≥ 1 `CA-xx`**. Si una HU queda sin criterio, la spec está incompleta: complétala o **detente e infórmalo** (NC-6).
 - **No-objetivos** explícitos (qué queda fuera).
 
-**Regla de oro:** cada criterio de aceptación debe poder traducirse a uno o más casos de test en la etapa `plan_builder`/`tdd`. Si no es verificable, reescríbelo.
+**Regla de oro:** cada `CA-xx` debe (a) poder traducirse a uno o más casos de test en `plan_builder`/`tdd` y (b) trazar a al menos una `HU-xx`. Si no es verificable o no traza a ninguna HU, reescríbelo.
 
 ### 3. Actualizar `state.json`
 - `spec_writer.status = "done"`, `artifact = "spec.md"`.
