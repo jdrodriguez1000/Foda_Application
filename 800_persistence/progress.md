@@ -24,15 +24,16 @@
 ## 2. Métricas de Avance
 | Métrica | Valor |
 |---|---|
-| Avance global | 5% (andamiaje listo) |
-| Tareas completadas | 4 |
+| Avance global | 6% (andamiaje + migración a subagentes lista) |
+| Tareas completadas | 5 |
 | Tareas pendientes | 1 |
 
 ## 3. Lo Realizado
 - Creación de la estructura de persistencia (`800_persistence`) con los 5 archivos de seguimiento.
 - Creación de `CLAUDE.md` con Protocolo de Inicio y Protocolo de Cierre de Sesión (incluye commit y push a Git).
 - Inicialización del repositorio Git, configuración del remoto `origin` y rama `main`.
-- Creación de las skills de proyecto `foda-next` (inicio) y `foda-status` (cierre).
+- Migración de los protocolos de inicio/cierre de skills de proyecto a subagentes: se crearon `session_starter` (model `haiku`, protocolo foda-next) y `session_closer` (model `sonnet`, protocolo foda-status) en `.claude/agents/`, y se eliminaron las skills antiguas `foda-next` y `foda-status` (junto con la carpeta `.claude/skills/`). Motivo: el frontmatter `model:` no aplica a skills invocadas inline, solo a agentes.
+- La sesión principal ahora se ejecuta en Opus 4.8 (fijado como default vía `/model`).
 
 ## 4. En Progreso
 - _Pendiente de definir el alcance del proyecto._
@@ -50,3 +51,4 @@
 | 2026-07-01 | Creación inicial del archivo. |
 | 2026-07-01 | Cierre de sesión: andamiaje del proyecto (persistencia, CLAUDE.md, Git, skills). |
 | 2026-07-01 | Sesión de verificación: sin trabajo nuevo, sigue a la espera de que el usuario defina el alcance del proyecto (T-002). |
+| 2026-07-01 | Migración de protocolos de skills a subagentes (`session_starter`, `session_closer`); eliminación de skills antiguas `foda-next`/`foda-status`; sesión principal fijada en Opus 4.8. Sigue pendiente T-002. |

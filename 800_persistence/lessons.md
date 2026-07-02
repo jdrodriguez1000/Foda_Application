@@ -18,7 +18,8 @@ Cada lección incluye: **ID**, **contexto** (qué pasó), **lección** (qué apr
 ## 2. Lecciones Técnicas
 | ID | Contexto | Lección | Acción |
 |---|---|---|---|
-| — | _Sin registros aún._ | — | — |
+| L-002 | Se invocó `foda-status` con frontmatter `model: sonnet` esperando que corriera en Sonnet, pero la sesión estaba en Haiku 4.5. | El frontmatter `model:` solo aplica a agentes/subagentes; las skills invocadas inline con slash command corren siempre en el modelo de la sesión activa. | Para fijar el modelo por protocolo, usar subagentes (herramienta Agent) en vez de skills inline. |
+| L-003 | Al migrar los protocolos a subagentes, el cierre de sesión no tenía acceso al historial de la conversación. | Los subagentes arrancan en frío (sin historial); el protocolo de cierre depende de que la sesión principal le entregue un resumen completo de lo trabajado. | El agente `session_closer` exige recibir el resumen de sesión en el prompt antes de actualizar los 5 archivos. |
 
 ## 3. Lecciones de Proceso
 | ID | Contexto | Lección | Acción |

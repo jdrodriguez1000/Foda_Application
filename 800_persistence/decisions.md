@@ -20,7 +20,8 @@ Cada decisión sigue el formato: **ID**, **título**, **estado** (Propuesta / Ac
 | D-001 | Estructura de persistencia en `800_persistence` | Aceptada | 2026-07-01 |
 | D-002 | Protocolos de sesión en `CLAUDE.md` | Aceptada | 2026-07-01 |
 | D-003 | Cierre de sesión finaliza con commit y push a Git | Aceptada | 2026-07-01 |
-| D-004 | Skills de proyecto para inicio y cierre de sesión | Aceptada | 2026-07-01 |
+| D-004 | Skills de proyecto para inicio y cierre de sesión | Reemplazada por D-005 | 2026-07-01 |
+| D-005 | Migrar protocolos de inicio/cierre de skills a subagentes | Aceptada | 2026-07-01 |
 
 ## 3. Detalle de Decisiones
 
@@ -46,8 +47,15 @@ Cada decisión sigue el formato: **ID**, **título**, **estado** (Propuesta / Ac
 - **Consecuencias:** Historial y respaldo remoto por sesión; requiere credenciales/acceso al repositorio.
 
 ### D-004 — Skills de proyecto para inicio y cierre de sesión
-- **Estado:** Aceptada
+- **Estado:** Reemplazada por D-005
 - **Fecha:** 2026-07-01
 - **Contexto:** Facilitar la ejecución de los protocolos con comandos.
 - **Decisión:** Crear las skills de proyecto `foda-next` (inicio) y `foda-status` (cierre) en `.claude/skills/`.
-- **Consecuencias:** Los protocolos se invocan con `/foda-next` y `/foda-status`.
+- **Consecuencias:** Los protocolos se invocan con `/foda-next` y `/foda-status`. Se descubrió que el frontmatter `model:` no aplica a skills inline, lo que motivó la migración a subagentes (ver D-005). Las skills fueron eliminadas.
+
+### D-005 — Migrar los protocolos de inicio/cierre de skills a subagentes
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-01
+- **Contexto:** Las skills invocadas con slash command corren inline en el modelo de la sesión principal; el frontmatter `model:` de la skill no tiene efecto. Esto impedía fijar un modelo económico (Haiku) para el inicio de sesión y uno más capaz (Sonnet) para el cierre.
+- **Decisión:** Reemplazar las skills `foda-next` y `foda-status` por dos subagentes en `.claude/agents/`: `session_starter` (model `haiku`, color amarillo, ejecuta el protocolo de inicio) y `session_closer` (model `sonnet`, color verde, ejecuta el protocolo de cierre). La sesión principal pasa a ejecutarse en Opus. Se eliminaron las skills antiguas y la carpeta `.claude/skills/`.
+- **Consecuencias:** Se gana control del modelo por protocolo (economía en el inicio, capacidad en el cierre). Se pierde la invocación directa por slash command; ahora se invocan vía la herramienta Agent. Como los subagentes arrancan en frío, el cierre de sesión depende de que la sesión principal le entregue un resumen completo de lo trabajado.
