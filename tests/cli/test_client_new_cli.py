@@ -185,6 +185,22 @@ def test_main_sin_name_termina_con_codigo_2(tmp_path, monkeypatch, capsys):
     assert "Traceback" not in captured.err
 
 
+def test_main_subcomando_desconocido_termina_con_codigo_2(tmp_path, monkeypatch, capsys):
+    """Caso 11 (Casos Limite spec, DS-CLI-3): ante subcomando desconocido
+    (main(["client","frobnicate"])), argparse imprime usage/error a stderr
+    y termina con codigo 2."""
+    (tmp_path / "pyproject.toml").write_text("", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    with pytest.raises(SystemExit) as exc_info:
+        main(["client", "frobnicate"])
+
+    assert exc_info.value.code == 2
+    captured = capsys.readouterr()
+    assert captured.err.strip() != ""
+    assert "Traceback" not in captured.err
+
+
 def test_main_camino_feliz_devuelve_0(tmp_path, monkeypatch):
     """Caso 1 (CA-01, CA-10): con el cwd dentro de un proyecto temporal
     (existe <raiz>/pyproject.toml), main(["client","new","ABC"]) devuelve
