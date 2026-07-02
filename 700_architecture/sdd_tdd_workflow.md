@@ -2,7 +2,9 @@
 
 > Documento de arquitectura que describe **cómo funciona la cadena de 8 agentes de desarrollo** (SDD + TDD) como sistema: la máquina de estado `state.json` que gobierna cada feature y la orquestación de las etapas. Es la **fuente única de verdad** de la convención de `state.json` y del encadenamiento; los archivos de cada agente en `.claude/agents/` describen el detalle de *su* etapa y deben ser coherentes con este documento.
 
-**Versión:** 0.1 · **Fecha:** 2026-07-02 · Ver [D-008](../800_persistence/decisions.md).
+**Versión:** 0.2 · **Fecha:** 2026-07-02 · Ver [D-008](../800_persistence/decisions.md).
+
+> **Cambios v0.2:** se añade §6 «Bandas y Ejes de Crecimiento» con la taxonomía de bandas (`tracer_bullet → stab_n`) y la distinción entre eje vertical (madurez de una feature) y eje horizontal (crecimiento del producto: hitos MVP/Final y evolución). Ver [D-029](../800_persistence/decisions.md).
 
 ---
 
@@ -12,10 +14,11 @@
 3. [Diagrama de Orquestación](#3-diagrama-de-orquestación)
 4. [Gates Humanos](#4-gates-humanos)
 5. [El Bucle TDD](#5-el-bucle-tdd)
-6. [Convención de `state.json`](#6-convención-de-statejson)
-7. [Reglas Transversales](#7-reglas-transversales)
-8. [Artefactos por Feature](#8-artefactos-por-feature)
-9. [Reanudación y Bloqueos](#9-reanudación-y-bloqueos)
+6. [Bandas y Ejes de Crecimiento](#6-bandas-y-ejes-de-crecimiento)
+7. [Convención de `state.json`](#7-convención-de-statejson)
+8. [Reglas Transversales](#8-reglas-transversales)
+9. [Artefactos por Feature](#9-artefactos-por-feature)
+10. [Reanudación y Bloqueos](#10-reanudación-y-bloqueos)
 
 ---
 
@@ -118,16 +121,44 @@ El bucle **no tiene gates humanos internos**: fluye automático hasta agotar los
 
 ---
 
-## 6. Convención de `state.json`
+## 6. Bandas y Ejes de Crecimiento
 
-Un archivo por **celda** (feature × banda) en `600_features/<feature>/<banda>/state.json` (`D-019`). Es la máquina de estado que todos los agentes leen al arrancar y actualizan al terminar.
+La **banda** dimensiona el esfuerzo del ciclo SDD/TDD por celda (D-017/D-019). El crecimiento del producto ocurre en **dos ejes ortogonales** que la palabra "banda" no debe mezclar (`D-029`):
+
+### 6.1 Eje vertical — madurez de UNA feature
+
+Una feature se endurece de forma controlada a lo largo de bandas sucesivas:
+
+```
+tracer_bullet → stab_1 → stab_2 → …
+```
+
+- `tracer_bullet` es la **primera pasada** (slice vertical mínimo de punta a punta); las bandas `stab_n` son **bandas de estabilización** que refinan la MISMA feature **sin cambiar su alcance** (endurecen, no amplían).
+- Cada banda es una **subcarpeta hermana** bajo la feature: `600_features/<feature>/<banda>/`.
+- Una feature crea **solo las bandas que necesita**: muchas se quedan en `tracer_bullet`.
+- La **unidad de trabajo es la celda = feature × banda**, y `state.json` es **por celda** (campo `band`). `spec_verifier` cierra **por celda**, no por feature.
+
+### 6.2 Eje horizontal — crecimiento del PRODUCTO
+
+- **MVP y Final NO son bandas ni carpetas:** son **hitos de producto emergentes** (etiquetas del roadmap) que aparecen cuando el conjunto de features necesarias alcanza madurez suficiente. Una feature "terminada" es un hito superior (alcanza su banda madura), distinto del cierre de celda que hace `spec_verifier`.
+- **Evolución = agregar features NUEVAS.** No es una banda: cada feature nueva **arranca en su propio `tracer_bullet`** y recorre la cadena SDD/TDD estándar. **No existen bandas `evol_n`.**
+
+### 6.3 Alcance de adopción (E4/NC-2)
+
+Se adopta **ahora** solo el **vocabulario del eje vertical** (`tracer_bullet`, `stab_n`). La maquinaria de hitos MVP/Final y de la fase de evolución queda como **convención futura documentada**, no construida.
+
+---
+
+## 7. Convención de `state.json`
+
+Un archivo por **celda** (feature × banda, ver §6) en `600_features/<feature>/<banda>/state.json` (`D-019`). Es la máquina de estado que todos los agentes leen al arrancar y actualizan al terminar.
 
 ### 6.1 Esquema
 
 ```json
 {
   "feature": "<feature>",              // snake_case, identidad de la feature
-  "band": "<banda>",                   // banda de construcción (p. ej. tracer_bullet) — D-019
+  "band": "<banda>",                   // banda del eje vertical: tracer_bullet | stab_n — §6, D-019/D-029
   "status": "in_progress",             // estado global de la celda
   "current_stage": "spec_writer",      // etapa actual o siguiente a ejecutar
   "stages": {
@@ -155,7 +186,7 @@ Un archivo por **celda** (feature × banda) en `600_features/<feature>/<banda>/s
 | `pending` | Aún no iniciada. |
 | `in_progress` | El agente de esa etapa está trabajando. |
 | `done` | Etapa completada satisfactoriamente. |
-| `blocked` | Detenida; requiere decisión humana (ver §9). |
+| `blocked` | Detenida; requiere decisión humana (ver §10). |
 
 **A nivel de caso TDD (`stages.tdd.cases[].status`):**
 
@@ -188,7 +219,7 @@ Un archivo por **celda** (feature × banda) en `600_features/<feature>/<banda>/s
 
 ---
 
-## 7. Reglas Transversales
+## 8. Reglas Transversales
 
 - **Unidad = celda (feature × banda):** cada agente recibe en el prompt `<feature>` y `<banda>` (por defecto `tracer_bullet`) y opera sobre `600_features/<feature>/<banda>/`; el código y los tests van a `src/foda/…` y `tests/…` (`D-019`).
 - **Arranque en frío:** cada agente recibe en el prompt lo que necesita (feature, banda, id de caso, resultado previo) y **relee `state.json`** para partir del estado real.
@@ -199,13 +230,13 @@ Un archivo por **celda** (feature × banda) en `600_features/<feature>/<banda>/s
 
 ---
 
-## 8. Artefactos por Feature
+## 9. Artefactos por Feature
 
-Estructura esperada en `600_features/<feature>/<banda>/` (celda = feature × banda; `D-019`):
+Estructura esperada en `600_features/<feature>/<banda>/` (celda = feature × banda, ver §6; `D-019`):
 
 ```
 600_features/<feature>/
-└── <banda>/                # p. ej. tracer_bullet (banda por defecto de la primera pasada)
+└── <banda>/                # eje vertical: tracer_bullet (primera pasada) o stab_n (estabilización) — §6
     ├── definition.md       # feature_definer — qué y por qué
     ├── spec.md             # spec_writer — comportamiento, contratos, criterios de aceptación
     ├── plan.md             # plan_builder — cómo + lista de casos de test
@@ -217,7 +248,7 @@ El **código y los tests NO viven aquí**: `src/foda/…` y `tests/…` respecti
 
 ---
 
-## 9. Reanudación y Bloqueos
+## 10. Reanudación y Bloqueos
 
 **Reanudación:** para retomar una feature interrumpida, la sesión principal lee `state.json`, mira `status` y `current_stage`, y reinvoca el agente correspondiente con el contexto en frío. No se pierde trabajo porque cada etapa quedó commiteada.
 

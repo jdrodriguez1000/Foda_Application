@@ -17,16 +17,17 @@
 
 ## 1. Resumen del Estado
 - **Proyecto:** Foda_Application
-- **Fase actual:** Construyendo la primera feature real `client_scaffold` (T-013) mediante la cadena SDD/TDD; etapas 1-3 (feature_definer, spec_writer, plan_builder) completadas y ambos GATEs humanos aprobados; sesión suspendida antes de arrancar el bucle TDD. Además, se sostuvo una conversación de gobernanza posterior (D-029, D-030) que generó una tarea de aplicación (T-021) a ejecutar ANTES de reanudar el bucle TDD.
-- **Estado general:** 🟢 T-013 en progreso (suspendida) — cadena SDD/TDD arrancada, plan aprobado, pendiente el bucle TDD (tdd_tester/tdd_coder/tdd_refactor) + integration_tester + spec_verifier. T-021 (nueva, alta prioridad) debe resolverse primero.
+- **Fase actual:** Construyendo la primera feature real `client_scaffold` (T-013) mediante la cadena SDD/TDD; etapas 1-3 (feature_definer, spec_writer, plan_builder) completadas y ambos GATEs humanos aprobados; sesión suspendida antes de arrancar el bucle TDD. T-021 (aplicación de D-029/D-030 a la documentación) está EN PROGRESO: ítem #1 de 6 completado.
+- **Estado general:** 🟢 T-013 en progreso (suspendida) — cadena SDD/TDD arrancada, plan aprobado, pendiente el bucle TDD (tdd_tester/tdd_coder/tdd_refactor) + integration_tester + spec_verifier. T-021 (alta prioridad) en progreso, debe completarse antes de reanudar el bucle TDD.
 - **Última actualización:** 2026-07-02
 
 ## 2. Métricas de Avance
 | Métrica | Valor |
 |---|---|
-| Avance global | 58% (sin cambio: sesión de gobernanza sin código ni docs editados; D-029/D-030 quedan registradas como decisiones, con su aplicación diferida a T-021) |
+| Avance global | 58% (sin cambio: avance documental parcial de T-021, aún no se completa ninguna tarea nueva) |
 | Tareas completadas | 14 |
-| Tareas pendientes | 1 (T-021, nueva, alta prioridad) |
+| Tareas pendientes | 0 |
+| Tareas en progreso | 2 (T-013, T-021) |
 
 ## 3. Lo Realizado
 - Creación de la estructura de persistencia (`800_persistence`) con los 5 archivos de seguimiento.
@@ -52,9 +53,10 @@
 
 ## 4. En Progreso
 - T-013: construir `client_scaffold`. Cadena SDD/TDD: feature_definer ✅ → spec_writer ✅ (GATE aprobado) → plan_builder ✅ (GATE aprobado) → **pendiente el bucle TDD** (18 casos) → integration_tester → spec_verifier. Suspendida hasta cerrar T-021.
+- T-021: aplicar D-029/D-030 en la documentación. Ítem #1/6 completado: `700_architecture/sdd_tdd_workflow.md` actualizado de v0.1 a v0.2 con la nueva sección §6 «Bandas y Ejes de Crecimiento» (eje vertical `tracer_bullet → stab_n` por feature/celda; eje horizontal = hitos de producto MVP/Final emergentes, evolución = features nuevas; alcance de adopción limitado al vocabulario del eje vertical por E4/NC-2), renumeración de §6-§9 a §7-§10, e índice y referencias cruzadas actualizadas. Pendientes ítems #2-#6 (ver tasks.md T-021).
 
 ## 5. Próximo a Realizar
-- T-021 (alta prioridad, primero): aplicar D-029/D-030 en la documentación (`sdd_tdd_workflow.md`, `methodology.md`, `600_features/README.md`, plantilla `feature_contract.md`, `feature_definer.md`) y retro-escribir `600_features/client_scaffold/feature_contract.md`.
+- T-021 (alta prioridad, continuar): ítems #2-#6 — (2) `980_guideline/methodology.md` reconciliar slice_contract/feature_contract; (3) `600_features/README.md` reflejar feature_contract; (4) plantilla `600_features/_template/feature_contract.md`; (5) `.claude/agents/feature_definer.md` responsable de crear feature_contract.md; (6) retro-ajuste `600_features/client_scaffold/feature_contract.md`.
 - Luego, invocar `tdd_tester` con el caso TDD #1 de `client_scaffold` (crea `tmp/ABC/` y devuelve su Path) para arrancar el bucle red/green/refactor y continuar T-013.
 - Validar en una sesión nueva que el import `@980_guideline/principles.md` en `CLAUDE.md` efectivamente carga el archivo en el contexto de la sesión principal (A-006).
 
@@ -78,3 +80,4 @@
 | 2026-07-02 | T-019 completada: reversión crítica del runtime agéntico importado por la metodología (sin código de aplicación). El usuario reportó sentirse perdido con la complejidad agregada; se contrastó contra `system_design.md` (D-006, ya resolvía el runtime como determinista) y se decidió (D-020, aprobada por el usuario) que el runtime NO es agéntico: se descartan el patrón A/B/C-runtime, foda-governor/planner/evaluator, MOTOR/INSTANCIA, install.sh y fda-*-state.json. `methodology.md` recortado a "Metodología de Desarrollo del Motor". Se rescataron solo dos piezas: Single Writer Rule (D-021) y rúbrica de evaluación calibrada limitada a salidas no deterministas (D-022). T-017/T-018 canceladas; nueva tarea de backlog T-020. `principles.md` y la carpetería por banda se conservan. T-013 sigue pendiente. Avance global sube de 52% a 54%. Ver D-020, D-021, D-022, L-012, L-013, L-014. |
 | 2026-07-02 | T-013 arrancada: ejecutadas las 3 primeras etapas de la cadena SDD/TDD sobre `client_scaffold` (feature_definer, spec_writer, plan_builder), con ambos GATEs humanos (tras spec y tras plan) APROBADOS. Se resolvieron DS-1/DS-2/DS-3 (D-023 a D-025) y se confirmaron PA-1/PA-2/PA-3 (D-026 a D-028): adoptar PyYAML, bootstrap del paquete `foda` dentro de esta feature, caso TDD 18 sin test en tracer_bullet. Se verificó que las capas medallion del `feature_definer` son canónicas contra `system_design.md` (L-015). Sesión suspendida antes del bucle TDD; T-013 pasa de Pendiente a En Progreso. Avance global sube de 54% a 58%. Ver D-023 a D-028, L-015, A-007, A-008. |
 | 2026-07-02 | Segundo cierre de la misma sesión: conversación de gobernanza posterior (sin código ni docs editados). Se acordaron D-029 (vocabulario de bandas: eje vertical `tracer_bullet → stab_n` por feature; MVP/Final = hitos de producto emergentes, no bandas; evolución = features nuevas) y D-030 (contratos en dos niveles: `feature_contract` obligatorio por feature, creado por `feature_definer`; `slice_contract` por celda diferido, con nota de posible fusión futura con `spec.md`). Se creó T-021 (alta prioridad) para aplicar ambas decisiones en la documentación y retro-ajustar `client_scaffold` con su `feature_contract`, ANTES de reanudar el bucle TDD de T-013. Avance global sin cambio (58%): sesión de gobernanza sin construcción. Ver D-029, D-030. |
+| 2026-07-02 | Tercer cierre de la misma sesión: T-021 arrancada, ítem #1/6 completado. `700_architecture/sdd_tdd_workflow.md` actualizado de v0.1 a v0.2: nueva sección §6 «Bandas y Ejes de Crecimiento» que formaliza D-029 (eje vertical `tracer_bullet → stab_n`, eje horizontal = hitos de producto emergentes MVP/Final sin carpetas, evolución = features nuevas, alcance de adopción limitado al vocabulario vertical por E4/NC-2), renumeración de secciones §6-§9 → §7-§10 y ajuste de índice/referencias cruzadas/menciones de banda. Cambio quirúrgico (NC-3), sin tocar la lógica de la cadena de agentes. T-013 sigue suspendida a la espera del cierre de T-021 (quedan ítems #2-#6). Avance global sin cambio (58%). |
