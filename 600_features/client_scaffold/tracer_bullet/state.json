@@ -2,12 +2,34 @@
   "feature": "client_scaffold",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "spec_writer",
+  "current_stage": "plan_builder",
   "stages": {
     "feature_definer":    { "status": "done",    "artifact": "definition.md" },
-    "spec_writer":        { "status": "done", "artifact": "spec.md",  "gate": "human", "awaiting_approval": true },
-    "plan_builder":       { "status": "pending", "artifact": "plan.md",  "gate": "human", "awaiting_approval": false },
-    "tdd":                { "status": "pending", "cases": [] },
+    "spec_writer":        { "status": "done", "artifact": "spec.md",  "gate": "human", "awaiting_approval": false, "approved": true },
+    "plan_builder":       { "status": "done", "artifact": "plan.md",  "gate": "human", "awaiting_approval": true },
+    "tdd":                {
+      "status": "pending",
+      "cases": [
+        { "id": 1,  "desc": "create_client(\"ABC\", tmp) crea el directorio tmp/ABC/ y devuelve un Path que apunta a él (AC1, AC7)", "status": "pending" },
+        { "id": 2,  "desc": "Bajo tmp/ABC/ existen exactamente: archivo client.yaml y carpetas 010_inputs/, 020_outputs/, data/, models/ (AC2)", "status": "pending" },
+        { "id": 3,  "desc": "tmp/ABC/010_inputs/ y tmp/ABC/020_outputs/ existen y estan vacias (AC5)", "status": "pending" },
+        { "id": 4,  "desc": "tmp/ABC/data/ contiene bronze/, silver/, gold/ y las tres estan vacias (AC3)", "status": "pending" },
+        { "id": 5,  "desc": "tmp/ABC/models/ existe y esta vacia, sin subcarpetas de version (AC4)", "status": "pending" },
+        { "id": 6,  "desc": "tmp/ABC/client.yaml es YAML valido que parsea a un mapa con name == \"ABC\" (AC6)", "status": "pending" },
+        { "id": 7,  "desc": "tmp/ABC/client.yaml tiene created_at que cumple el patron ^\\d{4}-\\d{2}-\\d{2}$ (AC6)", "status": "pending" },
+        { "id": 8,  "desc": "Para cada nombre valido representativo (\"X\", \"9lives\", \"Client_1-a\") create_client crea el arbol completo sin error (AC9)", "status": "pending" },
+        { "id": 9,  "desc": "Nombre vacio \"\" lanza ValueError y no crea ninguna carpeta (AC8, AC11)", "status": "pending" },
+        { "id": 10, "desc": "Nombre solo-espacios \"   \" y con espacio interior \"ab c\" lanzan ValueError; nada creado (AC8, AC11)", "status": "pending" },
+        { "id": 11, "desc": "Nombre que empieza por - (\"-abc\") o por _ (\"_abc\") lanza ValueError; nada creado (AC8, AC11)", "status": "pending" },
+        { "id": 12, "desc": "Nombre con separador de ruta \"a/b\" o \"a\\\\b\" lanza ValueError; nada creado (AC8, AC11)", "status": "pending" },
+        { "id": 13, "desc": "Nombres de ruta especiales \".\" y \"..\" lanzan ValueError; nada creado (AC8, AC11)", "status": "pending" },
+        { "id": 14, "desc": "Nombre con punto interior \"ab.c\" o caracter no permitido (\"a!b\", \"a@b\") lanza ValueError; nada creado (AC8, AC11)", "status": "pending" },
+        { "id": 15, "desc": "Nombre no-ASCII / acentuado (\"anez\" con enye, \"cliente\" con tilde) lanza ValueError; nada creado (AC8, AC11)", "status": "pending" },
+        { "id": 16, "desc": "Nombre de longitud > 64 (65 caracteres validos) lanza ValueError; nada creado (AC8, AC11)", "status": "pending" },
+        { "id": 17, "desc": "create_client(\"ABC\", tmp) con tmp/ABC/ ya existente (archivo centinela dentro) lanza FileExistsError y deja el contenido preexistente intacto (AC10, AC11)", "status": "pending" },
+        { "id": 18, "desc": "OPCIONAL (GATE PA-3): ante error de filesystem tras crear parte del arbol, create_client limpia best-effort tmp/<name>/ y relanza la excepcion original (DS-2.2)", "status": "pending" }
+      ]
+    },
     "integration_tester": { "status": "pending" },
     "spec_verifier":      { "status": "pending", "artifact": "verification.md" }
   }
