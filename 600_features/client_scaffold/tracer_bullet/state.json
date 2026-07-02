@@ -2,7 +2,7 @@
   "feature": "client_scaffold",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "tdd_coder",
+  "current_stage": "tdd_tester",
   "stages": {
     "feature_definer": {
       "status": "done",
@@ -24,7 +24,7 @@
     },
     "tdd": {
       "status": "in_progress",
-      "current_stage": "tdd_coder",
+      "current_stage": "tdd_tester",
       "next_case": 17,
       "cases": [
         {
@@ -188,13 +188,14 @@
         {
           "id": 16,
           "desc": "Nombre de longitud > 64 (65 caracteres validos) lanza ValueError; nada creado (AC8, AC11)",
-          "status": "green",
           "test": "tests/core/test_scaffold.py::test_create_client_nombre_muy_largo_lanza_valueerror_y_no_crea_nada",
           "red_evidence": "1 failed, 24 passed en tests/core/test_scaffold.py. Failed: DID NOT RAISE ValueError, porque _validate_name aun no valida longitud (solo vacio, primer caracter -/_, y whitelist de caracteres); create_client crea la carpeta 'a'*65 sin problema. Rojo por la razon esperada (falta la regla DS-1 de longitud maxima 64), no por error de import/sintaxis.",
           "green_files": [
             "src/foda/core/scaffold.py"
           ],
-          "green_evidence": "1 passed (caso 16) y 25 passed (suite completa, sin regresiones). Se agrego la guarda final `if len(name) > 64: raise ValueError(...)` a _validate_name, ultima regla de DS-1. No se rompe el caso 8 (nombres validos representativos son cortos, <=64)."
+          "status": "done",
+          "green_evidence": "1 passed (caso 16) y 25 passed (suite completa, sin regresiones). Se agrego la guarda final `if len(name) > 64: raise ValueError(...)` a _validate_name, ultima regla de DS-1. No se rompe el caso 8 (nombres validos representativos son cortos, <=64).",
+          "refactor_note": "Refactor aplicado (NC-3, cambio quirurgico): con las 7 reglas de DS-1 ya presentes tras el caso 16, se evaluo el diseno final de _validate_name como un todo. Se consolido la whitelist de caracteres y la guarda de longitud>64 en una sola expresion regular _ALLOWED_CHARS = re.compile(r\"[A-Za-z0-9_-]{1,64}\") (antes r\"[A-Za-z0-9_-]+\" mas un `if len(name) > 64` separado), pasando de 4 guardas a 3: name==\"\" (mensaje especifico, se conserva explicita), name[0] in (\"-\",\"_\") (no cubierta por el fullmatch porque -/_ SI son caracteres permitidos) y el fullmatch combinado (caracteres+longitud+no-vacio). Verificacion input-por-input antes de fusionar: los 25 casos existentes de la suite (vacio, espacios, -/_ inicial, separadores de ruta, ./.., caracteres no permitidos, no-ASCII, longitud 65 invalida, longitud<=64 valida en casos 1-8) se re-corrieron y siguen en verde; el borde 64-valido/65-invalido se preserva exactamente porque {1,64} es equivalente a +  mas  len<=64 para fullmatch. Ningun test hace match= sobre el mensaje de ValueError, por lo que fusionar el mensaje de caracteres y longitud en uno solo es seguro. Docstring de _validate_name actualizada para reflejar el diseno final (todas las reglas de DS-1 presentes). Suite completa en verde (25 passed) sin regresiones."
         },
         {
           "id": 17,

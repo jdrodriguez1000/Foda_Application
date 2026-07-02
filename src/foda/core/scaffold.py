@@ -9,7 +9,7 @@ from pathlib import Path
 
 import yaml
 
-_ALLOWED_CHARS = re.compile(r"[A-Za-z0-9_-]+")
+_ALLOWED_CHARS = re.compile(r"[A-Za-z0-9_-]{1,64}")
 
 
 _TOP_LEVEL_DIRS = ("010_inputs", "020_outputs", "data", "models")
@@ -17,21 +17,22 @@ _MEDALLION_DIRS = ("bronze", "silver", "gold")
 
 
 def _validate_name(name: str) -> None:
-    """Valida name antes de tocar el filesystem (CA-08, CA-11).
+    """Valida name antes de tocar el filesystem (CA-08, CA-11), aplicando
+    todas las reglas de DS-1.
 
-    Refactor (consolidacion tras caso 14): la whitelist _ALLOWED_CHARS ya
-    rechaza por si sola los espacios, los separadores de ruta ("/", "\\")
-    y los nombres de ruta especiales ("." y ".."), porque ninguno de esos
-    caracteres pertenece al conjunto permitido [A-Za-z0-9_-]; tambien
-    rechaza el nombre vacio, ya que "+" exige al menos un caracter. Esas
-    guardas explicitas se retiraron por ser redundantes (mismo resultado,
-    sin aportar mensaje ni comportamiento distinto), salvo dos que SI se
-    conservan porque la whitelist no las cubre:
-    - name == "": se mantiene por claridad del mensaje de error.
+    Refactor (consolidacion final tras caso 16, con las 7 reglas de DS-1 ya
+    implementadas): la whitelist _ALLOWED_CHARS = [A-Za-z0-9_-]{1,64} rechaza
+    por si sola, en un unico fullmatch, tanto los caracteres fuera del
+    conjunto permitido (espacios, separadores de ruta "/" "\\", ".", "..",
+    no-ASCII, simbolos) como la longitud maxima de 64 y el nombre vacio (el
+    cuantificador "{1,64}" exige entre 1 y 64 caracteres). Solo quedan dos
+    guardas explicitas que la whitelist NO puede cubrir con un unico regex:
+    - name == "": se mantiene por claridad del mensaje de error (distinto
+      del mensaje generico de caracteres/longitud invalidos).
     - name[0] in ("-", "_"): "-" y "_" SI pertenecen al conjunto permitido,
       por lo que "-abc"/"_abc" pasarian la whitelist; DS-1 exige que el
       primer caracter sea alfanumerico, asi que esta regla debe evaluarse
-      aparte. La regla de longitud>64 (caso 16) queda pendiente.
+      aparte, antes del fullmatch.
     """
     if name == "":
         raise ValueError("name no puede ser vacio")
@@ -39,10 +40,9 @@ def _validate_name(name: str) -> None:
         raise ValueError("name no puede empezar por - ni _")
     if not _ALLOWED_CHARS.fullmatch(name):
         raise ValueError(
-            "name solo puede contener letras, digitos, '-' y '_'"
+            "name solo puede contener letras, digitos, '-' y '_', "
+            "con una longitud maxima de 64 caracteres"
         )
-    if len(name) > 64:
-        raise ValueError("name no puede tener mas de 64 caracteres")
 
 
 def create_client(name: str, clients_root: Path) -> Path:
