@@ -1,10 +1,10 @@
 {
   "feature": "client_new_cli",
   "band": "tracer_bullet",
-  "status": "suspended",
-  "current_stage": "tdd",
+  "status": "in_progress",
+  "current_stage": "tdd_tester",
   "suspension": {
-    "suspended": true,
+    "suspended": false,
     "reason": "Plan y 12 casos TDD aprobados por el humano; ejecucion del bucle TDD suspendida por decision del humano.",
     "resume_at": "Invocar tdd_tester con el caso 1 (primer caso pendiente)."
   },
@@ -15,7 +15,7 @@
     "tdd": {
       "status": "pending",
       "cases": [
-        { "id": 1,  "desc": "main([\"client\",\"new\",\"ABC\"]) con cwd dentro de un proyecto temporal (existe <raiz>/pyproject.toml) devuelve el int 0 (camino feliz, invocabilidad).", "status": "pending" },
+        { "id": 1,  "desc": "main([\"client\",\"new\",\"ABC\"]) con cwd dentro de un proyecto temporal (existe <raiz>/pyproject.toml) devuelve el int 0 (camino feliz, invocabilidad).", "status": "red", "test": "tests/cli/test_client_new_cli.py::test_main_camino_feliz_devuelve_0", "red_evidence": "NotImplementedError: main() aun no implementado (esqueleto TDD, pendiente TSK-02/03/04)" },
         { "id": 2,  "desc": "En el camino de exito, main(...) crea el arbol de cliente en <raiz>/clients/ABC/ (existe <raiz>/clients/ABC/client.yaml y las carpetas del scaffold).", "status": "pending" },
         { "id": 3,  "desc": "En el camino de exito, la salida capturada en stdout contiene la ruta de <raiz>/clients/ABC.", "status": "pending" },
         { "id": 4,  "desc": "Con create_client espiado/monkeypatcheado, main([\"client\",\"new\",\"ABC\"]) lo invoca exactamente una vez con name == \"ABC\" y clients_root == <raiz>/clients.", "status": "pending" },
