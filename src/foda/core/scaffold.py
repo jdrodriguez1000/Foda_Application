@@ -16,12 +16,14 @@ _MEDALLION_DIRS = ("bronze", "silver", "gold")
 def _validate_name(name: str) -> None:
     """Valida name antes de tocar el filesystem (CA-08, CA-11).
 
-    Implementacion minima (casos 9-11): rechaza el nombre vacio,
+    Implementacion minima (casos 9-12): rechaza el nombre vacio,
     cualquier nombre que contenga espacios (solo-espacios o espacio
-    interior), y cualquier nombre cuyo primer caracter sea "-" o "_"
-    (DS-1: el primer caracter debe ser alfanumerico). Las demas reglas
-    (separadores de ruta, "." / "..", caracteres no permitidos,
-    no-ASCII, longitud>64) se agregan en los casos 12-16 del bucle TDD.
+    interior), cualquier nombre cuyo primer caracter sea "-" o "_"
+    (DS-1: el primer caracter debe ser alfanumerico), y cualquier nombre
+    que contenga un separador de ruta ("/" o "\\"), para evitar que
+    clients_root / name resuelva a una subruta anidada fuera de
+    clients_root. Las demas reglas ("." / "..", caracteres no permitidos,
+    no-ASCII, longitud>64) se agregan en los casos 13-16 del bucle TDD.
     """
     if name == "":
         raise ValueError("name no puede ser vacio")
@@ -29,6 +31,8 @@ def _validate_name(name: str) -> None:
         raise ValueError("name no puede contener espacios")
     if name[0] in ("-", "_"):
         raise ValueError("name no puede empezar por - ni _")
+    if "/" in name or "\\" in name:
+        raise ValueError("name no puede contener separadores de ruta")
 
 
 def create_client(name: str, clients_root: Path) -> Path:
