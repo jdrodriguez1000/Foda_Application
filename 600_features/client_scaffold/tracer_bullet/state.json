@@ -2,7 +2,7 @@
   "feature": "client_scaffold",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "tdd_coder",
+  "current_stage": "tdd_tester",
   "stages": {
     "feature_definer": {
       "status": "done",
@@ -24,7 +24,7 @@
     },
     "tdd": {
       "status": "in_progress",
-      "current_stage": "tdd_coder",
+      "current_stage": "tdd_tester",
       "next_case": 11,
       "cases": [
         {
@@ -122,13 +122,14 @@
         {
           "id": 10,
           "desc": "Nombre solo-espacios \"   \" y con espacio interior \"ab c\" lanzan ValueError; nada creado (AC8, AC11)",
-          "status": "green",
+          "status": "done",
           "test": "tests/core/test_scaffold.py::test_create_client_nombre_con_espacios_lanza_valueerror_y_no_crea_nada",
           "red_evidence": "2 failed, 11 passed en tests/core/test_scaffold.py. Parametrizacion [ab c]: 'Failed: DID NOT RAISE ValueError' (create_client crea la carpeta 'ab c' sin problema porque _validate_name aun no rechaza espacios interiores). Parametrizacion [   ]: FileExistsError [WinError 183] en client_dir.mkdir(parents=True) porque Windows recorta los espacios finales del nombre de carpeta '   ' y este colisiona con la carpeta padre 'root' ya existente; no es un typo/import roto sino consecuencia directa de que _validate_name no rechaza el nombre solo-espacios antes de tocar el filesystem. Ambos casos son rojo por la razon esperada: falta la regla de validacion de espacios (casos 10-16 pendientes en _validate_name).",
           "green_files": [
             "src/foda/core/scaffold.py"
           ],
-          "green_evidence": "2 passed (caso 10) y 13 passed (suite completa, sin regresiones). Se agrego la regla ' ' in name a _validate_name, que rechaza tanto el nombre solo-espacios como el nombre con espacio interior, sin adelantar las reglas de los casos 11-16 (NC-2/NC-3)."
+          "green_evidence": "2 passed (caso 10) y 13 passed (suite completa, sin regresiones). Se agrego la regla ' ' in name a _validate_name, que rechaza tanto el nombre solo-espacios como el nombre con espacio interior, sin adelantar las reglas de los casos 11-16 (NC-2/NC-3).",
+          "refactor_note": "Sin refactor aplicado (NC-2/NC-3): _validate_name tiene hoy dos guardas (vacio, espacios), cada una de 2 lineas, con nombre claro y un unico punto de llamada al inicio de create_client; no hay duplicacion que extraer. Introducir una tabla de reglas o un patron mas generico ahora seria una abstraccion prematura (solo 2 de las 7 reglas de DS-1 existen; el diseno final de _validate_name se decide mejor una vez agregadas las reglas 11-16, para no adivinar la forma correcta). Suite completa en verde (13 passed) sin cambios de codigo."
         },
         {
           "id": 11,
