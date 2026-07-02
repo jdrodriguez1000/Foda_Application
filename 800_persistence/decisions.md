@@ -49,6 +49,10 @@ Cada decisión sigue el formato: **ID**, **título**, **estado** (Propuesta / Ac
 | D-030 | Contratos en dos niveles: `feature_contract` (adoptado) + `slice_contract` (diferido) | Aceptada | 2026-07-02 |
 | D-031 | Cadena de trazabilidad codificada HU→CA→TSK y tareas atómicas del plan | Aceptada | 2026-07-02 |
 | D-032 | GATE PA-3 (opción c): posponer el rollback best-effort DS-2.2 (caso TDD 18) a banda `stab_n`; refina D-028 | Aceptada | 2026-07-02 |
+| D-033 | Cierre CONFORME de `client_scaffold` (banda `tracer_bullet`) con 3 hallazgos no bloqueantes (F-1, F-2, F-3) | Aceptada | 2026-07-02 |
+| D-034 | `client_new_cli` entra por la cadena SDD/TDD completa, no por cableado directo | Aceptada | 2026-07-02 |
+| D-035 | `client_new_cli` sí lleva tests propios de la capa CLI (NC-5 prevalece sobre el No-Objetivo previo de `client_scaffold`) | Aceptada | 2026-07-02 |
+| D-036 | `client_new_cli` — resolución de `clients_root` buscando `pyproject.toml` hacia arriba desde el cwd | Aceptada | 2026-07-02 |
 
 ## 3. Detalle de Decisiones
 
@@ -268,6 +272,34 @@ Cada decisión sigue el formato: **ID**, **título**, **estado** (Propuesta / Ac
 - **Contexto:** El plan de `client_scaffold` reservaba el caso TDD #18 (rollback best-effort ante fallo de filesystem a mitad de creación, DS-2.2) como GATE humano opcional (D-028 preveía "implementar sin test"). Al llegar al caso 18 tras cerrar en verde los casos 1-17 (26 tests), se presentaron al humano 3 opciones: (a) implementar sin test como preveía D-028, (b) implementar con un test que simule el fallo de I/O, (c) posponer el rollback por completo a una banda de estabilización posterior.
 - **Decisión:** El humano eligió la opción **(c) POSPONER**. No se implementa ni testea DS-2.2 en la banda `tracer_bullet`. `client_scaffold` cierra su tracer_bullet solo con la estrategia validación-primero (DS-2.1, D-024), que ya cubre los escenarios realistas (nombre inválido, cliente duplicado) sin llegar a mutar disco antes de fallar. El error raro de filesystem a mitad de creación del árbol se acepta como limitación conocida y documentada de esta banda. Esta decisión **refina D-028**: en vez de "implementar sin test", el caso 18 queda `deferred` en `state.json` con el campo `gate_decision` registrando la justificación, para una banda `stab_n` futura.
 - **Consecuencias:** El core `create_client(...)` no implementa rollback/limpieza best-effort; un fallo de I/O a mitad de creación puede dejar un árbol parcial en disco (límite conocido, análogo a A-007/A-008). El bucle TDD de `client_scaffold` (casos 1-17) queda cerrado con 26 tests en verde sin este caso. Trabajo pendiente explícito para una banda `stab_n` de `client_scaffold`: escribir el test que simule el fallo de I/O e implementar DS-2.2.
+
+### D-033 — Cierre CONFORME de `client_scaffold` (banda `tracer_bullet`) con 3 hallazgos no bloqueantes
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-02
+- **Contexto:** Tras cerrar el bucle TDD (casos 1-17, 26 tests) y correr `integration_tester` (6 tests de integración, 32 passed), `spec_verifier` recorrió los 11 CA de `spec.md` de `client_scaffold` buscando evidencia de test/comportamiento para cada uno.
+- **Decisión:** Veredicto **CONFORME**: los 11 CA (CA-01…CA-11) tienen evidencia verificable en la suite, documentada en `600_features/client_scaffold/tracer_bullet/verification.md` con matriz de trazabilidad CA→test. Se registran 3 hallazgos NO bloqueantes, no requeridos para el veredicto: **F-1** desalineación de entorno (runtime local Python 3.12.10, pero R1/D-010 exige 3.13+; el `pyproject.toml` ya declara `requires-python = ">=3.13"` correctamente, el problema es del entorno local, no del entregable). **F-2** la capa CLI `foda client new` (TSK-07) no fue construida en esta banda: estaba in-scope de la definición de la feature pero fuera de los 11 CA verificables. **F-3** `created_at` en `client.yaml` usa `date.today()` (fecha local) en vez de UTC como sugiere el contrato de artefacto; CA-06 solo valida el patrón de fecha, no la zona horaria, así que no bloquea el veredicto.
+- **Consecuencias:** `client_scaffold/tracer_bullet` queda cerrada. F-1 se resuelve alineando el entorno de desarrollo local a Python 3.13+ (fuera del alcance de esta feature). F-2 da origen a la nueva feature `client_new_cli` (T-023, ver D-034 a D-036). F-3 queda como tarea de backlog T-025 para una banda `stab_n` futura.
+
+### D-034 — `client_new_cli` entra por la cadena SDD/TDD completa
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-02
+- **Contexto:** El hallazgo F-2 de `spec_verifier` (D-033) dejó pendiente construir la capa CLI de `client_scaffold`. Existían dos caminos: cablear la CLI directamente sobre `create_client(...)` sin pasar por la cadena de agentes (más rápido, pero sin gates ni trazabilidad), o tratarla como una feature nueva con su propia cadena SDD/TDD completa.
+- **Decisión:** Se consultó al humano y se decidió que la capa CLI se construye como una **feature nueva** (`client_new_cli`), recorriendo la cadena SDD/TDD completa de los 8 agentes (feature_definer → spec_writer → plan_builder → bucle TDD → integration_tester → spec_verifier), no como cableado directo.
+- **Consecuencias:** Se preserva la disciplina P5 (contratos explícitos) y P3 (evaluador independiente) también para la capa CLI; a cambio, toma más pasos que un cableado directo. `client_new_cli` recorre su propia banda `tracer_bullet` bajo `600_features/client_new_cli/tracer_bullet/`.
+
+### D-035 — `client_new_cli` sí lleva tests propios de la capa CLI
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-02
+- **Contexto:** `client_scaffold` (D-025) había dejado la capa CLI explícitamente fuera de los tests de su banda ("capa CLI fina... sin lógica propia"). Al construir ahora la CLI como feature completa (D-034), esa decisión de alcance previa entraba en tensión con NC-5 ("toda tarea tiene un test que la respalda... sin excepción").
+- **Decisión:** `client_new_cli` **sí lleva tests propios** de la capa CLI (12 casos TDD sobre `main(argv)`), aceptado explícitamente por el humano en el GATE de `plan.md`. NC-5 prevalece sobre el No-Objetivo que la definición de `client_scaffold` había fijado para la CLI.
+- **Consecuencias:** Ver L-023. Los 12 casos TDD de `client_new_cli` cubren camino feliz, invocabilidad, resolución de raíz de proyecto, nombres inválidos, duplicados, argumentos ausentes/desconocidos y el contrato `[project.scripts]`.
+
+### D-036 — `client_new_cli`: resolución de `clients_root` buscando `pyproject.toml` hacia arriba desde el cwd
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-02
+- **Contexto:** `spec_writer` de `client_new_cli` necesitaba resolver cómo la CLI localiza la raíz del proyecto (y por tanto `clients/`) al ejecutarse desde cualquier subcarpeta (HU-02), sin asumir que el cwd es siempre la raíz.
+- **Decisión:** La CLI busca `pyproject.toml` hacia arriba desde el cwd hasta encontrar la raíz del proyecto (marcador de raíz); si no lo encuentra en el cwd ni en ningún ancestro, falla con código de salida 1 y mensaje claro en stderr (DS-CLI-1). `clients_root` se resuelve como `<raíz>/clients/`, creado por la CLI con `mkdir` idempotente si no existe (DS-CLI-2), no por el core `create_client`.
+- **Consecuencias:** La CLI es invocable desde cualquier subcarpeta del proyecto (HU-02), reflejado en los casos TDD 6 y 7. `create_client(...)` del core sigue sin conocer la noción de "raíz de proyecto"; esa responsabilidad queda enteramente en la capa CLI (`src/foda/cli.py`), preservando el aislamiento del core (D-025).
 
 ### D-031 — Cadena de trazabilidad codificada HU→CA→TSK y tareas atómicas del plan
 - **Estado:** Aceptada

@@ -1,12 +1,17 @@
 {
   "feature": "client_new_cli",
   "band": "tracer_bullet",
-  "status": "in_progress",
-  "current_stage": "plan_builder",
+  "status": "suspended",
+  "current_stage": "tdd",
+  "suspension": {
+    "suspended": true,
+    "reason": "Plan y 12 casos TDD aprobados por el humano; ejecucion del bucle TDD suspendida por decision del humano.",
+    "resume_at": "Invocar tdd_tester con el caso 1 (primer caso pendiente)."
+  },
   "stages": {
     "feature_definer":   { "status": "done",    "artifact": "definition.md" },
     "spec_writer":       { "status": "done",    "artifact": "spec.md",  "gate": "human", "awaiting_approval": false },
-    "plan_builder":      { "status": "done",    "artifact": "plan.md",  "gate": "human", "awaiting_approval": true },
+    "plan_builder":      { "status": "done",    "artifact": "plan.md",  "gate": "human", "awaiting_approval": false },
     "tdd": {
       "status": "pending",
       "cases": [
