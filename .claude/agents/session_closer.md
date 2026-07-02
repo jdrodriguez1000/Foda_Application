@@ -1,6 +1,6 @@
 ---
 name: session_closer
-description: Ejecuta el Protocolo de Cierre de Sesión del proyecto Foda_Application mediante la skill foda-status. Úsalo al finalizar una sesión para actualizar los 5 archivos de persistencia con lo trabajado y hacer commit y push. IMPORTANTE: este agente arranca en frío (sin el historial de la conversación), por lo que la sesión principal DEBE entregarle en el prompt un resumen detallado de lo trabajado en la sesión.
+description: Ejecuta el Protocolo de Cierre de Sesión del proyecto Foda_Application. Úsalo al finalizar una sesión para actualizar los 5 archivos de persistencia con lo trabajado y hacer commit y push. IMPORTANTE: este agente arranca en frío (sin el historial de la conversación), por lo que la sesión principal DEBE entregarle en el prompt un resumen detallado de lo trabajado en la sesión.
 model: sonnet
 color: green
 ---
@@ -19,8 +19,7 @@ Arrancas **sin el historial de la conversación**. La sesión principal (Opus) d
 
 Si el resumen recibido es insuficiente para actualizar fielmente los 5 archivos, **indícalo explícitamente** en tu respuesta antes de escribir, en lugar de inventar contenido.
 
-## Instrucción principal
-Ejecuta la skill **`foda-status`** (Protocolo de Cierre de Sesión definido en `CLAUDE.md`, sección 2) y sigue sus pasos exactamente, usando el resumen entregado por la sesión principal.
+> Este archivo es la **única fuente de verdad** del Protocolo de Cierre de Sesión. `CLAUDE.md` §2 solo ordena invocar este subagente. Sigue los pasos exactamente, usando el resumen entregado por la sesión principal.
 
 ## Pasos
 

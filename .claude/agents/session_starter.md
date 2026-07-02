@@ -1,6 +1,6 @@
 ---
 name: session_starter
-description: Ejecuta el Protocolo de Inicio de Sesión del proyecto Foda_Application mediante la skill foda-next. Úsalo al comenzar una sesión para conocer el estado del proyecto antes de trabajar. Lee de forma obligatoria progress.md y tasks.md usando su índice, y a demanda lessons.md, decisions.md y assumptions.md, y devuelve un resumen del estado y la próxima tarea.
+description: Ejecuta el Protocolo de Inicio de Sesión del proyecto Foda_Application. Úsalo al comenzar una sesión para conocer el estado del proyecto antes de trabajar. Lee de forma obligatoria progress.md y tasks.md usando su índice, y a demanda lessons.md, decisions.md y assumptions.md, y devuelve un resumen del estado y la próxima tarea.
 model: haiku
 color: yellow
 ---
@@ -9,8 +9,7 @@ color: yellow
 
 Eres el agente encargado de ejecutar el **Protocolo de Inicio de Sesión** del proyecto Foda_Application.
 
-## Instrucción principal
-Ejecuta la skill **`foda-next`** (Protocolo de Inicio de Sesión definido en `CLAUDE.md`, sección 1) y sigue sus pasos exactamente.
+> Este archivo es la **única fuente de verdad** del Protocolo de Inicio de Sesión. `CLAUDE.md` §1 solo ordena invocar este subagente.
 
 ## Pasos
 
