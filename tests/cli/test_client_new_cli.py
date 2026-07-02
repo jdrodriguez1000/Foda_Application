@@ -8,6 +8,8 @@ Fuente: 600_features/client_new_cli/tracer_bullet/plan.md (caso 1 de 12).
 
 from unittest.mock import MagicMock
 
+import pytest
+
 import foda.cli
 from foda.cli import main
 
@@ -112,6 +114,27 @@ def test_main_sin_pyproject_devuelve_1_y_no_toca_disco(tmp_path, monkeypatch, ca
     assert "Traceback" not in captured.out
     assert "Traceback" not in captured.err
     assert not (no_project_root / "clients").exists()
+
+
+@pytest.mark.parametrize("nombre_invalido", ["a b", "..", "-x"])
+def test_main_nombre_invalido_devuelve_1_y_no_crea_nada(
+    nombre_invalido, tmp_path, monkeypatch, capsys
+):
+    """Caso 8 (CA-07): para un NAME que create_client rechaza con
+    ValueError (p. ej. "a b", "..", "-x"), main(["client","new",NAME])
+    devuelve 1, escribe un mensaje legible en stderr, la salida no
+    contiene "Traceback", y no se crea ninguna carpeta para ese nombre."""
+    (tmp_path / "pyproject.toml").write_text("", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    result = main(["client", "new", nombre_invalido])
+
+    captured = capsys.readouterr()
+    assert result == 1
+    assert captured.err.strip() != ""
+    assert "Traceback" not in captured.out
+    assert "Traceback" not in captured.err
+    assert not (tmp_path / "clients" / nombre_invalido).exists()
 
 
 def test_main_camino_feliz_devuelve_0(tmp_path, monkeypatch):
