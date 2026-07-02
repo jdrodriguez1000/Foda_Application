@@ -44,7 +44,7 @@
 ## 4. Tareas Pendientes
 | ID | Tarea | Prioridad | Notas |
 |---|---|---|---|
-| — | _Ninguna._ | — | — |
+| T-021 | Aplicar ajustes de gobernanza: vocabulario de bandas (D-029) + `feature_contract` (D-030) | 🔴 Alta | **Próxima tarea de la sesión siguiente, ANTES de reanudar el bucle TDD de `client_scaffold`.** Checklist: (1) editar `700_architecture/sdd_tdd_workflow.md` — sección de bandas (eje vertical `tracer_bullet → stab_n`; MVP/Final como hitos de producto; evolución = features nuevas) y añadir `feature_contract` a los artefactos por feature, aclarando "celda verificada" vs "feature completa"; (2) editar `980_guideline/methodology.md` — reconciliar el `slice_contract "nivel banda"` citado por D-017 con el modelo de dos niveles de D-030 (feature_contract adoptado, slice_contract diferido + nota de posible fusión con spec.md); (3) editar `600_features/README.md` — reflejar feature_contract a nivel feature, por encima de las bandas; (4) añadir plantilla `600_features/_template/feature_contract.md`; (5) editar `.claude/agents/feature_definer.md` — responsable de crear `feature_contract.md` a nivel feature (antes/junto con `definition.md`) y que conozca el vocabulario de bandas; (6) retro-ajuste: crear `600_features/client_scaffold/feature_contract.md` documentando el contrato de la feature ya iniciada. Los docs deben referenciar los IDs reales D-029 y D-030. Tras completar, se reanuda el bucle TDD de `client_scaffold` invocando `tdd_tester` con el caso #1. |
 
 ## 5. Backlog
 | ID | Tarea | Notas |

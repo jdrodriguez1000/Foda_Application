@@ -45,6 +45,8 @@ Cada decisión sigue el formato: **ID**, **título**, **estado** (Propuesta / Ac
 | D-026 | Adoptar PyYAML como dependencia del proyecto | Aceptada | 2026-07-02 |
 | D-027 | Bootstrap del paquete `foda` (`pyproject.toml`, layout `src/`) dentro de la feature `client_scaffold` | Aceptada | 2026-07-02 |
 | D-028 | Caso TDD #18 (rollback de filesystem) implementado sin test en la banda `tracer_bullet` | Aceptada | 2026-07-02 |
+| D-029 | Taxonomía de bandas y ejes de crecimiento del producto (vertical feature vs. horizontal producto) | Aceptada | 2026-07-02 |
+| D-030 | Contratos en dos niveles: `feature_contract` (adoptado) + `slice_contract` (diferido) | Aceptada | 2026-07-02 |
 
 ## 3. Detalle de Decisiones
 
@@ -243,3 +245,17 @@ Cada decisión sigue el formato: **ID**, **título**, **estado** (Propuesta / Ac
 - **Contexto:** El plan de `client_scaffold` incluye 18 casos TDD; el caso 18 cubre la limpieza best-effort de DS-2 (D-024) ante fallo de filesystem a mitad de creación, un escenario difícil de testear de forma simple (requiere simular fallos de I/O).
 - **Decisión:** El caso 18 se **implementa sin test** en la banda `tracer_bullet`, respetando NC-2 (simplicidad primero); se endurecerá con test en una banda posterior.
 - **Consecuencias:** Excepción explícita y documentada a NC-5 ("toda tarea tiene un test que la respalda") para este caso puntual, aprobada por el humano en el GATE del plan. Queda como trabajo pendiente de banda futura escribir el test de este caso.
+
+### D-029 — Taxonomía de bandas y ejes de crecimiento del producto
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-02
+- **Contexto:** El concepto de "banda" (D-017/D-019) estaba definido solo para la primera pasada (`tracer_bullet`), sin nombres para bandas posteriores ni relación con hitos de producto. El usuario aportó su forma de trabajo habitual (bandas tracer_bullet / estabilización / MVP / evolución / final) y se detectó que la palabra "banda" mezclaba dos ejes ortogonales: profundizar UNA feature (vertical) vs. hacer crecer el PRODUCTO agregando features (horizontal).
+- **Decisión:** (1) **Eje vertical (madurez de UNA feature):** las bandas por feature son `tracer_bullet → stab_1 → stab_2 → …` (bandas de estabilización que endurecen la MISMA feature de forma controlada). Cada banda es una subcarpeta hermana bajo la feature: `600_features/<feature>/<banda>/` (refina, no cambia, D-017/D-019). Una feature crea solo las bandas que necesita. (2) **MVP y Final = hitos de PRODUCTO emergentes (Opción A elegida por el usuario), NO son bandas.** No son carpetas de ninguna feature; son etiquetas del roadmap del producto que emergen cuando el conjunto de features necesarias alcanza madurez suficiente. (3) **Evolución = agregar features NUEVAS**, no es una banda: cada feature nueva de la fase de evolución arranca en su propio `tracer_bullet` y recorre la cadena SDD/TDD estándar como cualquier otra; por tanto NO existen bandas `evol_n`. (4) **Alcance de adopción (E4/NC-2):** se adopta AHORA solo el VOCABULARIO de bandas del eje vertical (`tracer_bullet`, `stab_n`); la maquinaria de hitos MVP/Final y de la fase de evolución se documenta como convención futura, NO se construye todavía.
+- **Consecuencias:** Se separan limpiamente los dos ejes; se preserva la carpetería existente (`600_features/<feature>/<banda>/`); "feature terminada" pasa a ser un hito superior (la feature alcanza su banda madura), mientras `spec_verifier` sigue cerrando por CELDA (feature × banda). Pendiente de aplicar en docs (ver tarea nueva de aplicación en `tasks.md`). No se editó ningún documento en esta sesión; queda para la próxima.
+
+### D-030 — Contratos en dos niveles: `feature_contract` (adoptado) + `slice_contract` (diferido)
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-02
+- **Contexto:** D-017 mencionaba un `slice_contract "nivel banda"` que nunca se definió ni creó. Al formalizar el modelo de bandas (D-029) se vio la necesidad de un contrato explícito por feature (materializa P5 — contratos explícitos antes de ejecutar). El usuario decidió DOS artefactos separados.
+- **Decisión:** (1) **`feature_contract` (por feature):** es la "estrella polar" / definición de "terminado" total de la feature. Es OBLIGATORIO y debe existir ANTES de iniciar la primera banda. Vive a NIVEL FEATURE, por encima de las bandas: `600_features/<feature>/feature_contract.md`. Lo crea el agente `feature_definer` (decisión del usuario). Materializa P5. (2) **`slice_contract` (por celda/banda):** define qué entrega cada banda como slice hacia el `feature_contract`. Su ADOPCIÓN queda DIFERIDA (no se construye ni se exige todavía; E4/NC-2). (3) **Nota abierta:** cuando se adopte el `slice_contract`, podría FUSIONARSE con `spec.md` (que ya captura comportamiento + criterios de aceptación por celda) para evitar duplicación (E4); queda como decisión futura, sin resolver ahora. (4) **Retro-ajuste pendiente:** `client_scaffold` ejecutó su `tracer_bullet` SIN `feature_contract`, por lo que queda temporalmente no-conforme; debe retro-escribirse su `feature_contract` como parte de la tarea nueva.
+- **Consecuencias:** Contratos explícitos alineados con P5; el `feature_definer` gana la responsabilidad de crear el `feature_contract`. Pendiente de aplicar en docs, plantilla y agente (ver tarea nueva en `tasks.md`). No se editó ningún documento en esta sesión; queda para la próxima.
