@@ -112,6 +112,16 @@ def test_create_client_yaml_created_at_cumple_patron_iso(tmp_path: Path) -> None
     assert _CREATED_AT_PATTERN.match(created_at)
 
 
+def test_create_client_nombre_vacio_lanza_valueerror_y_no_crea_nada(tmp_path: Path) -> None:
+    """Caso 9 (CA-08, CA-11): create_client("", tmp) lanza ValueError y no
+    crea ninguna carpeta bajo tmp (tmp queda tal cual estaba antes de la
+    llamada, sin entradas nuevas)."""
+    with pytest.raises(ValueError):
+        create_client("", tmp_path)
+
+    assert list(tmp_path.iterdir()) == []
+
+
 @pytest.mark.parametrize("name", ["X", "9lives", "Client_1-a"])
 def test_create_client_nombres_validos_representativos_crean_arbol_completo(
     tmp_path: Path, name: str

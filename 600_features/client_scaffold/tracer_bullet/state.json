@@ -110,7 +110,9 @@
         {
           "id": 9,
           "desc": "Nombre vacio \"\" lanza ValueError y no crea ninguna carpeta (AC8, AC11)",
-          "status": "pending"
+          "status": "red",
+          "test": "tests/core/test_scaffold.py::test_create_client_nombre_vacio_lanza_valueerror_y_no_crea_nada",
+          "red_evidence": "FileExistsError: [WinError 183] No se puede crear un archivo que ya existe (client_dir = clients_root / \"\" resuelve al propio tmp_path, que ya existe; create_client aun no valida el nombre y mkdir(parents=True) falla con FileExistsError en vez de lanzar ValueError). 1 failed, 10 passed en tests/core/test_scaffold.py."
         },
         {
           "id": 10,
