@@ -2,12 +2,28 @@
   "feature": "client_new_cli",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "spec_writer",
+  "current_stage": "plan_builder",
   "stages": {
     "feature_definer":   { "status": "done",    "artifact": "definition.md" },
-    "spec_writer":       { "status": "done", "artifact": "spec.md",          "gate": "human", "awaiting_approval": true },
-    "plan_builder":      { "status": "pending", "artifact": "plan.md",      "gate": "human", "awaiting_approval": false },
-    "tdd":               { "status": "pending", "cases": [] },
+    "spec_writer":       { "status": "done",    "artifact": "spec.md",  "gate": "human", "awaiting_approval": false },
+    "plan_builder":      { "status": "done",    "artifact": "plan.md",  "gate": "human", "awaiting_approval": true },
+    "tdd": {
+      "status": "pending",
+      "cases": [
+        { "id": 1,  "desc": "main([\"client\",\"new\",\"ABC\"]) con cwd dentro de un proyecto temporal (existe <raiz>/pyproject.toml) devuelve el int 0 (camino feliz, invocabilidad).", "status": "pending" },
+        { "id": 2,  "desc": "En el camino de exito, main(...) crea el arbol de cliente en <raiz>/clients/ABC/ (existe <raiz>/clients/ABC/client.yaml y las carpetas del scaffold).", "status": "pending" },
+        { "id": 3,  "desc": "En el camino de exito, la salida capturada en stdout contiene la ruta de <raiz>/clients/ABC.", "status": "pending" },
+        { "id": 4,  "desc": "Con create_client espiado/monkeypatcheado, main([\"client\",\"new\",\"ABC\"]) lo invoca exactamente una vez con name == \"ABC\" y clients_root == <raiz>/clients.", "status": "pending" },
+        { "id": 5,  "desc": "Cuando <raiz>/clients/ no existe todavia, main([\"client\",\"new\",\"ABC\"]) la crea y crea ABC/ dentro, terminando con codigo 0 (primer cliente del proyecto).", "status": "pending" },
+        { "id": 6,  "desc": "Con el cwd en una subcarpeta anidada (p. ej. <raiz>/src/foda/), main([\"client\",\"new\",\"ABC\"]) crea el cliente en <raiz>/clients/ABC/ (raiz real localizada hacia arriba), no relativo al cwd.", "status": "pending" },
+        { "id": 7,  "desc": "Con un cwd sin pyproject.toml ni en el ni en ancestros, main([\"client\",\"new\",\"ABC\"]) devuelve 1, escribe en stderr un mensaje que menciona que no se encontro la raiz del proyecto, la salida no contiene \"Traceback\", y no se crea ninguna carpeta clients/ ni de cliente.", "status": "pending" },
+        { "id": 8,  "desc": "Para un NAME que create_client rechaza con ValueError (p. ej. \"a b\", \"..\", \"-x\"), main([\"client\",\"new\",NAME]) devuelve 1, escribe un mensaje legible en stderr, la salida no contiene \"Traceback\", y no se crea ninguna carpeta para ese nombre.", "status": "pending" },
+        { "id": 9,  "desc": "Cuando <raiz>/clients/ABC/ ya existe (con un archivo centinela dentro), main([\"client\",\"new\",\"ABC\"]) devuelve 1, escribe un mensaje legible en stderr (sin \"Traceback\"), y el archivo centinela del cliente existente permanece intacto.", "status": "pending" },
+        { "id": 10, "desc": "Ante argumento NAME ausente (main([\"client\",\"new\"])) argparse imprime usage a stderr y termina con codigo 2 (convencion de argparse).", "status": "pending" },
+        { "id": 11, "desc": "Ante subcomando desconocido (main([\"client\",\"frobnicate\"])) argparse imprime usage/error a stderr y termina con codigo 2.", "status": "pending" },
+        { "id": 12, "desc": "pyproject.toml declara [project.scripts] con la entrada foda = \"foda.cli:main\", y foda.cli.main es invocable con una lista argv devolviendo un int (contrato de invocabilidad del comando).", "status": "pending" }
+      ]
+    },
     "integration_tester":{ "status": "pending" },
     "spec_verifier":     { "status": "pending", "artifact": "verification.md" }
   }
