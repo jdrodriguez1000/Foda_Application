@@ -7,6 +7,7 @@ Bucle TDD: un test por caso, ejecutado en orden (state.json -> stages.tdd.cases)
 import re
 from pathlib import Path
 
+import pytest
 import yaml
 
 from foda.core.scaffold import create_client
@@ -109,3 +110,21 @@ def test_create_client_yaml_created_at_cumple_patron_iso(tmp_path: Path) -> None
     created_at = content["created_at"]
     assert isinstance(created_at, str)
     assert _CREATED_AT_PATTERN.match(created_at)
+
+
+@pytest.mark.parametrize("name", ["X", "9lives", "Client_1-a"])
+def test_create_client_nombres_validos_representativos_crean_arbol_completo(
+    tmp_path: Path, name: str
+) -> None:
+    """Caso 8 (CA-09): para cada nombre valido representativo ("X", "9lives",
+    "Client_1-a"), create_client crea el arbol completo sin lanzar excepcion.
+    Cada nombre usa su propia clients_root (subcarpeta de tmp_path) para
+    evitar colision de duplicado entre parametrizaciones."""
+    clients_root = tmp_path / name
+
+    result = create_client(name, clients_root)
+
+    client_dir = clients_root / name
+    assert result == client_dir
+    assert client_dir.is_dir()
+    assert (client_dir / "client.yaml").is_file()
