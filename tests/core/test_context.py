@@ -34,3 +34,17 @@ def test_client_context_expone_inputs_dir_y_outputs_dir(tmp_path: Path) -> None:
 
     assert ctx.inputs_dir == clients_root / "ABC" / "010_inputs"
     assert ctx.outputs_dir == clients_root / "ABC" / "020_outputs"
+
+
+def test_client_context_expone_bronze_silver_gold_dir(tmp_path: Path) -> None:
+    """Caso 3 (CA-06): sobre un cliente creado con create_client("ABC", tmp/clients),
+    ClientContext("ABC", tmp/clients) expone bronze_dir, silver_dir y gold_dir bajo
+    tmp/clients/ABC/data/{bronze,silver,gold}."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+
+    ctx = ClientContext("ABC", clients_root)
+
+    assert ctx.bronze_dir == clients_root / "ABC" / "data" / "bronze"
+    assert ctx.silver_dir == clients_root / "ABC" / "data" / "silver"
+    assert ctx.gold_dir == clients_root / "ABC" / "data" / "gold"
