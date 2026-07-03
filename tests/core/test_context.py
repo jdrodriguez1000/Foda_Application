@@ -76,3 +76,16 @@ def test_client_context_las_6_rutas_existen_en_disco(tmp_path: Path) -> None:
     assert ctx.silver_dir.is_dir()
     assert ctx.gold_dir.is_dir()
     assert ctx.models_dir.is_dir()
+
+
+def test_client_context_is_recurring_false_para_cliente_nuevo(tmp_path: Path) -> None:
+    """Caso 6 (CA-09): sobre un cliente recien creado con create_client("ABC", tmp/clients)
+    (models/ existe pero vacia, sin subcarpeta latest), ClientContext("ABC", tmp/clients)
+    expone is_recurring == False (cliente NUEVO). Regla (DS-CTX-2):
+    is_recurring == (models_dir / "latest").exists()."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+
+    ctx = ClientContext("ABC", clients_root)
+
+    assert ctx.is_recurring is False
