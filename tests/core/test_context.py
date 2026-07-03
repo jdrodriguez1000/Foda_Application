@@ -59,3 +59,20 @@ def test_client_context_expone_models_dir(tmp_path: Path) -> None:
     ctx = ClientContext("ABC", clients_root)
 
     assert ctx.models_dir == clients_root / "ABC" / "models"
+
+
+def test_client_context_las_6_rutas_existen_en_disco(tmp_path: Path) -> None:
+    """Caso 5 (CA-08): sobre un cliente creado con create_client("ABC", tmp/clients),
+    las 6 rutas resueltas por ClientContext (inputs_dir, outputs_dir, bronze_dir,
+    silver_dir, gold_dir, models_dir) existen en disco como directorios."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+
+    ctx = ClientContext("ABC", clients_root)
+
+    assert ctx.inputs_dir.is_dir()
+    assert ctx.outputs_dir.is_dir()
+    assert ctx.bronze_dir.is_dir()
+    assert ctx.silver_dir.is_dir()
+    assert ctx.gold_dir.is_dir()
+    assert ctx.models_dir.is_dir()
