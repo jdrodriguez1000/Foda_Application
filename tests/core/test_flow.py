@@ -87,3 +87,41 @@ def test_run_heredado_ejecuta_hasta_el_final_y_devuelve_flow_result(
     result = flow.run(ctx)
 
     assert isinstance(result, FlowResult)
+
+
+def test_run_invoca_los_cuatro_hooks_en_orden_y_una_vez_cada_uno(
+    tmp_path: Path,
+) -> None:
+    """Caso 4 (CA-02): instrumentando el flujo trivial (registrando cada hook
+    invocado en una lista de instancia), una ejecucion completa de run(ctx)
+    invoca exactamente load_inputs, validate, execute, write_outputs, en ese
+    orden, y una sola vez cada uno."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    class InstrumentedFlow(Flow):
+        name = "instrumented"
+        requires: list[Artifact] = []
+        produces: list[Artifact] = []
+
+        def __init__(self) -> None:
+            self.calls: list[str] = []
+
+        def load_inputs(self, ctx: ClientContext) -> None:
+            self.calls.append("load_inputs")
+
+        def validate(self, ctx: ClientContext) -> None:
+            self.calls.append("validate")
+
+        def execute(self, ctx: ClientContext) -> FlowResult:
+            self.calls.append("execute")
+            return FlowResult(success=True, outputs=[])
+
+        def write_outputs(self, ctx: ClientContext, result: FlowResult) -> None:
+            self.calls.append("write_outputs")
+
+    flow = InstrumentedFlow()
+    flow.run(ctx)
+
+    assert flow.calls == ["load_inputs", "validate", "execute", "write_outputs"]
