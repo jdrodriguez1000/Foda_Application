@@ -2,7 +2,7 @@
   "feature": "flow_base",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "tdd_tester",
+  "current_stage": "spec_verifier",
   "next_case": null,
   "stages": {
     "feature_definer":   { "status": "done",    "artifact": "definition.md" },
@@ -27,7 +27,18 @@
         { "id": 14, "desc": "Artifact(base=<clave desconocida>, relative=r).path(ctx) lanza ValueError cuando base no pertenece a {inputs, outputs, bronze, silver, gold, models} (guarda defensiva DS-FLOW-2, anadida por el humano en el GATE).", "ca": "DS-FLOW-2", "status": "done", "test_file": "tests/core/test_flow.py", "test_name": "test_artifact_path_con_base_desconocida_lanza_value_error", "tdd_note": "NO hubo fase red valida (D-037, verde directo): pytest tests/core/test_flow.py::test_artifact_path_con_base_desconocida_lanza_value_error -q -> 1 passed de inmediato. Motivo: Artifact.path(ctx) (TSK-01, ya implementado desde el caso 1) ya contiene la guarda defensiva que lanza ValueError cuando self.base no esta en _BASE_TO_DIR_ATTR (las 6 claves logicas), con mensaje que incluye el valor de base invalido. El caso 14 (DS-FLOW-2, sin CA-xx propio, anadido por el humano en el GATE) solo ejercita esa guarda ya existente con base='no_existe', sin ejercitar ninguna rama nueva de produccion. Forzar un rojo artificial violaria NC-2. No se modifico codigo de produccion (src/foda/core/flow.py intacto).", "green_evidence": "1 passed (caso); 90 passed suite completa, sin regresiones", "src_files": [] }
       ]
     },
-    "integration_tester":{ "status": "pending" },
+    "integration_tester":{
+      "status": "done",
+      "tests_file": "tests/integration/test_flow_base_integration.py",
+      "cases": [
+        "test_run_end_to_end_sobre_cliente_real_resuelve_require_existente_y_produce_output",
+        "test_run_end_to_end_falla_temprano_si_el_require_no_existe_en_el_cliente_real",
+        "test_artifact_base_coincide_con_las_carpetas_reales_de_create_client",
+        "test_run_end_to_end_produce_artefacto_consumible_por_flujo_vecino"
+      ],
+      "green_evidence": "pytest tests/integration -q -> 23 passed (4 nuevos de flow_base + 19 preexistentes de client_context/client_scaffold/client_new_cli, sin regresiones). pytest -q (suite completa) -> 94 passed, sin regresiones.",
+      "notes": "No se modifico codigo de produccion (src/foda/core/flow.py, context.py, scaffold.py intactos, NC-3): los 4 tests de integracion pasaron en verde directo contra el bucle TDD ya cerrado (14/14 casos done). Cobertura: (1) Flow.run(ctx) end-to-end sobre ClientContext de un cliente real creado por create_client, con require existente (010_inputs) y produce materializado bajo 020_outputs; (2) fallo temprano con FlowContractError (sin excepcion cruda) cuando el require no existe en el cliente real, sin artefactos espurios; (3) coherencia de las 6 claves logicas de Artifact.base con las carpetas reales que create_client crea (contrato flow_base<->client_context<->client_scaffold); (4) interaccion con flujo vecino: el artefacto que produce un Flow es consumido como require por un segundo Flow sobre el mismo cliente real."
+    },
     "spec_verifier":     { "status": "pending",  "artifact": "verification.md" }
   }
 }
