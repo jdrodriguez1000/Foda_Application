@@ -226,6 +226,7 @@ class Onboarding(Flow):
 | CA-03 | En el mapa, `hierarchies.geography.levels == ["region","pais","ciudad","sede"]` y `hierarchies.geography.depth == 4`. | HU-01 |
 | CA-04 | Los valores únicos por nivel son los distintos observados en `members`, en orden alfabético ascendente: p. ej. `product.unique_values.familia == ["Bebidas","Snacks"]` con `unique_counts.familia == 2`, y `geography.unique_counts.ciudad == 2` (`["Bogota","Medellin"]`). | HU-01 |
 | CA-05 | Dado un contrato cuya `product_hierarchy.levels` tiene profundidad ≠ 4 (p. ej. 3 niveles) con miembros coherentes, el mapa refleja `depth` = 3 y esos niveles en orden, sin asumir 4 niveles. | HU-01 |
+| CA-05b | Dado un contrato cuya `product_hierarchy.levels` tiene profundidad **> 4** (5 niveles, p. ej. `["familia","categoria","subcategoria","clase","sku"]`) con miembros que tienen exactamente esas 5 claves, el mapa refleja `depth == 5`, los 5 niveles en orden declarado, y `unique_values`/`unique_counts` calculados para los 5 niveles (incluido el 5.º, `sku`); sin asumir ni topar la profundidad en 4 (ningún nivel se pierde ni se trata `[3]` como hoja). | HU-01 |
 | CA-06 | El mapa lista los 2 datasets del fixture con su `kind`/`source_medium`/`periodicity` correctos y en el orden del contrato (ventas, luego inventario). | HU-02 |
 | CA-07 | El mapa refleja `file_count == 1` para ventas y `file_count == 2` para inventario, con cada `files[*].name`/`period_start`/`period_end` del contrato (incluye el archivo multi-año de ventas 2023-01-01→2025-12-31). | HU-02 |
 | CA-08 | Para cada dataset, `fields` expone cada columna con `name`/`type`/`required`/`maps_to`, incluido `precio_unitario` con `required=false` y `maps_to=null`. | HU-03 |
@@ -248,7 +249,7 @@ class Onboarding(Flow):
 
 | HU | Cubierta por |
 |---|---|
-| HU-01 | CA-01, CA-02, CA-03, CA-04, CA-05, CA-13 |
+| HU-01 | CA-01, CA-02, CA-03, CA-04, CA-05, CA-05b, CA-13 |
 | HU-02 | CA-06, CA-07, CA-10 |
 | HU-03 | CA-08, CA-09 |
 | HU-04 | CA-14, CA-15, CA-16, CA-17, CA-18, CA-19, CA-20, CA-21 |
