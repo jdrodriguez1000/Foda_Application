@@ -156,6 +156,32 @@ def test_client_context_lanza_filenotfounderror_si_carpeta_sin_client_yaml(
         ClientContext("HUECO", clients_root)
 
 
+def test_client_context_rutas_dependen_solo_de_clients_root_no_del_cwd(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Caso 12 (CA-12): sobre un cliente creado con create_client("ABC", tmp/clients),
+    con el cwd del proceso cambiado (monkeypatch.chdir) a un directorio no relacionado,
+    ClientContext("ABC", tmp/clients) sigue exponiendo root y las 6 rutas bajo
+    tmp/clients/ABC (parametro clients_root), sin verse afectado por el cwd (HU-04,
+    DS-CTX-3: el core no re-resuelve rutas desde el cwd)."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    otro_dir = tmp_path / "otro_dir_no_relacionado"
+    otro_dir.mkdir()
+
+    monkeypatch.chdir(otro_dir)
+
+    ctx = ClientContext("ABC", clients_root)
+
+    assert ctx.root == clients_root / "ABC"
+    assert ctx.inputs_dir == clients_root / "ABC" / "010_inputs"
+    assert ctx.outputs_dir == clients_root / "ABC" / "020_outputs"
+    assert ctx.bronze_dir == clients_root / "ABC" / "data" / "bronze"
+    assert ctx.silver_dir == clients_root / "ABC" / "data" / "silver"
+    assert ctx.gold_dir == clients_root / "ABC" / "data" / "gold"
+    assert ctx.models_dir == clients_root / "ABC" / "models"
+
+
 def test_client_context_is_recurring_ignora_flag_espurio_en_client_yaml(
     tmp_path: Path,
 ) -> None:
