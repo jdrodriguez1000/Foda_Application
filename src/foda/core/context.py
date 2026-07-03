@@ -9,17 +9,24 @@ from pathlib import Path
 class ClientContext:
     """Contexto de LECTURA de un cliente ya creado bajo clients_root/<name>/.
 
-    Implementacion parcial (TDD, casos 1-6 / CA-01, CA-05, CA-06, CA-07, CA-09):
+    Implementacion (TDD, casos 1-9 / CA-01, CA-02, CA-05, CA-06, CA-07, CA-09):
     resuelve root = clients_root/name y expone name, root, inputs_dir,
     outputs_dir, bronze_dir, silver_dir, gold_dir, models_dir e is_recurring
     (True si models_dir/"latest" existe; funcion pura del disco, no lee
-    client.yaml). La validacion de existencia del cliente (FileNotFoundError)
-    se agrega en casos posteriores del bucle TDD (9-11).
+    client.yaml). En la construccion valida que root/"client.yaml" exista
+    (DS-CTX-1: marcador de existencia del cliente); si no existe, lanza
+    FileNotFoundError antes de exponer el objeto.
     """
 
     def __init__(self, name: str, clients_root: Path) -> None:
+        root = clients_root / name
+        if not (root / "client.yaml").exists():
+            raise FileNotFoundError(
+                f"No existe el cliente '{name}': no se encontro {root / 'client.yaml'}. "
+                "Verifica el nombre del cliente o crealo con create_client()."
+            )
         self.name = name
-        self.root = clients_root / name
+        self.root = root
 
     @property
     def inputs_dir(self) -> Path:
