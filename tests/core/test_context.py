@@ -6,6 +6,7 @@ Bucle TDD: un test por caso, ejecutado en orden (state.json -> stages.tdd.cases)
 
 from pathlib import Path
 
+import pytest
 import yaml
 
 from foda.core.context import ClientContext
@@ -91,6 +92,20 @@ def test_client_context_is_recurring_false_para_cliente_nuevo(tmp_path: Path) ->
     ctx = ClientContext("ABC", clients_root)
 
     assert ctx.is_recurring is False
+
+
+def test_client_context_lanza_filenotfounderror_si_cliente_no_existe(
+    tmp_path: Path,
+) -> None:
+    """Caso 9 (CA-02): para un name cuyo tmp/clients/<name>/client.yaml no existe
+    (ni siquiera existe la carpeta clients_root/<name>/, porque nunca se llamo a
+    create_client), ClientContext(name, tmp/clients) lanza FileNotFoundError en la
+    construccion (DS-CTX-1: marcador de existencia = presencia de client.yaml)."""
+    clients_root = tmp_path / "clients"
+    clients_root.mkdir()
+
+    with pytest.raises(FileNotFoundError):
+        ClientContext("NOEXISTE", clients_root)
 
 
 def test_client_context_is_recurring_true_para_cliente_recurrente(tmp_path: Path) -> None:
