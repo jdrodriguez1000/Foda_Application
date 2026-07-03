@@ -151,6 +151,54 @@ def test_run_exitoso_devuelve_flow_result_con_success_true(tmp_path: Path) -> No
     assert result.success is True
 
 
+def test_run_con_requires_vacio_pasa_validate_y_completa_las_cuatro_fases(
+    tmp_path: Path,
+) -> None:
+    """Caso 7 (CA-12): un Flow con requires vacio pasa validate(ctx) sin lanzar
+    excepcion y run(ctx) completa las 4 fases devolviendo un FlowResult."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    class TrivialFlow(Flow):
+        name = "trivial"
+        requires: list[Artifact] = []
+        produces: list[Artifact] = []
+
+        def __init__(self) -> None:
+            self.calls: list[str] = []
+
+        def load_inputs(self, ctx: ClientContext) -> None:
+            self.calls.append("load_inputs")
+
+        def validate(self, ctx: ClientContext) -> None:
+            self.calls.append("validate")
+            super().validate(ctx)
+
+        def execute(self, ctx: ClientContext) -> FlowResult:
+            self.calls.append("execute")
+            return FlowResult(success=True, outputs=[])
+
+        def write_outputs(self, ctx: ClientContext, result: FlowResult) -> None:
+            self.calls.append("write_outputs")
+
+    flow = TrivialFlow()
+
+    # validate(ctx) no lanza (requires vacio pasa trivialmente).
+    flow.validate(ctx)
+
+    result = flow.run(ctx)
+
+    assert isinstance(result, FlowResult)
+    assert flow.calls == [
+        "validate",
+        "load_inputs",
+        "validate",
+        "execute",
+        "write_outputs",
+    ]
+
+
 def test_run_exitoso_expone_outputs_resueltos_y_existentes_en_disco(
     tmp_path: Path,
 ) -> None:
