@@ -1,9 +1,9 @@
 {
   "feature": "client_context",
   "band": "tracer_bullet",
-  "status": "in_progress",
-  "current_stage": "spec_verifier",
-  "current_case_note": "integration_tester CERRADO: 5 tests de integracion nuevos en tests/integration/test_client_context_integration.py, todos verdes; suite completa 71 passed (66 previos + 5 nuevos), sin regresiones. Siguiente fase: spec_verifier.",
+  "status": "done",
+  "current_stage": "completed",
+  "current_case_note": "spec_verifier CERRADO / CONFORME: los 12 CA (CA-01..CA-12) tienen evidencia unitaria directa (tests/core/test_context.py), reforzada por 5 tests de integracion; suite completa 71 passed, 0 regresiones. Decisiones vinculantes verificadas (D-1 modo desde models/latest, D-2 clients_root parametro sin cwd, D-3 introspeccion diferida, marcador = client.yaml, FileNotFoundError). Alcance in/out respetado. Veredicto CONFORME en verification.md. Cadena SDD/TDD de la celda cerrada.",
   "stages": {
     "feature_definer":    { "status": "done",    "artifact": "definition.md" },
     "spec_writer":        { "status": "done", "artifact": "spec.md",  "gate": "human", "awaiting_approval": false, "approved": true },
@@ -39,6 +39,6 @@
       "green_evidence": "pytest tests/integration -q -> 19 passed (13 previos de client_scaffold/client_new_cli + 6 archivos, 5 nuevos de client_context); pytest -q (suite completa) -> 71 passed (66 previos + 5 nuevos), 0 regresiones.",
       "coverage_note": "Puntos de integracion cubiertos: (1) contrato de artefactos create_client -> ClientContext (las 6 rutas hoja coinciden exactamente con las carpetas creadas por el scaffold, root identico); (2) camino nuevo->recurrente end-to-end sobre el mismo cliente materializando models/latest tras el hecho, sin reconstruir nada mas (SS12); (3) superficie de ClientContext suficiente y coherente para el consumo futuro de Flow.run(ctx) (SS9): ciclo leer input en 010_inputs -> escribir JSON en 020_outputs -> escribir dataset en bronze/, ejercitado con una funcion local que imita run(ctx) (flow_base/T-015 aun no existe, no se construyo una clase Flow real); (4) fallo temprano con FileNotFoundError claro cuando un 'flujo vecino' simulado recibe un cliente inexistente, sin afectar a otros clientes reales; (5) aislamiento multi-tenant (SS13) entre dos ClientContext sobre el mismo clients_root (rutas disjuntas, is_recurring independiente, escritura de un cliente no visible desde el otro). No se duplico cobertura unitaria de tests/core/test_context.py (que ya cubre CA-01..CA-12 en aislamiento)."
     },
-    "spec_verifier":      { "status": "pending", "artifact": "verification.md" }
+    "spec_verifier":      { "status": "done", "artifact": "verification.md", "verdict": "CONFORME" }
   }
 }
