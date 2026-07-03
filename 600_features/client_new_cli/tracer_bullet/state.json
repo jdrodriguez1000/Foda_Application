@@ -2,11 +2,11 @@
   "feature": "client_new_cli",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "integration_tester",
+  "current_stage": "spec_verifier",
   "suspension": {
     "suspended": false,
-    "reason": "Casos 2-6, 10 y 11 cerrados por instruccion explicita del orquestador (opcion (a), sin fase red). Casos 7, 8, 9 y 12 cerrados via rojo real -> tdd_coder (verde) -> tdd_refactor (done). El caso 12 (ultimo del bucle) cerro con la adicion de [project.scripts] a pyproject.toml (TSK-01) y una revision de tdd_refactor que solo actualizo el docstring de src/foda/cli.py para reflejar el cierre del bucle (sin cambios de comportamiento).",
-    "resume_at": "Bucle TDD completo (12/12 casos en done). Invocar integration_tester para la feature client_new_cli, banda tracer_bullet."
+    "reason": "Casos 2-6, 10 y 11 cerrados por instruccion explicita del orquestador (opcion (a), sin fase red). Casos 7, 8, 9 y 12 cerrados via rojo real -> tdd_coder (verde) -> tdd_refactor (done). El caso 12 (ultimo del bucle) cerro con la adicion de [project.scripts] a pyproject.toml (TSK-01) y una revision de tdd_refactor que solo actualizo el docstring de src/foda/cli.py para reflejar el cierre del bucle (sin cambios de comportamiento). integration_tester cerro con 8 tests de integracion nuevos en tests/integration/test_client_new_cli_integration.py, todos en verde.",
+    "resume_at": "integration_tester completo (8/8 tests de integracion en verde, 54/54 en la suite completa). Invocar spec_verifier para la feature client_new_cli, banda tracer_bullet."
   },
   "stages": {
     "feature_definer":   { "status": "done",    "artifact": "definition.md" },
@@ -29,7 +29,29 @@
         { "id": 12, "desc": "pyproject.toml declara [project.scripts] con la entrada foda = \"foda.cli:main\", y foda.cli.main es invocable con una lista argv devolviendo un int (contrato de invocabilidad del comando).", "status": "done", "test": "tests/cli/test_client_new_cli.py::test_pyproject_declara_entry_point_y_main_es_invocable", "red_evidence": "AssertionError: assert None == 'foda.cli:main' (pyproject_data.get('project', {}).get('scripts', {}).get('foda') es None); pyproject.toml del repo aun no tiene la tabla [project.scripts] (TSK-01 pendiente, plan SS2). Rojo por la razon esperada (configuracion de packaging no implementada), no por ImportError/typo. pytest tests/cli/test_client_new_cli.py::test_pyproject_declara_entry_point_y_main_es_invocable -q -> 1 failed; pytest -q (suite completa) -> 1 failed, 45 passed, sin regresiones en los demas tests.", "tdd_note": "No se escribio codigo de produccion ni se modifico pyproject.toml. El test lee pyproject.toml del repo real (via tomllib, stdlib 3.11+) con _REPO_ROOT = Path(__file__).resolve().parents[2], y ademas invoca main(['client','new','ABC']) bajo un proyecto temporal para verificar isinstance(result, int) (esa segunda mitad del contrato ya esta cubierta por la implementacion existente; el test falla en la primera aserccion sobre pyproject.toml antes de llegar a la invocacion de main).", "green_evidence": "tdd_coder (fase green) agrego la tabla [project.scripts] con foda = \"foda.cli:main\" a pyproject.toml (TSK-01, cambio quirurgico, unica adicion, sin tocar dependencies ni el resto de tablas). Verde logrado en el primer intento, sin reintentos. pytest tests/cli/test_client_new_cli.py::test_pyproject_declara_entry_point_y_main_es_invocable -q -> 1 passed; pytest -q (suite completa) -> 46 passed, sin regresiones.", "refactor_evidence": "Revision de pyproject.toml (tdd_refactor): la tabla [project.scripts] ya esta ubicada correctamente (dentro de [project], antes de [build-system]) y en su forma minima (una unica entrada foda = \"foda.cli:main\", sin claves extra); cambio puramente declarativo, sin refactor de comportamiento aplicable. Unico cambio: se actualizo el docstring del modulo src/foda/cli.py (mencionaba 'casos 1-9 en verde' y describia los casos 10-11 como pendientes del bucle, cuando ya estaban en verde); se corrigio para reflejar que los 12 casos del bucle TDD estan en verde y que el entry point del paquete se declara en pyproject.toml. Sin cambios de comportamiento. pytest -q -> 46 passed, sin regresiones. Con el cierre de este caso, los 12 casos del bucle TDD de la feature client_new_cli (banda tracer_bullet) quedan en status done; stages.tdd.status pasa a done y current_stage avanza a integration_tester.", "src_files": ["pyproject.toml", "src/foda/cli.py"] }
       ]
     },
-    "integration_tester":{ "status": "pending" },
+    "integration_tester":{
+      "status": "done",
+      "tests": [
+        "tests/integration/test_client_new_cli_integration.py::test_pyproject_declara_entry_point_consistente_con_el_modulo_real",
+        "tests/integration/test_client_new_cli_integration.py::test_entry_point_real_en_proceso_separado_crea_cliente_y_devuelve_0",
+        "tests/integration/test_client_new_cli_integration.py::test_entry_point_real_falla_claro_sin_pyproject_y_no_toca_disco",
+        "tests/integration/test_client_new_cli_integration.py::test_main_integra_de_verdad_con_create_client_sin_espiar",
+        "tests/integration/test_client_new_cli_integration.py::test_main_produce_artefacto_consumible_por_flujo_vecino_simulado",
+        "tests/integration/test_client_new_cli_integration.py::test_multiples_invocaciones_de_la_cli_aislan_clientes_bajo_el_mismo_proyecto",
+        "tests/integration/test_client_new_cli_integration.py::test_resolucion_de_raiz_real_con_arbol_de_varios_niveles_y_clients_root_inexistente",
+        "tests/integration/test_client_new_cli_integration.py::test_duplicado_end_to_end_preserva_cliente_existente_creado_por_la_propia_cli"
+      ],
+      "evidence": "pytest tests/integration -q -> 14 passed (8 nuevos de client_new_cli + 6 preexistentes de client_scaffold), sin fallos; pytest -q (suite completa) -> 54 passed, sin regresiones (46 previos del bucle TDD + 8 nuevos de integracion).",
+      "puntos_cubiertos": [
+        "Invocacion real del entry point declarado en pyproject.toml ([project.scripts] foda = \"foda.cli:main\") en un proceso Python separado (subprocess), sin monkeypatch, verificando argv/stdout/stderr/exit code reales -- punto que el plan (SS7 Estrategia de test) delego explicitamente a integration_tester.",
+        "Integracion real (sin espiar) de main() con el core CONFORME create_client de client_scaffold: arbol de carpetas y client.yaml coinciden con el contrato SS7/SS8 de system_design.md.",
+        "Contrato de artefactos entre flujos (SS8): client.yaml producido por la CLI es consumido por un lector externo que no conoce los internos de foda.cli ni de create_client.",
+        "Aislamiento multi-tenant (SS13) a traves de multiples invocaciones sucesivas de la CLI bajo el mismo proyecto.",
+        "Resolucion de clients_root (D-C) sobre un arbol de proyecto realista de varios niveles, incluyendo clients_root inexistente al arrancar.",
+        "Fallo temprano con mensaje claro (sin traceback) y exit code correcto a nivel de proceso real cuando falta el marcador pyproject.toml (DS-CLI-1).",
+        "Duplicado end-to-end: dos invocaciones sucesivas de main() con el mismo nombre preservan intacto el cliente creado por la primera."
+      ]
+    },
     "spec_verifier":     { "status": "pending", "artifact": "verification.md" }
   }
 }
