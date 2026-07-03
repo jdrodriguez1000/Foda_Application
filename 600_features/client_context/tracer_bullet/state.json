@@ -2,15 +2,15 @@
   "feature": "client_context",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "plan_builder",
+  "current_stage": "tdd_tester",
   "stages": {
     "feature_definer":    { "status": "done",    "artifact": "definition.md" },
     "spec_writer":        { "status": "done", "artifact": "spec.md",  "gate": "human", "awaiting_approval": false, "approved": true },
-    "plan_builder":       { "status": "done", "artifact": "plan.md",  "gate": "human", "awaiting_approval": true },
+    "plan_builder":       { "status": "done", "artifact": "plan.md",  "gate": "human", "awaiting_approval": false, "approved": true },
     "tdd": {
-      "status": "pending",
+      "status": "in_progress",
       "cases": [
-        { "id": 1,  "desc": "Sobre un cliente creado con create_client('ABC', tmp/clients), ClientContext('ABC', tmp/clients) se construye sin lanzar y expone name == 'ABC' y root == tmp/clients/ABC (CA-01).", "status": "pending" },
+        { "id": 1,  "desc": "Sobre un cliente creado con create_client('ABC', tmp/clients), ClientContext('ABC', tmp/clients) se construye sin lanzar y expone name == 'ABC' y root == tmp/clients/ABC (CA-01).", "status": "red", "test_file": "tests/core/test_context.py", "test_name": "test_client_context_construye_sin_lanzar_y_expone_name_y_root" },
         { "id": 2,  "desc": "inputs_dir == tmp/clients/ABC/010_inputs y outputs_dir == tmp/clients/ABC/020_outputs (CA-05).", "status": "pending" },
         { "id": 3,  "desc": "bronze_dir, silver_dir y gold_dir son tmp/clients/ABC/data/{bronze,silver,gold} (CA-06).", "status": "pending" },
         { "id": 4,  "desc": "models_dir == tmp/clients/ABC/models (CA-07).", "status": "pending" },
