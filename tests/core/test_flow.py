@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from foda.core.context import ClientContext
-from foda.core.flow import Artifact
+from foda.core.flow import Artifact, Flow, FlowResult
 from foda.core.scaffold import create_client
 
 
@@ -59,3 +59,31 @@ def test_artifact_path_resuelve_las_seis_claves_base_solo_via_ctx(
     artifact = Artifact(name="a", base=base, relative=relative)
 
     assert artifact.path(ctx) == getattr(ctx, dir_attr) / relative
+
+
+def test_run_heredado_ejecuta_hasta_el_final_y_devuelve_flow_result(
+    tmp_path: Path,
+) -> None:
+    """Caso 3 (CA-01): una subclase trivial de Flow que define solo name/requires/
+    produces y sobreescribe UNICAMENTE execute y write_outputs (sin sobreescribir
+    run) expone un run(ctx) heredado que se ejecuta hasta el final y devuelve un
+    FlowResult, sin contener codigo de orquestacion propio."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    class TrivialFlow(Flow):
+        name = "trivial"
+        requires: list[Artifact] = []
+        produces: list[Artifact] = []
+
+        def execute(self, ctx: ClientContext) -> FlowResult:
+            return FlowResult(success=True, outputs=[])
+
+        def write_outputs(self, ctx: ClientContext, result: FlowResult) -> None:
+            pass
+
+    flow = TrivialFlow()
+    result = flow.run(ctx)
+
+    assert isinstance(result, FlowResult)
