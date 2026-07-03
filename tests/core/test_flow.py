@@ -233,3 +233,24 @@ def test_run_exitoso_expone_outputs_resueltos_y_existentes_en_disco(
     assert result.outputs == [ctx.outputs_dir / "050_demo/out.json"]
     for output_path in result.outputs:
         assert output_path.exists()
+
+
+def test_run_sin_override_de_execute_lanza_not_implemented_error(
+    tmp_path: Path,
+) -> None:
+    """Caso 8 (CA-11): una subclase de Flow que NO sobreescribe execute (solo
+    hereda el hook base) provoca NotImplementedError al ejecutar run(ctx), pues
+    la base no implementa el nucleo (especifico de cada flujo concreto)."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    class FlowSinExecute(Flow):
+        name = "sin_execute"
+        requires: list[Artifact] = []
+        produces: list[Artifact] = []
+
+    flow = FlowSinExecute()
+
+    with pytest.raises(NotImplementedError):
+        flow.run(ctx)
