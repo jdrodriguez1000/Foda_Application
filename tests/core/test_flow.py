@@ -374,3 +374,44 @@ def test_run_con_require_faltante_secuencia_se_detiene_tras_validate(
     assert flow.calls == ["load_inputs"]
     assert "execute" not in flow.calls
     assert "write_outputs" not in flow.calls
+
+
+def test_run_con_require_faltante_no_deja_produces_en_disco(
+    tmp_path: Path,
+) -> None:
+    """Caso 12 (CA-06): tras un run(ctx) que falla por require faltante, el/los
+    artefacto(s) declarados en produces NO existen en disco (no se escribio
+    salida espuria; write_outputs, que si se invocara materializaria el
+    artefacto, no llega a ejecutarse porque validate corta antes de execute)."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    class FlowConRequireFaltanteYProduces(Flow):
+        name = "con_require_faltante_y_produces"
+        requires: list[Artifact] = [
+            Artifact(name="in", base="inputs", relative="010_demo/missing.json")
+        ]
+        produces: list[Artifact] = [
+            Artifact(name="out", base="outputs", relative="050_demo/out.json")
+        ]
+
+        def execute(self, ctx: ClientContext) -> FlowResult:
+            return FlowResult(
+                success=True, outputs=[a.path(ctx) for a in self.produces]
+            )
+
+        def write_outputs(self, ctx: ClientContext, result: FlowResult) -> None:
+            for artifact in self.produces:
+                path = artifact.path(ctx)
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("{}", encoding="utf-8")
+
+    flow = FlowConRequireFaltanteYProduces()
+
+    assert not flow.requires[0].exists(ctx)
+
+    with pytest.raises(FlowContractError):
+        flow.run(ctx)
+
+    assert flow.produces[0].path(ctx).exists() is False
