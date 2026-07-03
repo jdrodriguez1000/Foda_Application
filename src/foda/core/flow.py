@@ -1,13 +1,13 @@
 """Abstraccion base de flujo (feature flow_base, banda tracer_bullet).
 
 Fuente: 600_features/flow_base/tracer_bullet/spec.md (DS-FLOW-2/3/4, Interfaces /
-Firmas Publicas) y plan.md (TSK-01, TSK-02, TSK-04). Bucle TDD: casos 1-2 (CA-09,
-CA-10) en verde; caso 3 (CA-01) en curso.
+Firmas Publicas) y plan.md (TSK-01, TSK-02, TSK-04). Bucle TDD: casos 1-3 (CA-09,
+CA-10, CA-01) en verde.
 
 Esta version implementa `Artifact` (TSK-01), `FlowResult` (TSK-02) y el esqueleto de
 `Flow` con el template method `run` y los hooks base `load_inputs`/`execute`/
-`write_outputs` (TSK-04), lo minimo necesario para el caso 3 del bucle TDD.
-`Flow.validate` queda como placeholder no-op (se implementa en TSK-05, caso 7+) y
+`write_outputs` (TSK-04), lo minimo necesario para los casos 1-3 del bucle TDD.
+`Flow.validate` queda como placeholder no-op (se implementa en TSK-05, caso 9+) y
 `FlowContractError` se añade en una tarea/caso posterior.
 """
 
