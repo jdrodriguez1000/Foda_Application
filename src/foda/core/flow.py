@@ -1,11 +1,14 @@
 """Abstraccion base de flujo (feature flow_base, banda tracer_bullet).
 
-Fuente: 600_features/flow_base/tracer_bullet/spec.md (DS-FLOW-2, Interfaces / Firmas
-Publicas) y plan.md (TSK-01). Bucle TDD: caso 1 (CA-10) en verde.
+Fuente: 600_features/flow_base/tracer_bullet/spec.md (DS-FLOW-2/3/4, Interfaces /
+Firmas Publicas) y plan.md (TSK-01, TSK-02, TSK-04). Bucle TDD: casos 1-2 (CA-09,
+CA-10) en verde; caso 3 (CA-01) en curso.
 
-Esta version implementa unicamente el dataclass `Artifact` (TSK-01), lo minimo
-necesario para el caso 1 del bucle TDD. `FlowResult`, `FlowContractError` y `Flow`
-se añaden en tareas/casos posteriores del mismo bucle.
+Esta version implementa `Artifact` (TSK-01), `FlowResult` (TSK-02) y el esqueleto de
+`Flow` con el template method `run` y los hooks base `load_inputs`/`execute`/
+`write_outputs` (TSK-04), lo minimo necesario para el caso 3 del bucle TDD.
+`Flow.validate` queda como placeholder no-op (se implementa en TSK-05, caso 7+) y
+`FlowContractError` se añade en una tarea/caso posterior.
 """
 
 from dataclasses import dataclass
@@ -55,3 +58,47 @@ class Artifact:
     def exists(self, ctx: ClientContext) -> bool:
         """True si self.path(ctx) existe en disco."""
         return self.path(ctx).exists()
+
+
+@dataclass(frozen=True)
+class FlowResult:
+    """Estado de una ejecucion de flujo + rutas de artefactos producidos (DS-FLOW-3)."""
+
+    success: bool
+    outputs: list[Path]
+
+
+class Flow:
+    """Abstraccion comun de un flujo (system_design.md §9, DS-FLOW-4).
+
+    Template method run() invoca load_inputs -> validate -> execute ->
+    write_outputs en orden fijo. Los flujos concretos heredan y sobreescriben
+    SOLO los 4 hooks; run() no es sobreescribible en el contrato.
+    """
+
+    name: str = ""
+    requires: list[Artifact] = []
+    produces: list[Artifact] = []
+
+    def run(self, ctx: ClientContext) -> FlowResult:
+        self.load_inputs(ctx)
+        self.validate(ctx)
+        result = self.execute(ctx)
+        self.write_outputs(ctx, result)
+        return result
+
+    def load_inputs(self, ctx: ClientContext) -> None:
+        """Base: no-op. Subclases cargan inputs (YAML/JSON) a su estado."""
+
+    def validate(self, ctx: ClientContext) -> None:
+        """Base (placeholder, TSK-05 pendiente): no-op."""
+
+    def execute(self, ctx: ClientContext) -> FlowResult:
+        """Base: raise NotImplementedError. Subclases ejecutan el nucleo y
+        devuelven un FlowResult."""
+        raise NotImplementedError(
+            "Flow.execute() debe ser sobreescrito por la subclase concreta."
+        )
+
+    def write_outputs(self, ctx: ClientContext, result: FlowResult) -> None:
+        """Base: no-op. Subclases persisten los artefactos de produces."""
