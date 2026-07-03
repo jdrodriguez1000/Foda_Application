@@ -2,7 +2,7 @@
   "feature": "client_context",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "tdd_tester",
+  "current_stage": "tdd_coder",
   "stages": {
     "feature_definer":    { "status": "done",    "artifact": "definition.md" },
     "spec_writer":        { "status": "done", "artifact": "spec.md",  "gate": "human", "awaiting_approval": false, "approved": true },
@@ -12,7 +12,7 @@
       "next_case_id": 2,
       "cases": [
         { "id": 1,  "desc": "Sobre un cliente creado con create_client('ABC', tmp/clients), ClientContext('ABC', tmp/clients) se construye sin lanzar y expone name == 'ABC' y root == tmp/clients/ABC (CA-01).", "status": "done", "test_file": "tests/core/test_context.py", "test_name": "test_client_context_construye_sin_lanzar_y_expone_name_y_root", "src_files": ["src/foda/core/context.py"], "refactor_note": "no-op (tdd_refactor): codigo minimo, sin duplicacion ni superficie extra; suite 55 passed sin regresiones" },
-        { "id": 2,  "desc": "inputs_dir == tmp/clients/ABC/010_inputs y outputs_dir == tmp/clients/ABC/020_outputs (CA-05).", "status": "red" },
+        { "id": 2,  "desc": "inputs_dir == tmp/clients/ABC/010_inputs y outputs_dir == tmp/clients/ABC/020_outputs (CA-05).", "status": "green", "test_file": "tests/core/test_context.py", "test_name": "test_client_context_expone_inputs_dir_y_outputs_dir", "src_files": ["src/foda/core/context.py"] },
         { "id": 3,  "desc": "bronze_dir, silver_dir y gold_dir son tmp/clients/ABC/data/{bronze,silver,gold} (CA-06).", "status": "pending" },
         { "id": 4,  "desc": "models_dir == tmp/clients/ABC/models (CA-07).", "status": "pending" },
         { "id": 5,  "desc": "Para un cliente creado por create_client, las 6 rutas resueltas existen en disco (CA-08).", "status": "pending" },
