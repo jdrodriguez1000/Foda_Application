@@ -149,3 +149,39 @@ def test_run_exitoso_devuelve_flow_result_con_success_true(tmp_path: Path) -> No
     result = flow.run(ctx)
 
     assert result.success is True
+
+
+def test_run_exitoso_expone_outputs_resueltos_y_existentes_en_disco(
+    tmp_path: Path,
+) -> None:
+    """Caso 6 (CA-08): tras un run(ctx) exitoso, FlowResult.outputs expone las
+    rutas resueltas de produces (via Artifact.path(ctx)) y cada una de esas
+    rutas existe en disco (materializada por write_outputs del flujo trivial)."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    class TrivialFlow(Flow):
+        name = "trivial"
+        requires: list[Artifact] = []
+        produces: list[Artifact] = [
+            Artifact(name="out", base="outputs", relative="050_demo/out.json")
+        ]
+
+        def execute(self, ctx: ClientContext) -> FlowResult:
+            return FlowResult(
+                success=True, outputs=[a.path(ctx) for a in self.produces]
+            )
+
+        def write_outputs(self, ctx: ClientContext, result: FlowResult) -> None:
+            for artifact in self.produces:
+                path = artifact.path(ctx)
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("{}", encoding="utf-8")
+
+    flow = TrivialFlow()
+    result = flow.run(ctx)
+
+    assert result.outputs == [ctx.outputs_dir / "050_demo/out.json"]
+    for output_path in result.outputs:
+        assert output_path.exists()
