@@ -1,14 +1,16 @@
 """Abstraccion base de flujo (feature flow_base, banda tracer_bullet).
 
-Fuente: 600_features/flow_base/tracer_bullet/spec.md (DS-FLOW-2/3/4, Interfaces /
-Firmas Publicas) y plan.md (TSK-01, TSK-02, TSK-04). Bucle TDD: casos 1-3 (CA-09,
-CA-10, CA-01) en verde.
+Fuente: 600_features/flow_base/tracer_bullet/spec.md (DS-FLOW-1/2/3/4, Interfaces /
+Firmas Publicas) y plan.md (TSK-01..TSK-05). Bucle TDD: casos 1-9 (CA-10, CA-09,
+CA-01, CA-02, CA-07, CA-08, CA-12, CA-11, CA-04) en verde.
 
-Esta version implementa `Artifact` (TSK-01), `FlowResult` (TSK-02) y el esqueleto de
-`Flow` con el template method `run` y los hooks base `load_inputs`/`execute`/
-`write_outputs` (TSK-04), lo minimo necesario para los casos 1-3 del bucle TDD.
-`Flow.validate` queda como placeholder no-op (se implementa en TSK-05, caso 9+) y
-`FlowContractError` se añade en una tarea/caso posterior.
+Esta version implementa `Artifact` (TSK-01), `FlowResult` (TSK-02),
+`FlowContractError` (TSK-03) y `Flow` (TSK-04/TSK-05): el template method `run`
+con los hooks base `load_inputs`/`execute`/`write_outputs`, y `validate` con la
+comprobacion real de existencia de `requires` (lanza `FlowContractError` con el/los
+faltante(s) antes de `execute`). Casos 10-14 (mensaje/agregacion de
+`FlowContractError`, instrumentacion de hooks ante fallo, `ValueError` de `base`
+desconocido) quedan pendientes en el bucle TDD.
 """
 
 from dataclasses import dataclass
