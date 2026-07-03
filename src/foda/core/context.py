@@ -44,6 +44,10 @@ class ClientContext:
     def models_dir(self) -> Path:
         return self.root / "models"
 
+    @property
+    def is_recurring(self) -> bool:
+        return (self.models_dir / "latest").exists()
+
     def _data_dir(self, layer: str) -> Path:
         """Resuelve root/data/<layer> (bronze/silver/gold comparten el prefijo data/)."""
         return self.root / "data" / layer
