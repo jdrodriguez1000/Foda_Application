@@ -415,3 +415,39 @@ def test_run_con_require_faltante_no_deja_produces_en_disco(
         flow.run(ctx)
 
     assert flow.produces[0].path(ctx).exists() is False
+
+
+def test_run_con_varios_requires_faltantes_mensaje_identifica_todos(
+    tmp_path: Path,
+) -> None:
+    """Caso 13 (CA-13): con varios requires de los cuales mas de uno no existe
+    en disco, run(ctx) lanza FlowContractError cuyo mensaje identifica TODOS
+    los faltantes (agrega, no solo el primero)."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    faltante_a = Artifact(name="in_a", base="inputs", relative="010_demo/a.json")
+    faltante_b = Artifact(name="in_b", base="inputs", relative="020_demo/b.json")
+
+    class FlowConVariosRequiresFaltantes(Flow):
+        name = "con_varios_requires_faltantes"
+        requires: list[Artifact] = [faltante_a, faltante_b]
+        produces: list[Artifact] = []
+
+        def execute(self, ctx: ClientContext) -> FlowResult:
+            return FlowResult(success=True, outputs=[])
+
+    flow = FlowConVariosRequiresFaltantes()
+
+    assert not faltante_a.exists(ctx)
+    assert not faltante_b.exists(ctx)
+
+    with pytest.raises(FlowContractError) as exc_info:
+        flow.run(ctx)
+
+    mensaje = str(exc_info.value)
+    assert faltante_a.name in mensaje
+    assert str(faltante_a.path(ctx)) in mensaje
+    assert faltante_b.name in mensaje
+    assert str(faltante_b.path(ctx)) in mensaje
