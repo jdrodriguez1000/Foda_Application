@@ -1,8 +1,8 @@
 {
   "feature": "flow_base",
   "band": "tracer_bullet",
-  "status": "in_progress",
-  "current_stage": "spec_verifier",
+  "status": "done",
+  "current_stage": "completed",
   "next_case": null,
   "stages": {
     "feature_definer":   { "status": "done",    "artifact": "definition.md" },
@@ -39,6 +39,6 @@
       "green_evidence": "pytest tests/integration -q -> 23 passed (4 nuevos de flow_base + 19 preexistentes de client_context/client_scaffold/client_new_cli, sin regresiones). pytest -q (suite completa) -> 94 passed, sin regresiones.",
       "notes": "No se modifico codigo de produccion (src/foda/core/flow.py, context.py, scaffold.py intactos, NC-3): los 4 tests de integracion pasaron en verde directo contra el bucle TDD ya cerrado (14/14 casos done). Cobertura: (1) Flow.run(ctx) end-to-end sobre ClientContext de un cliente real creado por create_client, con require existente (010_inputs) y produce materializado bajo 020_outputs; (2) fallo temprano con FlowContractError (sin excepcion cruda) cuando el require no existe en el cliente real, sin artefactos espurios; (3) coherencia de las 6 claves logicas de Artifact.base con las carpetas reales que create_client crea (contrato flow_base<->client_context<->client_scaffold); (4) interaccion con flujo vecino: el artefacto que produce un Flow es consumido como require por un segundo Flow sobre el mismo cliente real."
     },
-    "spec_verifier":     { "status": "pending",  "artifact": "verification.md" }
+    "spec_verifier":     { "status": "done",  "artifact": "verification.md", "verdict": "CONFORME" }
   }
 }
