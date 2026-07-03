@@ -451,3 +451,20 @@ def test_run_con_varios_requires_faltantes_mensaje_identifica_todos(
     assert str(faltante_a.path(ctx)) in mensaje
     assert faltante_b.name in mensaje
     assert str(faltante_b.path(ctx)) in mensaje
+
+
+def test_artifact_path_con_base_desconocida_lanza_value_error(tmp_path: Path) -> None:
+    """Caso 14 (DS-FLOW-2, guarda defensiva anadida por el humano en el GATE, sin
+    CA-xx propio): Artifact(base=<clave desconocida>, relative=r).path(ctx) lanza
+    ValueError, pues base no pertenece a {inputs, outputs, bronze, silver, gold,
+    models}. El mensaje menciona la base invalida."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    artifact = Artifact(name="x", base="no_existe", relative="algo.json")
+
+    with pytest.raises(ValueError) as exc_info:
+        artifact.path(ctx)
+
+    assert "no_existe" in str(exc_info.value)
