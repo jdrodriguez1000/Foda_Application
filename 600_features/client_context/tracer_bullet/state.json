@@ -2,8 +2,8 @@
   "feature": "client_context",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "tdd_tester",
-  "current_case_note": "caso 12 (CA-12) verde directo (D-037), status done. ULTIMO caso del plan (12/12) cubierto; siguiente fase: integration_tester.",
+  "current_stage": "spec_verifier",
+  "current_case_note": "integration_tester CERRADO: 5 tests de integracion nuevos en tests/integration/test_client_context_integration.py, todos verdes; suite completa 71 passed (66 previos + 5 nuevos), sin regresiones. Siguiente fase: spec_verifier.",
   "stages": {
     "feature_definer":    { "status": "done",    "artifact": "definition.md" },
     "spec_writer":        { "status": "done", "artifact": "spec.md",  "gate": "human", "awaiting_approval": false, "approved": true },
@@ -26,7 +26,19 @@
         { "id": 12, "desc": "Con monkeypatch.chdir a un dir no relacionado, root y las 6 rutas siguen bajo tmp/clients/ABC (parametro), no bajo el cwd (CA-12).", "status": "done", "test_file": "tests/core/test_context.py", "test_name": "test_client_context_rutas_dependen_solo_de_clients_root_no_del_cwd", "tdd_note": "NO hubo fase red valida (D-037, verde directo): pytest tests/core/test_context.py::test_client_context_rutas_dependen_solo_de_clients_root_no_del_cwd -q -> 1 passed de inmediato. Motivo: ClientContext.__init__ calcula root = clients_root/name (parametro explicito) y todas las propiedades de ruta se derivan de self.root; en ningun punto de context.py se consulta os.getcwd()/Path.cwd() (grep verificado). Al hacer monkeypatch.chdir(otro_dir) antes de construir ClientContext('ABC', clients_root), root y las 6 rutas siguen apuntando bajo clients_root/ABC, exactamente como en los casos 1-4 sin cwd alterado. Esto materializa la decision vinculante DS-CTX-3/D-2 (clients_root como parametro, sin re-resolver desde el cwd). Forzar un rojo artificial violaria NC-2. Test conservado como cobertura de regresion explicita de CA-12/HU-04. No se modifico codigo de produccion (src/foda/core/context.py no se toco).", "green_evidence": "1 passed (caso); 66 passed suite completa, sin regresiones", "src_files": [] }
       ]
     },
-    "integration_tester": { "status": "pending" },
+    "integration_tester": {
+      "status": "done",
+      "test_files": ["tests/integration/test_client_context_integration.py"],
+      "tests": [
+        "test_client_context_resuelve_exactamente_el_arbol_creado_por_create_client",
+        "test_camino_nuevo_a_recurrente_end_to_end_sobre_el_mismo_cliente",
+        "test_client_context_es_superficie_suficiente_para_flow_run_ctx",
+        "test_fallo_temprano_con_mensaje_claro_si_el_flujo_vecino_recibe_cliente_inexistente",
+        "test_dos_client_context_bajo_el_mismo_clients_root_quedan_aislados"
+      ],
+      "green_evidence": "pytest tests/integration -q -> 19 passed (13 previos de client_scaffold/client_new_cli + 6 archivos, 5 nuevos de client_context); pytest -q (suite completa) -> 71 passed (66 previos + 5 nuevos), 0 regresiones.",
+      "coverage_note": "Puntos de integracion cubiertos: (1) contrato de artefactos create_client -> ClientContext (las 6 rutas hoja coinciden exactamente con las carpetas creadas por el scaffold, root identico); (2) camino nuevo->recurrente end-to-end sobre el mismo cliente materializando models/latest tras el hecho, sin reconstruir nada mas (SS12); (3) superficie de ClientContext suficiente y coherente para el consumo futuro de Flow.run(ctx) (SS9): ciclo leer input en 010_inputs -> escribir JSON en 020_outputs -> escribir dataset en bronze/, ejercitado con una funcion local que imita run(ctx) (flow_base/T-015 aun no existe, no se construyo una clase Flow real); (4) fallo temprano con FileNotFoundError claro cuando un 'flujo vecino' simulado recibe un cliente inexistente, sin afectar a otros clientes reales; (5) aislamiento multi-tenant (SS13) entre dos ClientContext sobre el mismo clients_root (rutas disjuntas, is_recurring independiente, escritura de un cliente no visible desde el otro). No se duplico cobertura unitaria de tests/core/test_context.py (que ya cubre CA-01..CA-12 en aislamiento)."
+    },
     "spec_verifier":      { "status": "pending", "artifact": "verification.md" }
   }
 }
