@@ -6,6 +6,8 @@ Bucle TDD: un test por caso, ejecutado en orden (state.json -> stages.tdd.cases)
 
 from pathlib import Path
 
+import yaml
+
 from foda.core.context import ClientContext
 from foda.core.scaffold import create_client
 
@@ -103,3 +105,23 @@ def test_client_context_is_recurring_true_para_cliente_recurrente(tmp_path: Path
     ctx = ClientContext("ABC", clients_root)
 
     assert ctx.is_recurring is True
+
+
+def test_client_context_is_recurring_ignora_flag_espurio_en_client_yaml(
+    tmp_path: Path,
+) -> None:
+    """Caso 8 (CA-11): sobre un cliente creado con create_client("ABC", tmp/clients),
+    aunque client.yaml contenga un campo espurio mode: recurring, sin que exista
+    models/latest, ClientContext("ABC", tmp/clients) expone is_recurring == False.
+    El modo se infiere solo del disco (DS-CTX-2, D-1): (models_dir / "latest").exists()
+    ignora por completo el contenido de client.yaml."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    client_yaml = clients_root / "ABC" / "client.yaml"
+    data = yaml.safe_load(client_yaml.read_text(encoding="utf-8"))
+    data["mode"] = "recurring"
+    client_yaml.write_text(yaml.safe_dump(data), encoding="utf-8")
+
+    ctx = ClientContext("ABC", clients_root)
+
+    assert ctx.is_recurring is False
