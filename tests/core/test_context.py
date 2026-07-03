@@ -21,3 +21,16 @@ def test_client_context_construye_sin_lanzar_y_expone_name_y_root(tmp_path: Path
 
     assert ctx.name == "ABC"
     assert ctx.root == clients_root / "ABC"
+
+
+def test_client_context_expone_inputs_dir_y_outputs_dir(tmp_path: Path) -> None:
+    """Caso 2 (CA-05): sobre un cliente creado con create_client("ABC", tmp/clients),
+    ClientContext("ABC", tmp/clients) expone inputs_dir == tmp/clients/ABC/010_inputs
+    y outputs_dir == tmp/clients/ABC/020_outputs."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+
+    ctx = ClientContext("ABC", clients_root)
+
+    assert ctx.inputs_dir == clients_root / "ABC" / "010_inputs"
+    assert ctx.outputs_dir == clients_root / "ABC" / "020_outputs"
