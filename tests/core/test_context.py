@@ -89,3 +89,17 @@ def test_client_context_is_recurring_false_para_cliente_nuevo(tmp_path: Path) ->
     ctx = ClientContext("ABC", clients_root)
 
     assert ctx.is_recurring is False
+
+
+def test_client_context_is_recurring_true_para_cliente_recurrente(tmp_path: Path) -> None:
+    """Caso 7 (CA-10): sobre un cliente creado con create_client("ABC", tmp/clients),
+    tras materializar models/latest como carpeta, ClientContext("ABC", tmp/clients)
+    expone is_recurring == True (cliente RECURRENTE). Regla (DS-CTX-2):
+    is_recurring == (models_dir / "latest").exists()."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    (clients_root / "ABC" / "models" / "latest").mkdir()
+
+    ctx = ClientContext("ABC", clients_root)
+
+    assert ctx.is_recurring is True
