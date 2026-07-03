@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from foda.core.context import ClientContext
-from foda.core.flow import Artifact, Flow, FlowResult
+from foda.core.flow import Artifact, Flow, FlowContractError, FlowResult
 from foda.core.scaffold import create_client
 
 
@@ -254,3 +254,42 @@ def test_run_sin_override_de_execute_lanza_not_implemented_error(
 
     with pytest.raises(NotImplementedError):
         flow.run(ctx)
+
+
+def test_run_con_require_faltante_lanza_flow_contract_error_antes_de_execute(
+    tmp_path: Path,
+) -> None:
+    """Caso 9 (CA-04): si un Artifact de requires no existe en disco (ruta
+    resuelta via ctx), run(ctx) lanza FlowContractError, y el fallo ocurre en
+    validate, ANTES de execute (execute no se invoca)."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    class FlowConRequireFaltante(Flow):
+        name = "con_require_faltante"
+        requires: list[Artifact] = [
+            Artifact(name="in", base="inputs", relative="010_demo/missing.json")
+        ]
+        produces: list[Artifact] = []
+
+        def __init__(self) -> None:
+            self.execute_invocado = False
+
+        def execute(self, ctx: ClientContext) -> FlowResult:
+            self.execute_invocado = True
+            return FlowResult(success=True, outputs=[])
+
+        def write_outputs(self, ctx: ClientContext, result: FlowResult) -> None:
+            pass
+
+    flow = FlowConRequireFaltante()
+
+    # El Artifact de requires no fue materializado en disco.
+    assert not flow.requires[0].exists(ctx)
+
+    with pytest.raises(FlowContractError):
+        flow.run(ctx)
+
+    # El fallo ocurrio en validate, antes de execute: execute no se invoco.
+    assert flow.execute_invocado is False
