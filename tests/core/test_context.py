@@ -142,6 +142,20 @@ def test_client_context_is_recurring_true_para_cliente_recurrente(tmp_path: Path
     assert ctx.is_recurring is True
 
 
+def test_client_context_lanza_filenotfounderror_si_carpeta_sin_client_yaml(
+    tmp_path: Path,
+) -> None:
+    """Caso 11 (CA-04): si clients_root/<name>/ existe como carpeta pero no contiene
+    client.yaml (carpeta a medio crear / espuria), ClientContext(name, tmp/clients)
+    lanza FileNotFoundError igual que si el cliente no existiera. El marcador de
+    existencia es client.yaml, no la mera carpeta (DS-CTX-1/DS-CTX-3)."""
+    clients_root = tmp_path / "clients"
+    (clients_root / "HUECO").mkdir(parents=True)
+
+    with pytest.raises(FileNotFoundError):
+        ClientContext("HUECO", clients_root)
+
+
 def test_client_context_is_recurring_ignora_flag_espurio_en_client_yaml(
     tmp_path: Path,
 ) -> None:
