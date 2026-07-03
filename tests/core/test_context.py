@@ -48,3 +48,14 @@ def test_client_context_expone_bronze_silver_gold_dir(tmp_path: Path) -> None:
     assert ctx.bronze_dir == clients_root / "ABC" / "data" / "bronze"
     assert ctx.silver_dir == clients_root / "ABC" / "data" / "silver"
     assert ctx.gold_dir == clients_root / "ABC" / "data" / "gold"
+
+
+def test_client_context_expone_models_dir(tmp_path: Path) -> None:
+    """Caso 4 (CA-07): sobre un cliente creado con create_client("ABC", tmp/clients),
+    ClientContext("ABC", tmp/clients) expone models_dir == tmp/clients/ABC/models."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+
+    ctx = ClientContext("ABC", clients_root)
+
+    assert ctx.models_dir == clients_root / "ABC" / "models"
