@@ -2,7 +2,7 @@
   "feature": "client_context",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "tdd_tester",
+  "current_stage": "tdd_coder",
   "stages": {
     "feature_definer":    { "status": "done",    "artifact": "definition.md" },
     "spec_writer":        { "status": "done", "artifact": "spec.md",  "gate": "human", "awaiting_approval": false, "approved": true },
@@ -13,7 +13,7 @@
       "cases": [
         { "id": 1,  "desc": "Sobre un cliente creado con create_client('ABC', tmp/clients), ClientContext('ABC', tmp/clients) se construye sin lanzar y expone name == 'ABC' y root == tmp/clients/ABC (CA-01).", "status": "done", "test_file": "tests/core/test_context.py", "test_name": "test_client_context_construye_sin_lanzar_y_expone_name_y_root", "src_files": ["src/foda/core/context.py"], "refactor_note": "no-op (tdd_refactor): codigo minimo, sin duplicacion ni superficie extra; suite 55 passed sin regresiones" },
         { "id": 2,  "desc": "inputs_dir == tmp/clients/ABC/010_inputs y outputs_dir == tmp/clients/ABC/020_outputs (CA-05).", "status": "done", "test_file": "tests/core/test_context.py", "test_name": "test_client_context_expone_inputs_dir_y_outputs_dir", "src_files": ["src/foda/core/context.py"], "refactor_note": "no-op (tdd_refactor): propiedades inputs_dir/outputs_dir minimas, sin duplicacion real (los literales '010_inputs'/'020_outputs' tambien aparecen en scaffold.py pero extraer una constante compartida acoplaria context.py [lectura] a scaffold.py [creacion] sin necesidad; NC-2/NC-3 desaconsejan esa abstraccion no solicitada). Suite: 56 passed sin regresiones." },
-        { "id": 3,  "desc": "bronze_dir, silver_dir y gold_dir son tmp/clients/ABC/data/{bronze,silver,gold} (CA-06).", "status": "red", "test_file": "tests/core/test_context.py", "test_name": "test_client_context_expone_bronze_silver_gold_dir", "red_evidence": "AttributeError: 'ClientContext' object has no attribute 'bronze_dir' (tests/core/test_context.py:48)" },
+        { "id": 3,  "desc": "bronze_dir, silver_dir y gold_dir son tmp/clients/ABC/data/{bronze,silver,gold} (CA-06).", "status": "green", "test_file": "tests/core/test_context.py", "test_name": "test_client_context_expone_bronze_silver_gold_dir", "src_files": ["src/foda/core/context.py"], "green_evidence": "1 passed (caso); 57 passed suite completa, sin regresiones" },
         { "id": 4,  "desc": "models_dir == tmp/clients/ABC/models (CA-07).", "status": "pending" },
         { "id": 5,  "desc": "Para un cliente creado por create_client, las 6 rutas resueltas existen en disco (CA-08).", "status": "pending" },
         { "id": 6,  "desc": "Cliente existente sin models/latest (aunque models/ exista y este vacia): is_recurring == False (NUEVO) (CA-09).", "status": "pending" },
