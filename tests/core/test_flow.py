@@ -125,3 +125,27 @@ def test_run_invoca_los_cuatro_hooks_en_orden_y_una_vez_cada_uno(
     flow.run(ctx)
 
     assert flow.calls == ["load_inputs", "validate", "execute", "write_outputs"]
+
+
+def test_run_exitoso_devuelve_flow_result_con_success_true(tmp_path: Path) -> None:
+    """Caso 5 (CA-07): tras un run(ctx) exitoso sobre el flujo trivial, el
+    FlowResult devuelto tiene success == True."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    class TrivialFlow(Flow):
+        name = "trivial"
+        requires: list[Artifact] = []
+        produces: list[Artifact] = []
+
+        def execute(self, ctx: ClientContext) -> FlowResult:
+            return FlowResult(success=True, outputs=[])
+
+        def write_outputs(self, ctx: ClientContext, result: FlowResult) -> None:
+            pass
+
+    flow = TrivialFlow()
+    result = flow.run(ctx)
+
+    assert result.success is True
