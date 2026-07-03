@@ -108,6 +108,26 @@ def test_client_context_lanza_filenotfounderror_si_cliente_no_existe(
         ClientContext("NOEXISTE", clients_root)
 
 
+def test_client_context_intento_fallido_no_modifica_filesystem(tmp_path: Path) -> None:
+    """Caso 10 (CA-03): tras un intento fallido de ClientContext("NOEXISTE", tmp/clients)
+    (que lanza FileNotFoundError porque el cliente no existe), el filesystem bajo
+    tmp/clients queda identico al previo a la llamada: no se crea ninguna carpeta
+    ni archivo para ese name (ClientContext es de solo lectura, incluso al fallar)."""
+    clients_root = tmp_path / "clients"
+    clients_root.mkdir()
+    create_client("ABC", clients_root)
+
+    before = sorted(str(p.relative_to(clients_root)) for p in clients_root.rglob("*"))
+
+    with pytest.raises(FileNotFoundError):
+        ClientContext("NOEXISTE", clients_root)
+
+    after = sorted(str(p.relative_to(clients_root)) for p in clients_root.rglob("*"))
+
+    assert after == before
+    assert not (clients_root / "NOEXISTE").exists()
+
+
 def test_client_context_is_recurring_true_para_cliente_recurrente(tmp_path: Path) -> None:
     """Caso 7 (CA-10): sobre un cliente creado con create_client("ABC", tmp/clients),
     tras materializar models/latest como carpeta, ClientContext("ABC", tmp/clients)
