@@ -55,6 +55,7 @@ Cada decisión sigue el formato: **ID**, **título**, **estado** (Propuesta / Ac
 | D-036 | `client_new_cli` — resolución de `clients_root` buscando `pyproject.toml` hacia arriba desde el cwd | Aceptada | 2026-07-02 |
 | D-037 | Patrón "verde directo, sin rojo artificial" consolidado como práctica estándar del bucle TDD del harness | Aceptada | 2026-07-02 |
 | D-038 | `client_new_cli` — ramas `except ValueError`/`except FileExistsError` en `cli.py` se mantienen separadas | Aceptada | 2026-07-02 |
+| D-039 | `clients/` y `.venv/` no se versionan en Git; se añaden a `.gitignore` | Aceptada | 2026-07-03 |
 
 ## 3. Detalle de Decisiones
 
@@ -316,6 +317,13 @@ Cada decisión sigue el formato: **ID**, **título**, **estado** (Propuesta / Ac
 - **Contexto:** En el refactor del caso 9 (duplicado), se evaluó consolidar las ramas `except ValueError` (nombre inválido, caso 8) y `except FileExistsError` (cliente duplicado, caso 9) de `main()` en `src/foda/cli.py`, ya que ambas envuelven la llamada a `create_client` y devuelven `return 1`.
 - **Decisión:** NO se consolidan. La `spec.md` de `client_new_cli` exige mensajes de error distintos por historia de usuario (CA-07 para nombre inválido, CA-08 para duplicado); fusionar ambas ramas en un único `except (ValueError, FileExistsError)` con un `if/elif` interno para elegir el mensaje degradaría la claridad sin reducir duplicación real.
 - **Consecuencias:** `cli.py` conserva dos bloques `except` explícitos y paralelos, cada uno con su propio mensaje a stderr, priorizando legibilidad y trazabilidad directa a su CA sobre la eliminación de una duplicación menor.
+
+### D-039 — `clients/` y `.venv/` no se versionan en Git
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-03
+- **Contexto:** Al verificar el uso real de la CLI, el usuario creó `clients/DEMO_ABC/` con `foda client new DEMO_ABC` y recreó `.venv/` con Python 3.13, quedando ambos como untracked en `git status`. El usuario pidió explícitamente dejar `clients/DEMO_ABC/` en disco (no eliminarlo). `system_design.md`/D-006 ya establece el modelo multi-tenant como carpeta-por-cliente **en disco, sin base de datos**: los datos de cliente son datos de runtime generados por la aplicación, no código fuente ni artefactos de diseño.
+- **Decisión:** Se añaden `clients/` y `.venv/` a `.gitignore`. `clients/` no se versiona porque es el directorio de datos de runtime multi-tenant (coherente con D-006, no requiere una decisión nueva de arquitectura, solo su reflejo en `.gitignore`); `.venv/` no se versiona porque es un entorno virtual local reproducible desde `pyproject.toml`. El cliente de prueba `clients/DEMO_ABC/` permanece en disco (a pedido del usuario) pero fuera del control de versiones.
+- **Consecuencias:** El repositorio no arrastra datos de cliente ni el entorno virtual; cualquier colaborador nuevo reproduce `.venv/` siguiendo `README.md` y genera sus propios clientes de prueba sin ensuciar el historial de Git. Si en el futuro se necesita un cliente de ejemplo versionado (p. ej. para fixtures de test), deberá vivir fuera de `clients/` o excepcionarse explícitamente en `.gitignore`.
 
 ### D-031 — Cadena de trazabilidad codificada HU→CA→TSK y tareas atómicas del plan
 - **Estado:** Aceptada
