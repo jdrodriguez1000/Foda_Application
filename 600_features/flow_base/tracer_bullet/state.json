@@ -2,12 +2,29 @@
   "feature": "flow_base",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "spec_writer",
+  "current_stage": "plan_builder",
   "stages": {
     "feature_definer":   { "status": "done",    "artifact": "definition.md" },
-    "spec_writer":       { "status": "done",  "artifact": "spec.md",      "gate": "human", "awaiting_approval": true },
-    "plan_builder":      { "status": "pending",  "artifact": "plan.md",      "gate": "human" },
-    "tdd":               { "status": "pending",  "cases": [] },
+    "spec_writer":       { "status": "done",  "artifact": "spec.md",      "gate": "human", "awaiting_approval": false, "gate_approved": true },
+    "plan_builder":      { "status": "done",  "artifact": "plan.md",      "gate": "human", "awaiting_approval": true },
+    "tdd":               {
+      "status": "pending",
+      "cases": [
+        { "id": 1,  "desc": "Artifact.path(ctx) == ctx.outputs_dir / relative para base='outputs'; Artifact.exists(ctx) refleja la existencia en disco de esa ruta.", "ca": "CA-10", "status": "pending" },
+        { "id": 2,  "desc": "Para las seis claves base (inputs/outputs/bronze/silver/gold/models), Artifact(base=k, relative=r).path(ctx) == ctx.<k>_dir / r; se resuelve solo via ctx.", "ca": "CA-09", "status": "pending" },
+        { "id": 3,  "desc": "Subclase trivial de Flow (define name/requires/produces + override de execute/write_outputs, sin sobreescribir run) ejecuta el run(ctx) heredado hasta el final y devuelve un FlowResult.", "ca": "CA-01", "status": "pending" },
+        { "id": 4,  "desc": "Instrumentando el flujo trivial, run(ctx) invoca load_inputs, validate, execute, write_outputs en ese orden y una vez cada uno.", "ca": "CA-02", "status": "pending" },
+        { "id": 5,  "desc": "Tras un run(ctx) exitoso, el FlowResult devuelto tiene success == True.", "ca": "CA-07", "status": "pending" },
+        { "id": 6,  "desc": "Tras un run(ctx) exitoso, FlowResult.outputs expone las rutas resueltas de produces y cada una existe en disco.", "ca": "CA-08", "status": "pending" },
+        { "id": 7,  "desc": "Un Flow con requires vacio pasa validate(ctx) sin lanzar y run(ctx) completa las 4 fases devolviendo un FlowResult.", "ca": "CA-12", "status": "pending" },
+        { "id": 8,  "desc": "Una subclase de Flow que no sobreescribe execute provoca NotImplementedError al ejecutar run(ctx).", "ca": "CA-11", "status": "pending" },
+        { "id": 9,  "desc": "Si un Artifact de requires no existe en disco, run(ctx) lanza FlowContractError y el fallo ocurre en validate (antes de execute).", "ca": "CA-04", "status": "pending" },
+        { "id": 10, "desc": "FlowContractError es tipo propio en flow.py (subclase de Exception), capturable con pytest.raises(FlowContractError), y su mensaje nombra el artefacto faltante (name y/o ruta).", "ca": "CA-05", "status": "pending" },
+        { "id": 11, "desc": "Instrumentando los hooks, ante un require faltante la secuencia registrada es load_inputs, validate y se detiene: execute y write_outputs no se invocan.", "ca": "CA-03", "status": "pending" },
+        { "id": 12, "desc": "Tras un run(ctx) que falla por require faltante, el/los artefacto(s) de produces no existen en disco (sin salida espuria).", "ca": "CA-06", "status": "pending" },
+        { "id": 13, "desc": "Con varios requires de los cuales mas de uno no existe, run(ctx) lanza FlowContractError cuyo mensaje identifica todos los faltantes (agrega, no solo el primero).", "ca": "CA-13", "status": "pending" }
+      ]
+    },
     "integration_tester":{ "status": "pending" },
     "spec_verifier":     { "status": "pending",  "artifact": "verification.md" }
   }
