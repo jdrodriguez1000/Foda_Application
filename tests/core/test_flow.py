@@ -293,3 +293,38 @@ def test_run_con_require_faltante_lanza_flow_contract_error_antes_de_execute(
 
     # El fallo ocurrio en validate, antes de execute: execute no se invoco.
     assert flow.execute_invocado is False
+
+
+def test_flow_contract_error_es_tipo_propio_y_mensaje_nombra_el_faltante(
+    tmp_path: Path,
+) -> None:
+    """Caso 10 (CA-05): FlowContractError es un tipo de excepcion propio de
+    flow.py (subclase de Exception), capturable de forma independiente con
+    pytest.raises(FlowContractError), y su mensaje nombra el artefacto
+    requerido faltante (su name y/o su ruta resuelta)."""
+    assert issubclass(FlowContractError, Exception)
+
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    faltante = Artifact(name="in", base="inputs", relative="010_demo/missing.json")
+
+    class FlowConRequireFaltante(Flow):
+        name = "con_require_faltante"
+        requires: list[Artifact] = [faltante]
+        produces: list[Artifact] = []
+
+        def execute(self, ctx: ClientContext) -> FlowResult:
+            return FlowResult(success=True, outputs=[])
+
+    flow = FlowConRequireFaltante()
+
+    assert not faltante.exists(ctx)
+
+    with pytest.raises(FlowContractError) as exc_info:
+        flow.run(ctx)
+
+    mensaje = str(exc_info.value)
+    assert faltante.name in mensaje
+    assert str(faltante.path(ctx)) in mensaje
