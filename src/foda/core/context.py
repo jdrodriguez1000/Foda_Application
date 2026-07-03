@@ -30,12 +30,16 @@ class ClientContext:
 
     @property
     def bronze_dir(self) -> Path:
-        return self.root / "data" / "bronze"
+        return self._data_dir("bronze")
 
     @property
     def silver_dir(self) -> Path:
-        return self.root / "data" / "silver"
+        return self._data_dir("silver")
 
     @property
     def gold_dir(self) -> Path:
-        return self.root / "data" / "gold"
+        return self._data_dir("gold")
+
+    def _data_dir(self, layer: str) -> Path:
+        """Resuelve root/data/<layer> (bronze/silver/gold comparten el prefijo data/)."""
+        return self.root / "data" / layer
