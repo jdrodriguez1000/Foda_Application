@@ -9,11 +9,12 @@ from pathlib import Path
 class ClientContext:
     """Contexto de LECTURA de un cliente ya creado bajo clients_root/<name>/.
 
-    Implementacion minima (TDD, casos 1-4 / CA-01, CA-05, CA-06, CA-07): resuelve
-    root = clients_root/name y expone name, root, inputs_dir, outputs_dir,
-    bronze_dir, silver_dir, gold_dir y models_dir. La validacion de existencia
-    (FileNotFoundError) y las demas propiedades de ruta / is_recurring se
-    agregan en casos posteriores del bucle TDD.
+    Implementacion parcial (TDD, casos 1-6 / CA-01, CA-05, CA-06, CA-07, CA-09):
+    resuelve root = clients_root/name y expone name, root, inputs_dir,
+    outputs_dir, bronze_dir, silver_dir, gold_dir, models_dir e is_recurring
+    (True si models_dir/"latest" existe; funcion pura del disco, no lee
+    client.yaml). La validacion de existencia del cliente (FileNotFoundError)
+    se agrega en casos posteriores del bucle TDD (9-11).
     """
 
     def __init__(self, name: str, clients_root: Path) -> None:
