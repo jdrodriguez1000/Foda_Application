@@ -1,8 +1,8 @@
 {
   "feature": "client_new_cli",
   "band": "tracer_bullet",
-  "status": "in_progress",
-  "current_stage": "spec_verifier",
+  "status": "done",
+  "current_stage": "completed",
   "suspension": {
     "suspended": false,
     "reason": "Casos 2-6, 10 y 11 cerrados por instruccion explicita del orquestador (opcion (a), sin fase red). Casos 7, 8, 9 y 12 cerrados via rojo real -> tdd_coder (verde) -> tdd_refactor (done). El caso 12 (ultimo del bucle) cerro con la adicion de [project.scripts] a pyproject.toml (TSK-01) y una revision de tdd_refactor que solo actualizo el docstring de src/foda/cli.py para reflejar el cierre del bucle (sin cambios de comportamiento). integration_tester cerro con 8 tests de integracion nuevos en tests/integration/test_client_new_cli_integration.py, todos en verde.",
@@ -52,6 +52,6 @@
         "Duplicado end-to-end: dos invocaciones sucesivas de main() con el mismo nombre preservan intacto el cliente creado por la primera."
       ]
     },
-    "spec_verifier":     { "status": "pending", "artifact": "verification.md" }
+    "spec_verifier":     { "status": "done", "artifact": "verification.md", "verdict": "CONFORME" }
   }
 }
