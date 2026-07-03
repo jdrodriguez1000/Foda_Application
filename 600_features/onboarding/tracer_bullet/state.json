@@ -1,0 +1,14 @@
+{
+  "feature": "onboarding",
+  "band": "tracer_bullet",
+  "status": "in_progress",
+  "current_stage": "spec_writer",
+  "stages": {
+    "feature_definer":    { "status": "done",    "artifact": "definition.md" },
+    "spec_writer":        { "status": "pending", "artifact": "spec.md",  "gate": "human", "awaiting_approval": false },
+    "plan_builder":       { "status": "pending", "artifact": "plan.md",  "gate": "human", "awaiting_approval": false },
+    "tdd":                { "status": "pending", "cases": [] },
+    "integration_tester": { "status": "pending" },
+    "spec_verifier":      { "status": "pending", "artifact": "verification.md" }
+  }
+}
