@@ -22,7 +22,8 @@
         { "id": 10, "desc": "FlowContractError es tipo propio en flow.py (subclase de Exception), capturable con pytest.raises(FlowContractError), y su mensaje nombra el artefacto faltante (name y/o ruta).", "ca": "CA-05", "status": "pending" },
         { "id": 11, "desc": "Instrumentando los hooks, ante un require faltante la secuencia registrada es load_inputs, validate y se detiene: execute y write_outputs no se invocan.", "ca": "CA-03", "status": "pending" },
         { "id": 12, "desc": "Tras un run(ctx) que falla por require faltante, el/los artefacto(s) de produces no existen en disco (sin salida espuria).", "ca": "CA-06", "status": "pending" },
-        { "id": 13, "desc": "Con varios requires de los cuales mas de uno no existe, run(ctx) lanza FlowContractError cuyo mensaje identifica todos los faltantes (agrega, no solo el primero).", "ca": "CA-13", "status": "pending" }
+        { "id": 13, "desc": "Con varios requires de los cuales mas de uno no existe, run(ctx) lanza FlowContractError cuyo mensaje identifica todos los faltantes (agrega, no solo el primero).", "ca": "CA-13", "status": "pending" },
+        { "id": 14, "desc": "Artifact(base=<clave desconocida>, relative=r).path(ctx) lanza ValueError cuando base no pertenece a {inputs, outputs, bronze, silver, gold, models} (guarda defensiva DS-FLOW-2, anadida por el humano en el GATE).", "ca": "DS-FLOW-2", "status": "pending" }
       ]
     },
     "integration_tester":{ "status": "pending" },

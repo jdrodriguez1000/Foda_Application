@@ -177,7 +177,8 @@ El bucle TDD consume los casos de la §6 en orden. Secuencia de implementación 
 | TSK-16 | Escribir el test que, instrumentando los hooks, verifica que ante un `require` faltante la secuencia registrada es `load_inputs`, `validate` y se detiene: `execute` y `write_outputs` **no** se invocan. | test corte de secuencia (caso 11) | tdd_tester | no_implementada | CA-03 |
 | TSK-17 | Escribir el test de que, tras un `run(ctx)` que falla por `require` faltante, el/los artefacto(s) de `produces` **no** existen en disco (sin salida espuria). | test sin salida espuria (caso 12) | tdd_tester | no_implementada | CA-06 |
 | TSK-18 | Escribir el test de que, con varios `requires` de los cuales más de uno no existe, `run(ctx)` lanza `FlowContractError` cuyo mensaje identifica **todos** los faltantes (agrega, no solo el primero). | test agregación de faltantes (caso 13) | tdd_tester | no_implementada | CA-13 |
-| TSK-19 | Refactor: consolidar/limpiar la suite (factorizar el fixture `ClientContext` creado con `create_client`, el flujo trivial y el instrumentado; parametrizar las seis claves base) manteniendo todo verde. | Refactor (sin cambio de comportamiento) | tdd_refactor | no_implementada | CA-01…CA-13 |
+| TSK-20 | Escribir el test de que `Artifact(base=<clave desconocida>, relative=r).path(ctx)` lanza `ValueError` (guarda defensiva de `base` no ∈ {inputs, outputs, bronze, silver, gold, models}). Verde directo contra el código ya presente en TSK-01. | test `base` inválida → `ValueError` (caso 14) | tdd_tester | no_implementada | DS-FLOW-2 |
+| TSK-19 | Refactor: consolidar/limpiar la suite (factorizar el fixture `ClientContext` creado con `create_client`, el flujo trivial y el instrumentado; parametrizar las seis claves base) manteniendo todo verde. | Refactor (sin cambio de comportamiento) | tdd_refactor | no_implementada | CA-01…CA-13, DS-FLOW-2 |
 
 ---
 
@@ -201,6 +202,7 @@ complejo. Trazabilidad a los `CA-xx` de la spec entre paréntesis. Deben coincid
 11. Instrumentando los hooks, ante un `require` faltante la secuencia registrada es `load_inputs`, `validate` y se detiene: `execute` y `write_outputs` **no** se invocan. (CA-03)
 12. Tras un `run(ctx)` que falla por `require` faltante, el/los artefacto(s) de `produces` **no** existen en disco (no se escribió salida espuria; `write_outputs` no se ejecutó). (CA-06)
 13. Con varios `requires` de los cuales más de uno no existe en disco, `run(ctx)` lanza `FlowContractError` cuyo mensaje identifica **todos** los faltantes (agrega los ausentes, no solo el primero). (CA-13)
+14. `Artifact(base=<clave desconocida>, relative=r).path(ctx)` lanza `ValueError` cuando `base` no ∈ {inputs, outputs, bronze, silver, gold, models} (guarda defensiva de DS-FLOW-2: error de programación del autor del flujo). (DS-FLOW-2 — sin `CA-xx` propio; añadido por el humano en el GATE.)
 
 ### Mapa caso → tareas (`TSK-xx`)
 Cada caso agrupa su tarea-test y su(s) tarea(s)-código (el bucle corre por caso; las tareas son la
@@ -221,7 +223,8 @@ capa de trazabilidad).
 | 11 | CA-03 | TSK-16 | TSK-05 |
 | 12 | CA-06 | TSK-17 | TSK-05 |
 | 13 | CA-13 | TSK-18 | TSK-03, TSK-05 |
-| (toda la suite) | CA-01…CA-13 | TSK-19 (refactor) | — |
+| 14 | DS-FLOW-2 | TSK-20 | TSK-01 |
+| (toda la suite) | CA-01…CA-13, DS-FLOW-2 | TSK-19 (refactor) | — |
 
 ### Cobertura CA → caso (los 13 CA quedan cubiertos)
 
@@ -233,7 +236,7 @@ capa de trazabilidad).
 | CA-04 | 9 | CA-11 | 8 |
 | CA-05 | 10 | CA-12 | 7 |
 | CA-06 | 12 | CA-13 | 13 |
-| CA-07 | 5 | | |
+| CA-07 | 5 | DS-FLOW-2 | 14 |
 
 ---
 
@@ -257,10 +260,10 @@ capa de trazabilidad).
   `pytest.raises(NotImplementedError)`.
 - **Sin salida espuria (caso 12):** declarar `produces` bajo `tmp_path`, provocar el fallo por
   `require` faltante y asertar `not produce.path(ctx).exists()` para cada producido.
-- **`base` inválida (guarda DS-FLOW-2):** no tiene `CA-xx` propio en la spec, por lo que **no** se
-  añade un caso del bucle (no se inventan casos fuera de los CA). El comportamiento
-  (`ValueError`) queda cubierto por el código de TSK-01; si el humano lo desea como test explícito en
-  el GATE, se añade un caso 14.
+- **`base` inválida (guarda DS-FLOW-2, caso 14):** no tiene `CA-xx` propio en la spec, pero el humano
+  lo **aprobó explícitamente en el GATE** como caso del bucle (caso 14). `pytest.raises(ValueError)`
+  al llamar `Artifact(base=<clave desconocida>).path(ctx)`; el comportamiento ya está en el código de
+  TSK-01, por lo que el caso 14 se resolverá como "verde directo" (D-037).
 - **Integración:** el ejercicio *end-to-end* `Flow` ⇄ `ClientContext` (tracer bullet completo) lo
   refuerza `integration_tester` tras el bucle unit; esta suite unit ya cubre la integración mínima al
   construir el `ctx` con el core real.
@@ -276,8 +279,9 @@ capa de trazabilidad).
   DS-FLOW-4 hooks base + `run` template no sobreescribible; GATE #5 `execute` construye el
   `FlowResult`; GATE #6 orden `load_inputs → validate → execute → write_outputs`) fueron **aprobadas
   por el humano** junto con la spec. Este plan las implementa sin reabrirlas.
-- **Guarda `base` inválida sin CA:** documentada arriba (§7); se implementa en código pero no genera
-  un caso del bucle salvo que el humano lo pida en el GATE (evita inventar casos fuera de los CA).
+- **Guarda `base` inválida (caso 14):** el humano la **añadió en el GATE** como caso 14 del bucle
+  (traza a DS-FLOW-2, sin `CA-xx` propio). El código ya está en TSK-01; el test es TSK-20 (verde
+  directo, D-037).
 - **`write_outputs` transaccional** y **inconsistencias como estado suave** (`FlowResult.messages`):
   fuera de esta banda, diferidos a `stab_1` (sin consumidor; NC-2), como fija la spec.
 - **`requires` multi-flujo complejo:** el mecanismo lo soporta; esta banda solo lo ejercita al mínimo
