@@ -328,3 +328,49 @@ def test_flow_contract_error_es_tipo_propio_y_mensaje_nombra_el_faltante(
     mensaje = str(exc_info.value)
     assert faltante.name in mensaje
     assert str(faltante.path(ctx)) in mensaje
+
+
+def test_run_con_require_faltante_secuencia_se_detiene_tras_validate(
+    tmp_path: Path,
+) -> None:
+    """Caso 11 (CA-03): instrumentando load_inputs/execute/write_outputs (sin
+    sobreescribir validate, para ejercitar el validate REAL de la base), ante
+    un require faltante la secuencia registrada es unicamente load_inputs:
+    validate (real) corta con FlowContractError antes de llegar a execute y
+    write_outputs, que por lo tanto NO se invocan."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    class InstrumentedFlowConRequireFaltante(Flow):
+        name = "instrumented_con_require_faltante"
+        requires: list[Artifact] = [
+            Artifact(name="in", base="inputs", relative="010_demo/missing.json")
+        ]
+        produces: list[Artifact] = []
+
+        def __init__(self) -> None:
+            self.calls: list[str] = []
+
+        def load_inputs(self, ctx: ClientContext) -> None:
+            self.calls.append("load_inputs")
+
+        # validate NO se sobreescribe: se usa el validate real de Flow.
+
+        def execute(self, ctx: ClientContext) -> FlowResult:
+            self.calls.append("execute")
+            return FlowResult(success=True, outputs=[])
+
+        def write_outputs(self, ctx: ClientContext, result: FlowResult) -> None:
+            self.calls.append("write_outputs")
+
+    flow = InstrumentedFlowConRequireFaltante()
+
+    assert not flow.requires[0].exists(ctx)
+
+    with pytest.raises(FlowContractError):
+        flow.run(ctx)
+
+    assert flow.calls == ["load_inputs"]
+    assert "execute" not in flow.calls
+    assert "write_outputs" not in flow.calls
