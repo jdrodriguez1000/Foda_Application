@@ -28,6 +28,11 @@ _BASE_TO_DIR_ATTR = {
 }
 
 
+class FlowContractError(Exception):
+    """Se lanza cuando un artefacto declarado en requires no existe en disco
+    (violacion del contrato de entrada del flujo), antes de execute()."""
+
+
 @dataclass(frozen=True)
 class Artifact:
     """Descriptor declarativo minimo de un artefacto de flujo.
@@ -91,7 +96,16 @@ class Flow:
         """Base: no-op. Subclases cargan inputs (YAML/JSON) a su estado."""
 
     def validate(self, ctx: ClientContext) -> None:
-        """Base (placeholder, TSK-05 pendiente): no-op."""
+        """Base: por cada Artifact de self.requires, comprueba artifact.exists(ctx);
+        si falta alguno, lanza FlowContractError nombrandolo (name + ruta)."""
+        missing = [artifact for artifact in self.requires if not artifact.exists(ctx)]
+        if missing:
+            details = ", ".join(
+                f"{artifact.name!r} ({artifact.path(ctx)})" for artifact in missing
+            )
+            raise FlowContractError(
+                f"Artefacto(s) requerido(s) ausente(s): {details}"
+            )
 
     def execute(self, ctx: ClientContext) -> FlowResult:
         """Base: raise NotImplementedError. Subclases ejecutan el nucleo y
