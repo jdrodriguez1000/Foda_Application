@@ -2,12 +2,38 @@
   "feature": "onboarding",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "spec_writer",
+  "current_stage": "plan_builder",
   "stages": {
     "feature_definer":    { "status": "done",    "artifact": "definition.md" },
     "spec_writer":        { "status": "done", "artifact": "spec.md",  "gate": "human", "awaiting_approval": true },
-    "plan_builder":       { "status": "pending", "artifact": "plan.md",  "gate": "human", "awaiting_approval": false },
-    "tdd":                { "status": "pending", "cases": [] },
+    "plan_builder":       { "status": "done", "artifact": "plan.md",  "gate": "human", "awaiting_approval": true },
+    "tdd":                {
+      "status": "pending",
+      "cases": [
+        { "id": 1,  "desc": "run(ctx) sobre el fixture valido escribe map_client_data.json en la ruta esperada y devuelve FlowResult(success=True, outputs=[esa ruta]); el archivo existe.", "status": "pending", "ca": "CA-01" },
+        { "id": 2,  "desc": "Onboarding hereda Flow, declara requires/produces con los Artifact esperados y completa las 4 fases sin sobreescribir run.", "status": "pending", "ca": "CA-11" },
+        { "id": 3,  "desc": "hierarchies.product.levels == [familia,categoria,subcategoria,clase] (orden declarado) y depth == 4.", "status": "pending", "ca": "CA-02" },
+        { "id": 4,  "desc": "hierarchies.geography.levels == [region,pais,ciudad,sede] y depth == 4.", "status": "pending", "ca": "CA-03" },
+        { "id": 5,  "desc": "unique_values/unique_counts por nivel = distintos observados en orden alfabetico (familia==[Bebidas,Snacks], ciudad==[Bogota,Medellin]).", "status": "pending", "ca": "CA-04" },
+        { "id": 6,  "desc": "Los 2 datasets aparecen con kind/source_medium/periodicity correctos, en orden de contrato (ventas, inventario).", "status": "pending", "ca": "CA-06" },
+        { "id": 7,  "desc": "file_count == 1 (ventas) y == 2 (inventario); cada files[*] refleja name/period_start/period_end (incl. multi-anio 2023->2025).", "status": "pending", "ca": "CA-07" },
+        { "id": 8,  "desc": "fields expone name/type/required/maps_to por columna, incl. precio_unitario con required=false y maps_to=null.", "status": "pending", "ca": "CA-08" },
+        { "id": 9,  "desc": "maps_to proviene del contrato, no del nombre (sede->geography.sede, clase->product.clase, cantidad/stock->measure, fecha->time).", "status": "pending", "ca": "CA-09" },
+        { "id": 10, "desc": "totals.dataset_count == 2 y totals.file_count == 3.", "status": "pending", "ca": "CA-10" },
+        { "id": 11, "desc": "Contrato con product_hierarchy.levels de 3 niveles => depth == 3 y niveles en orden (sin hardcode de 4).", "status": "pending", "ca": "CA-05" },
+        { "id": 12, "desc": "Contrato con product_hierarchy.levels de 5 niveles => depth == 5, 5 niveles en orden y unique_values/unique_counts para los 5 (incl. sku).", "status": "pending", "ca": "CA-05b" },
+        { "id": 13, "desc": "Dos run(ctx) con el mismo input producen map_client_data.json identico byte a byte.", "status": "pending", "ca": "CA-13" },
+        { "id": 14, "desc": "Tras un run(ctx) exitoso no existe nada bajo bronze/silver/gold; el unico artefacto es map_client_data.json.", "status": "pending", "ca": "CA-12" },
+        { "id": 15, "desc": "contract_data.json ausente => FlowContractError en validate (existencia base); sin output.", "status": "pending", "ca": "CA-20" },
+        { "id": 16, "desc": "levels == [] (product o geography) => FlowContractError; sin output.", "status": "pending", "ca": "CA-14" },
+        { "id": 17, "desc": "Miembro con claves que no coinciden exactamente con levels => FlowContractError; sin output.", "status": "pending", "ca": "CA-15" },
+        { "id": 18, "desc": "maps_to a un <level> inexistente => FlowContractError; sin output.", "status": "pending", "ca": "CA-16" },
+        { "id": 19, "desc": "Enum invalido (type/kind/source_medium/periodicity) => FlowContractError; sin output.", "status": "pending", "ca": "CA-17" },
+        { "id": 20, "desc": "Fecha no YYYY-MM-DD o period_start > period_end => FlowContractError; sin output.", "status": "pending", "ca": "CA-18" },
+        { "id": 21, "desc": "Dos field.name duplicados en un dataset => FlowContractError; sin output.", "status": "pending", "ca": "CA-19" },
+        { "id": 22, "desc": "Ante cualquier inconsistencia, el fallo ocurre en validate (antes de execute/write_outputs): no queda salida parcial.", "status": "pending", "ca": "CA-21" }
+      ]
+    },
     "integration_tester": { "status": "pending" },
     "spec_verifier":      { "status": "pending", "artifact": "verification.md" }
   }
