@@ -111,6 +111,30 @@ La CLI busca la **raíz del proyecto** hacia arriba desde el directorio actual (
 
 ## Uso diario del entorno virtual
 
+Una vez hecha la **configuración inicial** (venv creado + `pip install -e .`), esos pasos **no se repiten**. En una terminal nueva solo necesitas activar el entorno y ejecutar el comando.
+
+### Flujo típico en una terminal nueva (validado)
+
+Desde la raíz del proyecto:
+
+```powershell
+# 1. Activar el entorno virtual (una vez por terminal)
+.venv\Scripts\Activate.ps1
+
+# 2. Crear el cliente
+foda client new COMPANY_XYZ
+```
+
+> ✅ **No necesitas** volver a crear el venv ni reinstalar el paquete: el `.venv` y la instalación editable de `foda` persisten entre sesiones.
+
+**Alternativa sin activar** (invoca el ejecutable del venv directamente, en una sola línea):
+
+```powershell
+.venv\Scripts\foda.exe client new COMPANY_XYZ
+```
+
+### Activar y desactivar
+
 - **Cada vez que abras una terminal nueva**, debes **activar** el entorno virtual antes de usar `foda`:
 
   ```powershell

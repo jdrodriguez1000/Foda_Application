@@ -63,6 +63,13 @@ Cada decisión sigue el formato: **ID**, **título**, **estado** (Propuesta / Ac
 | D-044 | `client_context` — `is_recurring` como propiedad booleana `== (models/latest).exists()` (DS-CTX-2) | Aceptada | 2026-07-03 |
 | D-045 | `client_context` — constructor directo con validación en `__init__` y rutas como propiedades de solo lectura (DS-CTX-3) | Aceptada | 2026-07-03 |
 | D-046 | Cierre CONFORME de `client_context` (banda `tracer_bullet`) con 2 hallazgos no bloqueantes (F-1, F-2) | Aceptada | 2026-07-03 |
+| D-047 | `flow_base` — `FlowContractError(Exception)` propia en `flow.py` (DS-FLOW-1) | Aceptada | 2026-07-03 |
+| D-048 | `flow_base` — `Artifact(name, base, relative)` declarativo con clave `base` mapeada (DS-FLOW-2) | Aceptada | 2026-07-03 |
+| D-049 | `flow_base` — `FlowResult(success, outputs)` mínimo (DS-FLOW-3) | Aceptada | 2026-07-03 |
+| D-050 | `flow_base` — hooks base + `run` como template method no sobreescribible (DS-FLOW-4) | Aceptada | 2026-07-03 |
+| D-051 | `flow_base` — GATE#5: `execute()` construye y devuelve el `FlowResult` | Aceptada | 2026-07-03 |
+| D-052 | `flow_base` — GATE#6: orden `load_inputs → validate` en el template method | Aceptada | 2026-07-03 |
+| D-053 | Cierre CONFORME de `flow_base` (banda `tracer_bullet`), sin hallazgos bloqueantes | Aceptada | 2026-07-03 |
 
 ## 3. Detalle de Decisiones
 
@@ -380,6 +387,55 @@ Cada decisión sigue el formato: **ID**, **título**, **estado** (Propuesta / Ac
 - **Contexto:** Tras cerrar el bucle TDD (12/12 casos) y correr `integration_tester` (5 tests de integración), `spec_verifier` recorrió los 12 CA de `spec.md` de `client_context` buscando evidencia de test/comportamiento para cada uno.
 - **Decisión:** Veredicto **CONFORME**: los 12 CA tienen evidencia verificable en la suite, documentada en `600_features/client_context/tracer_bullet/verification.md` con matriz de trazabilidad CA→test completa. Se registran 2 hallazgos NO bloqueantes: **F-1** 6 de los 12 casos llegaron en "verde directo" (D-037) sin rojo genuino, documentado, sin afectar la cobertura. **F-2** limitaciones aceptadas para esta banda: un symlink `models/latest` roto se evalúa como inexistente (⇒ NUEVO); los filesystems case-insensitive heredan la semántica del FS sin normalización adicional. Ninguna tiene consumidor hoy que la requiera.
 - **Consecuencias:** `client_context/tracer_bullet` queda cerrada. F-2 se registra como limitación conocida en `assumptions.md` (A-010, A-011), análogo a A-007/A-008 de `client_scaffold`; se endurecerá en una banda futura solo si un flujo consumidor lo exige.
+
+### D-047 — `flow_base`: `FlowContractError(Exception)` propia (DS-FLOW-1)
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-03
+- **Contexto:** `spec_writer` necesitaba fijar qué excepción lanza `Flow.validate()` cuando faltan artefactos requeridos (`requires`). `client_context` (D-043) había usado `FileNotFoundError`, una excepción estándar de Python, para su propio caso de "no existe".
+- **Decisión:** `flow_base` define una excepción de dominio propia, `FlowContractError(Exception)`, en `src/foda/core/flow.py`, en vez de reutilizar `FileNotFoundError` u otra excepción estándar. `validate()` la lanza una sola vez, agregando en el mensaje TODOS los artefactos `requires` faltantes (no solo el primero).
+- **Consecuencias:** A diferencia de `client_context`, aquí sí hay un consumidor previsible de la excepción (el futuro orquestador/`foda run`, §9 de `system_design.md`, que necesitará capturarla específicamente para informar al científico de datos qué falta), lo que justifica una excepción de dominio dedicada en vez de una genérica.
+
+### D-048 — `flow_base`: `Artifact(name, base, relative)` declarativo con clave `base` mapeada (DS-FLOW-2)
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-03
+- **Contexto:** Había que decidir cómo un flujo concreto declara SUS artefactos (`requires`/`produces`) de forma que `Flow.validate()` pueda resolver su ruta real contra un `ClientContext` sin que cada flujo reimplemente la lógica de rutas. Se evaluó también un callable `path_fn(ctx) -> Path` opaco por artefacto.
+- **Decisión:** Se adopta `Artifact(name, base, relative)`, un dataclass congelado (`frozen=True`) puramente declarativo: `base` es una clave lógica de texto (una de `inputs/outputs/bronze/silver/gold/models`) que `Artifact.path(ctx)` mapea a la propiedad correspondiente de `ClientContext` (p. ej. `base="bronze"` → `ctx.bronze_dir`), concatenada con `relative`. Si `base` no es una de las 6 claves conocidas, `path(ctx)` lanza `ValueError`. Se descarta el callable `path_fn` opaco por ser menos legible/declarativo y más difícil de auditar en `spec.md`/`plan.md`.
+- **Consecuencias:** Los flujos concretos declaran sus artefactos como datos simples e inspeccionables (útil para futura introspección/documentación automática), sin poder inyectar lógica arbitraria de resolución de rutas. Reutiliza `ClientContext` (T-014) tal cual, sin tocarlo (NC-3).
+
+### D-049 — `flow_base`: `FlowResult(success, outputs)` mínimo (DS-FLOW-3)
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-03
+- **Contexto:** Había que fijar qué devuelve `Flow.run(ctx)` al terminar. Se evaluó incluir desde ya un campo para mensajes/inconsistencias de ejecución (p. ej. avisos no bloqueantes de un flujo).
+- **Decisión:** `FlowResult` es un dataclass congelado mínimo con solo dos campos: `success: bool` y `outputs: list[Path]`. Se difiere explícitamente un campo de "inconsistencias/mensajes" a una banda `stab_1` futura, cuando exista un consumidor real que lo necesite (E4/NC-2).
+- **Consecuencias:** Contrato de retorno simple y suficiente para el tracer_bullet; un flujo concreto que necesite reportar avisos no bloqueantes deberá esperar a la ampliación de `FlowResult` en `stab_1`.
+
+### D-050 — `flow_base`: hooks base + `run` como template method no sobreescribible (DS-FLOW-4)
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-03
+- **Contexto:** Había que fijar el mecanismo exacto por el que los flujos concretos heredan de `Flow`: si `run()` es libre de sobreescribirse o si está fijado, y qué hacen por defecto los 4 hooks (`load_inputs`, `validate`, `execute`, `write_outputs`) sin sobreescribir.
+- **Decisión:** `run(ctx) -> FlowResult` es un template method NO sobreescribible (documentado como tal; el tracer_bullet no lo impone técnicamente con un guard runtime) que invoca siempre, en orden fijo, `load_inputs(ctx) → validate(ctx) → execute(ctx) → write_outputs(ctx)`. Los flujos concretos heredan y sobreescriben SOLO los 4 hooks. Por defecto: `load_inputs`/`write_outputs` son no-op; `validate` tiene comportamiento real (agrega faltantes de `requires`, D-047); `execute` lanza `NotImplementedError` (obliga a todo flujo concreto a implementarlo).
+- **Consecuencias:** Todo flujo futuro (010–140) queda forzado a seguir la misma secuencia de 4 pasos, garantizando comportamiento uniforme del pipeline (orquestador, logging, manejo de errores futuro) sin que cada flujo reimplemente el orden.
+
+### D-051 — `flow_base`: GATE#5 — `execute()` construye y devuelve el `FlowResult`
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-03
+- **Contexto:** En el GATE de spec se presentó al humano una ambigüedad de diseño (NC-1): ¿quién ensambla el `FlowResult` final — el hook `execute()` de cada flujo concreto, o el propio `run()` de la clase base a partir de lo que devuelven los hooks?
+- **Decisión:** El humano eligió que `execute()` (implementado por el flujo concreto) construye y devuelve el `FlowResult` completo; `run()` simplemente lo retorna tal cual, sin reensamblarlo. Es la opción más fiel a la redacción de §9 de `system_design.md`, frente a la alternativa de que `run()` ensamblara el resultado a partir de piezas devueltas por los hooks.
+- **Consecuencias:** Cada flujo concreto es responsable de reportar su propio éxito/outputs; `run()` queda como pura orquestación de la secuencia de 4 pasos, sin lógica de negocio.
+
+### D-052 — `flow_base`: GATE#6 — orden `load_inputs → validate`
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-03
+- **Contexto:** En el GATE de spec se resolvió explícitamente el orden entre `load_inputs` y `validate` (ninguno de los documentos previos lo fijaba de forma inequívoca), y qué implica ese orden si `validate` falla.
+- **Decisión:** El orden es `load_inputs → validate` (no al revés). Ante un `requires` faltante, `load_inputs` ya se ejecutó (pero no escribe nada, es no-op por defecto en el tracer_bullet) mientras que `execute`/`write_outputs` NO llegan a correr.
+- **Consecuencias:** Un flujo concreto que sobreescriba `load_inputs` con lógica real debe asumir que puede ejecutarse incluso si luego `validate` falla; el tracer_bullet no sufre este riesgo porque el hook base es no-op.
+
+### D-053 — Cierre CONFORME de `flow_base` (banda `tracer_bullet`), sin hallazgos bloqueantes
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-03
+- **Contexto:** Tras cerrar el bucle TDD (14/14 casos) y correr `integration_tester` (4 tests de integración), `spec_verifier` recorrió los 13 CA de `spec.md` de `flow_base` buscando evidencia de test/comportamiento para cada uno.
+- **Decisión:** Veredicto **CONFORME**: los 13 CA (CA-01…CA-13) tienen evidencia verificable en la suite, documentada en `600_features/flow_base/tracer_bullet/verification.md` con matriz de trazabilidad completa. A diferencia de `client_scaffold`/`client_context`, no se registraron hallazgos no bloqueantes nuevos en esta feature.
+- **Consecuencias:** `flow_base/tracer_bullet` queda cerrada; es la cuarta feature en recorrer la cadena de 8 agentes de punta a punta CONFORME. Con esta feature construida, queda disponible el contrato base que consumirán el primer flujo concreto y/o el futuro orquestador.
 
 ### D-031 — Cadena de trazabilidad codificada HU→CA→TSK y tareas atómicas del plan
 - **Estado:** Aceptada
