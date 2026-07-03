@@ -56,6 +56,13 @@ Cada decisión sigue el formato: **ID**, **título**, **estado** (Propuesta / Ac
 | D-037 | Patrón "verde directo, sin rojo artificial" consolidado como práctica estándar del bucle TDD del harness | Aceptada | 2026-07-02 |
 | D-038 | `client_new_cli` — ramas `except ValueError`/`except FileExistsError` en `cli.py` se mantienen separadas | Aceptada | 2026-07-02 |
 | D-039 | `clients/` y `.venv/` no se versionan en Git; se añaden a `.gitignore` | Aceptada | 2026-07-03 |
+| D-040 | `client_context` — modo nuevo/recurrente inferido del disco vía `models/latest`, sin flag editable en `client.yaml` | Aceptada | 2026-07-03 |
+| D-041 | `client_context` — `clients_root` como parámetro del constructor, el core no resuelve `pyproject.toml` desde el cwd | Aceptada | 2026-07-03 |
+| D-042 | `client_context` — introspección de artefactos existentes diferida a `flow_base` (T-015) | Aceptada | 2026-07-03 |
+| D-043 | `client_context` — `FileNotFoundError` como validación de existencia vía `client.yaml` (DS-CTX-1) | Aceptada | 2026-07-03 |
+| D-044 | `client_context` — `is_recurring` como propiedad booleana `== (models/latest).exists()` (DS-CTX-2) | Aceptada | 2026-07-03 |
+| D-045 | `client_context` — constructor directo con validación en `__init__` y rutas como propiedades de solo lectura (DS-CTX-3) | Aceptada | 2026-07-03 |
+| D-046 | Cierre CONFORME de `client_context` (banda `tracer_bullet`) con 2 hallazgos no bloqueantes (F-1, F-2) | Aceptada | 2026-07-03 |
 
 ## 3. Detalle de Decisiones
 
@@ -324,6 +331,55 @@ Cada decisión sigue el formato: **ID**, **título**, **estado** (Propuesta / Ac
 - **Contexto:** Al verificar el uso real de la CLI, el usuario creó `clients/DEMO_ABC/` con `foda client new DEMO_ABC` y recreó `.venv/` con Python 3.13, quedando ambos como untracked en `git status`. El usuario pidió explícitamente dejar `clients/DEMO_ABC/` en disco (no eliminarlo). `system_design.md`/D-006 ya establece el modelo multi-tenant como carpeta-por-cliente **en disco, sin base de datos**: los datos de cliente son datos de runtime generados por la aplicación, no código fuente ni artefactos de diseño.
 - **Decisión:** Se añaden `clients/` y `.venv/` a `.gitignore`. `clients/` no se versiona porque es el directorio de datos de runtime multi-tenant (coherente con D-006, no requiere una decisión nueva de arquitectura, solo su reflejo en `.gitignore`); `.venv/` no se versiona porque es un entorno virtual local reproducible desde `pyproject.toml`. El cliente de prueba `clients/DEMO_ABC/` permanece en disco (a pedido del usuario) pero fuera del control de versiones.
 - **Consecuencias:** El repositorio no arrastra datos de cliente ni el entorno virtual; cualquier colaborador nuevo reproduce `.venv/` siguiendo `README.md` y genera sus propios clientes de prueba sin ensuciar el historial de Git. Si en el futuro se necesita un cliente de ejemplo versionado (p. ej. para fixtures de test), deberá vivir fuera de `clients/` o excepcionarse explícitamente en `.gitignore`.
+
+### D-040 — `client_context`: modo nuevo/recurrente inferido del disco vía `models/latest`
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-03
+- **Contexto:** Al definir el alcance de `client_context` (HU de "determinar modo nuevo vs. recurrente"), había que decidir cómo se determina ese modo: mediante un flag explícito en `client.yaml` (que alguien debería mantener sincronizado) o infiriéndolo de artefactos ya existentes en disco.
+- **Decisión:** El modo se infiere exclusivamente del disco: RECURRENTE ⇔ existe `models/latest`; NUEVO ⇔ no existe. No se añade ningún flag editable de modo en `client.yaml`. Refleja R9 y `system_design.md` §12.
+- **Consecuencias:** Se evita un estado duplicado que podría desincronizarse del contenido real de `models/`; el modo es siempre una consecuencia observable del filesystem, no una entrada humana que pueda mentir. Un `client.yaml` con un campo `mode` espurio se ignora (ver CA-11).
+
+### D-041 — `client_context`: `clients_root` como parámetro del constructor
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-03
+- **Contexto:** Igual que en `client_new_cli` (D-036), había que decidir si `ClientContext` resuelve por sí mismo la raíz del proyecto (buscando `pyproject.toml` desde el cwd) o si la recibe ya resuelta.
+- **Decisión:** `ClientContext(name, clients_root)` recibe `clients_root` como parámetro explícito, con el mismo patrón que `create_client(name, clients_root)`. El core no re-resuelve `pyproject.toml` desde el cwd; esa resolución vive únicamente en la capa CLI.
+- **Consecuencias:** El core sigue siendo testeable de forma aislada con `tmp_path` (sin acoplar a rutas reales ni al cwd del proceso), preservando el aislamiento ya establecido en D-025/D-036.
+
+### D-042 — `client_context`: introspección de artefactos existentes diferida a `flow_base`
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-03
+- **Contexto:** Durante la definición de alcance surgió la pregunta de si `client_context` también debía saber "qué pasos ya se hicieron" (reanudación/idempotencia por flujo), distinta de "si el cliente ya tiene modelo" (nuevo vs. recurrente). Ambas nociones son ortogonales: un cliente con limpieza hecha pero sin modelo sigue siendo NUEVO correctamente.
+- **Decisión:** La introspección de "qué artefactos existen" (para soportar reanudación de un flujo donde se dejó) queda **fuera de alcance** de `client_context` y se difiere a cuando `flow_base` (T-015) la consuma (E4/NC-2, no construir antes de tener consumidor).
+- **Consecuencias:** `client_context` se mantiene acotado a resolución de rutas + determinación de modo nuevo/recurrente; la lógica de idempotencia por artefacto (§2.5 de `system_design.md`) se diseñará junto con `Flow.run(ctx)` en T-015, con el contexto concreto de qué necesita saber cada flujo.
+
+### D-043 — `client_context`: `FileNotFoundError` como validación de existencia vía `client.yaml` (DS-CTX-1)
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-03
+- **Contexto:** `spec_writer` necesitaba fijar qué excepción lanza `ClientContext` si el cliente no existe, y qué archivo se usa como marcador de existencia.
+- **Decisión:** El marcador de existencia de un cliente es su archivo `client.yaml` (no solo la existencia de la carpeta). Si no existe, el constructor lanza `FileNotFoundError` con mensaje claro que incluye el nombre del cliente y la ruta esperada.
+- **Consecuencias:** Un cliente con carpeta pero sin `client.yaml` (estado inconsistente) se trata como inexistente, evitando construir un `ClientContext` sobre un árbol incompleto o corrupto.
+
+### D-044 — `client_context`: `is_recurring` como propiedad booleana `== (models/latest).exists()` (DS-CTX-2)
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-03
+- **Contexto:** Formaliza a nivel de spec la decisión de alcance D-040: se necesitaba fijar la firma exacta de la propiedad que expone el modo nuevo/recurrente.
+- **Decisión:** `ClientContext.is_recurring` es una propiedad booleana de solo lectura, calculada como `(models/latest).exists()`, evaluada en el momento de la consulta (no cacheada al construir el objeto).
+- **Consecuencias:** El valor de `is_recurring` puede cambiar durante la vida de un mismo objeto `ClientContext` si el filesystem cambia (p. ej. tras entrenar un modelo), lo cual es el comportamiento deseado: siempre refleja el estado real del disco.
+
+### D-045 — `client_context`: constructor directo con validación en `__init__` y rutas de solo lectura (DS-CTX-3)
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-03
+- **Contexto:** Había que fijar el patrón de construcción de `ClientContext`: constructor directo vs. método de fábrica (`ClientContext.for_client(...)`), y si las rutas se calculan una vez o en cada acceso.
+- **Decisión:** Constructor directo `ClientContext(name, clients_root)` que valida la existencia del cliente en `__init__` (lanzando `FileNotFoundError` si falta, D-043). Las rutas (`inputs_dir`, `outputs_dir`, `bronze_dir`, `silver_dir`, `gold_dir`, `models_dir`) se exponen como propiedades de solo lectura, derivadas de `root`/`name`, sin setters.
+- **Consecuencias:** Un `ClientContext` construido con éxito garantiza que el cliente existe (invariante de constructor); las propiedades son inmutables desde fuera, evitando que un consumidor corrompa las rutas de un contexto ya construido.
+
+### D-046 — Cierre CONFORME de `client_context` (banda `tracer_bullet`) con 2 hallazgos no bloqueantes
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-03
+- **Contexto:** Tras cerrar el bucle TDD (12/12 casos) y correr `integration_tester` (5 tests de integración), `spec_verifier` recorrió los 12 CA de `spec.md` de `client_context` buscando evidencia de test/comportamiento para cada uno.
+- **Decisión:** Veredicto **CONFORME**: los 12 CA tienen evidencia verificable en la suite, documentada en `600_features/client_context/tracer_bullet/verification.md` con matriz de trazabilidad CA→test completa. Se registran 2 hallazgos NO bloqueantes: **F-1** 6 de los 12 casos llegaron en "verde directo" (D-037) sin rojo genuino, documentado, sin afectar la cobertura. **F-2** limitaciones aceptadas para esta banda: un symlink `models/latest` roto se evalúa como inexistente (⇒ NUEVO); los filesystems case-insensitive heredan la semántica del FS sin normalización adicional. Ninguna tiene consumidor hoy que la requiera.
+- **Consecuencias:** `client_context/tracer_bullet` queda cerrada. F-2 se registra como limitación conocida en `assumptions.md` (A-010, A-011), análogo a A-007/A-008 de `client_scaffold`; se endurecerá en una banda futura solo si un flujo consumidor lo exige.
 
 ### D-031 — Cadena de trazabilidad codificada HU→CA→TSK y tareas atómicas del plan
 - **Estado:** Aceptada
