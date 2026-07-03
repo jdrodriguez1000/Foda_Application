@@ -2,13 +2,14 @@
   "feature": "onboarding",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "plan_builder",
+  "current_stage": "tdd",
   "stages": {
     "feature_definer":    { "status": "done",    "artifact": "definition.md" },
-    "spec_writer":        { "status": "done", "artifact": "spec.md",  "gate": "human", "awaiting_approval": true },
-    "plan_builder":       { "status": "done", "artifact": "plan.md",  "gate": "human", "awaiting_approval": true },
+    "spec_writer":        { "status": "done", "artifact": "spec.md",  "gate": "human", "awaiting_approval": false, "approved": true },
+    "plan_builder":       { "status": "done", "artifact": "plan.md",  "gate": "human", "awaiting_approval": false, "approved": true },
     "tdd":                {
-      "status": "pending",
+      "status": "ready",
+      "next_case": 1,
       "cases": [
         { "id": 1,  "desc": "run(ctx) sobre el fixture valido escribe map_client_data.json en la ruta esperada y devuelve FlowResult(success=True, outputs=[esa ruta]); el archivo existe.", "status": "pending", "ca": "CA-01" },
         { "id": 2,  "desc": "Onboarding hereda Flow, declara requires/produces con los Artifact esperados y completa las 4 fases sin sobreescribir run.", "status": "pending", "ca": "CA-11" },

@@ -46,12 +46,12 @@
 ## 3. Tareas En Progreso
 | ID | Tarea | Prioridad | Notas |
 |---|---|---|---|
-| _Ninguna._ | | | |
+| T-027 | Construir la feature `onboarding` (flujo 020, banda `tracer_bullet`) ejecutando la cadena de 8 agentes | 🔴 Alta | Etapas 1-3/8 completadas y APROBADAS por el humano: `feature_definer` (HU-01…HU-05, commit `33211d2`), `spec_writer` (22 CA tras añadir CA-05b, DS-ONB-1..5, GATE APROBADO), `plan_builder` (22 casos TDD, commit `4f4736e`, GATE APROBADO). Contrato `contract_data.json` (fixture de Discovery) consensuado punto por punto con el humano: jerarquías dinámicas vía `levels`, miembros planos, `historical_data.datasets` con esquema por dataset (`fields`), Modelo B de mapeo columna→nivel vía `maps_to` (D-058), vocabularios controlados cerrados. Pendiente: bucle TDD (22 casos, arrancar con `tdd_tester` caso 1/CA-01), `integration_tester`, `spec_verifier`. Ver D-058, D-059, L-034, A-013. |
 
 ## 4. Tareas Pendientes
 | ID | Tarea | Prioridad | Notas |
 |---|---|---|---|
-| T-027 | Iniciar el desarrollo de la feature `onboarding` invocando la cadena SDD/TDD desde `feature_definer` | 🔴 Alta | Alcance: mapear la estructura de datos del cliente (jerarquía de productos y geografía) a partir de un `contract_data.json` simulado, produciendo `map_client_data.json`. Banda: `tracer_bullet`. Primera sub-tarea al definir: acordar y documentar la forma del `contract_data.json` simulado (contrato provisional con Discovery, ver D-055, A-012), sin decidirla en silencio (NC-6). |
+| _Ninguna._ | | | |
 
 ## 5. Backlog
 | ID | Tarea | Notas |
