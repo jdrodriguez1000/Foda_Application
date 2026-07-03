@@ -2,12 +2,28 @@
   "feature": "client_context",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "spec_writer",
+  "current_stage": "plan_builder",
   "stages": {
     "feature_definer":    { "status": "done",    "artifact": "definition.md" },
-    "spec_writer":        { "status": "done", "artifact": "spec.md",  "gate": "human", "awaiting_approval": true },
-    "plan_builder":       { "status": "pending", "artifact": "plan.md",  "gate": "human", "awaiting_approval": false },
-    "tdd":                { "status": "pending", "cases": [] },
+    "spec_writer":        { "status": "done", "artifact": "spec.md",  "gate": "human", "awaiting_approval": false, "approved": true },
+    "plan_builder":       { "status": "done", "artifact": "plan.md",  "gate": "human", "awaiting_approval": true },
+    "tdd": {
+      "status": "pending",
+      "cases": [
+        { "id": 1,  "desc": "Sobre un cliente creado con create_client('ABC', tmp/clients), ClientContext('ABC', tmp/clients) se construye sin lanzar y expone name == 'ABC' y root == tmp/clients/ABC (CA-01).", "status": "pending" },
+        { "id": 2,  "desc": "inputs_dir == tmp/clients/ABC/010_inputs y outputs_dir == tmp/clients/ABC/020_outputs (CA-05).", "status": "pending" },
+        { "id": 3,  "desc": "bronze_dir, silver_dir y gold_dir son tmp/clients/ABC/data/{bronze,silver,gold} (CA-06).", "status": "pending" },
+        { "id": 4,  "desc": "models_dir == tmp/clients/ABC/models (CA-07).", "status": "pending" },
+        { "id": 5,  "desc": "Para un cliente creado por create_client, las 6 rutas resueltas existen en disco (CA-08).", "status": "pending" },
+        { "id": 6,  "desc": "Cliente existente sin models/latest (aunque models/ exista y este vacia): is_recurring == False (NUEVO) (CA-09).", "status": "pending" },
+        { "id": 7,  "desc": "Tras materializar tmp/clients/ABC/models/latest como carpeta, is_recurring == True (RECURRENTE) (CA-10).", "status": "pending" },
+        { "id": 8,  "desc": "client.yaml con flag espurio (mode: recurring) pero sin models/latest: is_recurring == False (no se lee el YAML) (CA-11).", "status": "pending" },
+        { "id": 9,  "desc": "name cuyo tmp/clients/<name>/client.yaml no existe (carpeta inexistente): ClientContext lanza FileNotFoundError (CA-02).", "status": "pending" },
+        { "id": 10, "desc": "Tras el intento fallido, el filesystem bajo tmp/clients queda identico: no se crea nada para ese name (CA-03).", "status": "pending" },
+        { "id": 11, "desc": "Carpeta tmp/clients/<name>/ existe pero sin client.yaml: ClientContext lanza FileNotFoundError (marcador = client.yaml) (CA-04).", "status": "pending" },
+        { "id": 12, "desc": "Con monkeypatch.chdir a un dir no relacionado, root y las 6 rutas siguen bajo tmp/clients/ABC (parametro), no bajo el cwd (CA-12).", "status": "pending" }
+      ]
+    },
     "integration_tester": { "status": "pending" },
     "spec_verifier":      { "status": "pending", "artifact": "verification.md" }
   }
