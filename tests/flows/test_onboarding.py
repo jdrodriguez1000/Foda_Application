@@ -787,3 +787,37 @@ def test_dos_run_con_mismo_input_producen_map_client_data_identico_byte_a_byte(
     segunda_corrida = ruta_salida.read_bytes()
 
     assert primera_corrida == segunda_corrida
+
+
+def test_run_exitoso_no_deja_nada_bajo_bronze_silver_gold(tmp_path: Path) -> None:
+    """Caso 14 (CA-12): tras un run(ctx) exitoso, ctx.bronze_dir/silver_dir/
+    gold_dir no contienen ningun archivo ni carpeta; el unico artefacto
+    escrito por Onboarding es map_client_data.json (DS-ONB-5, plan.md Sec.
+    'No toca bronze/silver/gold no datos reales', feature CA-3).
+
+    Nota TDD (D-037, precedente casos 2/CA-11, 9/CA-09, 11/CA-05, 12/CA-05b
+    y 13/CA-13): este caso nace en verde directo. `Onboarding.load_inputs`/
+    `execute`/`write_outputs` (cerrados en casos previos) solo leen
+    contract_data.json y escriben map_client_data.json bajo
+    020_onboarding/; el codigo nunca referencia ctx.bronze_dir/silver_dir/
+    gold_dir. create_client() (core CONFORME, no re-testeado aqui) ya crea
+    esas carpetas vacias en el scaffold antes de que Onboarding corra, y
+    ningun hook de Onboarding escribe en ellas. Se confirmo empiricamente
+    (tdd_tester) que este test pasa sin cambios de produccion, y el humano
+    aprobo tratarlo como verde directo, sin pasar por
+    tdd_coder/tdd_refactor."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    contrato_path = ctx.outputs_dir / "010_discovery/contract_data.json"
+    contrato_path.parent.mkdir(parents=True)
+    contrato_path.write_text(
+        json.dumps(_contrato_valido(), ensure_ascii=False), encoding="utf-8"
+    )
+
+    Onboarding().run(ctx)
+
+    assert list(ctx.bronze_dir.iterdir()) == []
+    assert list(ctx.silver_dir.iterdir()) == []
+    assert list(ctx.gold_dir.iterdir()) == []
