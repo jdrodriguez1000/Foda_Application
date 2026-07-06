@@ -2,8 +2,8 @@
   "feature": "onboarding",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "integration_tester",
-  "note": "Bucle TDD completo: 22/22 casos done (caso 22/CA-21 cerrado como verde directo bajo D-060, precedente D-037; ver stages.tdd.cases[21].note). Suite: 116 passed, sin regresion. Siguiente etapa: integration_tester.",
+  "current_stage": "spec_verifier",
+  "note": "Bucle TDD completo: 22/22 casos done (caso 22/CA-21 cerrado como verde directo bajo D-060, precedente D-037; ver stages.tdd.cases[21].note). Integracion (integration_tester) cerrada: 5 tests nuevos en tests/integration/test_onboarding_integration.py (run end-to-end vs esperado fijo, invariante bronze/silver/gold, fallo temprano FlowContractError con cliente real, interaccion con flujo vecino consumidor de map_client_data.json, aislamiento multi-tenant entre 2 clientes reales). Suite completa: 121 passed (116 previos + 5 nuevos), sin regresion. Siguiente etapa: spec_verifier.",
   "stages": {
     "feature_definer":    { "status": "done",    "artifact": "definition.md" },
     "spec_writer":        { "status": "done", "artifact": "spec.md",  "gate": "human", "awaiting_approval": false, "approved": true },
@@ -36,7 +36,18 @@
         { "id": 22, "desc": "Ante cualquier inconsistencia, el fallo ocurre en validate (antes de execute/write_outputs): no queda salida parcial.", "status": "done", "ca": "CA-21", "test": "tests/flows/test_onboarding.py::test_ante_inconsistencia_el_fallo_ocurre_en_validate_antes_de_execute_write_outputs", "note": "verde directo (D-060, precedente D-037 y casos 2/CA-11, 9/CA-09, 11/CA-05, 12/CA-05b, 13/CA-13, 14/CA-12, 15/CA-20): CA-21 ya estaba garantizado estructuralmente por Flow.run() (core CONFORME, src/foda/core/flow.py), que ejecuta load_inputs->validate->execute->write_outputs en linea recta -- si validate() lanza FlowContractError (como ya lo hace Onboarding.validate() desde el caso 16, TSK-07, para cualquiera de las 6 reglas de contenido CA-14..CA-19), Python interrumpe run() antes de alcanzar execute()/write_outputs(); load_inputs/validate no escriben en disco (solo write_outputs lo hace) y write_outputs nunca se alcanza. El test (instrumentacion de las 4 fases, mismo patron del caso 2/CA-11, sobre la inconsistencia del caso 16/CA-14 -- product_hierarchy.levels == []) se confirmo EMPIRICAMENTE en verde sin ningun cambio de produccion: python -m pytest tests/flows/test_onboarding.py::test_ante_inconsistencia_el_fallo_ocurre_en_validate_antes_de_execute_write_outputs -q -> 1 passed; python -m pytest -q -> 116 passed (sin regresion en casos 1-21); sin ciclo rojo->verde; no paso por tdd_coder/tdd_refactor; cierre confirmado por la sesion principal bajo pre-autorizacion D-060." }
       ]
     },
-    "integration_tester": { "status": "pending" },
+    "integration_tester": {
+      "status": "done",
+      "artifact": "tests/integration/test_onboarding_integration.py",
+      "tests": [
+        "tests/integration/test_onboarding_integration.py::test_run_end_to_end_sobre_cliente_real_produce_mapa_identico_al_esperado_fijo",
+        "tests/integration/test_onboarding_integration.py::test_run_exitoso_no_toca_bronze_silver_gold_del_cliente_real",
+        "tests/integration/test_onboarding_integration.py::test_run_falla_temprano_con_flow_contract_error_si_falta_contract_data_en_cliente_real",
+        "tests/integration/test_onboarding_integration.py::test_run_produce_artefacto_consumible_sin_fallar_por_un_flujo_vecino_real",
+        "tests/integration/test_onboarding_integration.py::test_aislamiento_multi_tenant_entre_dos_clientes_reales_bajo_el_mismo_clients_root"
+      ],
+      "evidence": "python -m pytest tests/integration/test_onboarding_integration.py -q -> 5 passed; python -m pytest -q -> 121 passed (116 previos del bucle TDD + 5 nuevos de integracion), sin regresion."
+    },
     "spec_verifier":      { "status": "pending", "artifact": "verification.md" }
   }
 }
