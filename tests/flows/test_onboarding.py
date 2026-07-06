@@ -8,8 +8,10 @@ Fuente: 600_features/onboarding/tracer_bullet/spec.md (CA-xx) y plan.md
 import json
 from pathlib import Path
 
+import pytest
+
 from foda.core.context import ClientContext
-from foda.core.flow import Artifact, Flow, FlowResult
+from foda.core.flow import Artifact, Flow, FlowContractError, FlowResult
 from foda.core.scaffold import create_client
 from foda.flows.f020_onboarding.onboarding import Onboarding
 
@@ -821,3 +823,34 @@ def test_run_exitoso_no_deja_nada_bajo_bronze_silver_gold(tmp_path: Path) -> Non
     assert list(ctx.bronze_dir.iterdir()) == []
     assert list(ctx.silver_dir.iterdir()) == []
     assert list(ctx.gold_dir.iterdir()) == []
+
+
+def test_contract_data_ausente_lanza_flow_contract_error_y_no_crea_output(
+    tmp_path: Path,
+) -> None:
+    """Caso 15 (CA-20): si contract_data.json no existe en disco, run(ctx)
+    lanza FlowContractError en validate() (existencia base, DS-ONB-5 fase
+    2a) antes de derivar nada, y no se crea map_client_data.json.
+
+    Nota TDD (D-037, precedente casos 2/CA-11, 9/CA-09, 11/CA-05, 12/CA-05b,
+    13/CA-13 y 14/CA-12): este caso nace en verde directo. Onboarding.validate()
+    (cerrado desde el caso 1, CA-01, TSK-02) delega integramente en
+    super().validate(ctx) (Flow.validate, core CONFORME, no re-testeado
+    aqui), que ya comprueba la existencia fisica de cada Artifact de
+    requires y lanza FlowContractError si falta antes de que run() llame a
+    execute()/write_outputs(); Onboarding no necesita logica propia para
+    este caso. Se confirmo empiricamente (tdd_tester) que este test pasa
+    sin cambios de produccion, y el humano pre-autorizo cerrar verdes
+    directos sin aprobacion individual, por lo que se cierra directamente
+    (sin pasar por tdd_coder/tdd_refactor)."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    # No se escribe contract_data.json: el require queda ausente en disco.
+    ruta_salida = ctx.outputs_dir / "020_onboarding/map_client_data.json"
+
+    with pytest.raises(FlowContractError):
+        Onboarding().run(ctx)
+
+    assert not ruta_salida.exists()
