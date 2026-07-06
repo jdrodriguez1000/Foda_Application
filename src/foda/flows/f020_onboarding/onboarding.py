@@ -1,12 +1,11 @@
 """Flujo 020: Onboarding (feature onboarding, banda tracer_bullet).
 
 Fuente: 600_features/onboarding/tracer_bullet/spec.md (DS-ONB-1..5) y plan.md
-(TSK-01..TSK-09). Bucle TDD en curso: caso 1 (CA-01) en verde via TSK-02
-(esqueleto + happy path minimo); caso 3 (CA-02) en verde via TSK-03 parcial
-(derivacion minima de hierarchies.product.levels/depth). El resto de
-jerarquias/datasets/totals (TSK-03..TSK-05), la serializacion determinista
-(TSK-06) y la validacion de contenido (TSK-07) quedan para casos posteriores
-del bucle.
+(TSK-01..TSK-09). Bucle TDD en curso: caso 1 (CA-01, TSK-02) y caso 3 (CA-02,
+TSK-03 parcial) cerrados (derivacion minima de hierarchies.product.levels/
+depth). El resto de jerarquias/datasets/totals (TSK-03..TSK-05), la
+serializacion determinista (TSK-06) y la validacion de contenido (TSK-07)
+quedan para casos posteriores del bucle.
 """
 
 import json
@@ -42,6 +41,7 @@ class Onboarding(Flow):
 
     def __init__(self) -> None:
         self._contract: dict | None = None
+        self._mapa: dict | None = None
 
     def load_inputs(self, ctx: ClientContext) -> None:
         """DS-ONB-5: lee y parsea contract_data.json a estado de instancia solo
