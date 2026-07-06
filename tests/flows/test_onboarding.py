@@ -5,6 +5,7 @@ Fuente: 600_features/onboarding/tracer_bullet/spec.md (CA-xx) y plan.md
 (state.json -> stages.tdd.cases).
 """
 
+import json
 from pathlib import Path
 
 from foda.core.context import ClientContext
@@ -166,8 +167,6 @@ def test_run_sobre_fixture_valido_escribe_map_client_data_y_devuelve_flow_result
 
     contrato_path = ctx.outputs_dir / "010_discovery/contract_data.json"
     contrato_path.parent.mkdir(parents=True)
-    import json
-
     contrato_path.write_text(
         json.dumps(_contrato_valido(), ensure_ascii=False), encoding="utf-8"
     )
