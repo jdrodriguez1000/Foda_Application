@@ -1129,3 +1129,76 @@ def test_field_name_duplicado_en_dataset_lanza_flow_contract_error_y_no_crea_out
         Onboarding().run(ctx)
 
     assert not ruta_salida.exists()
+
+
+def test_ante_inconsistencia_el_fallo_ocurre_en_validate_antes_de_execute_write_outputs(
+    tmp_path: Path,
+) -> None:
+    """Caso 22 (CA-21, TSK-32/TSK-07): ante cualquier inconsistencia de
+    contrato (p. ej. CA-14..CA-19), el fallo ocurre en validate() -- antes de
+    llegar a execute()/write_outputs() --, por lo que no queda
+    map_client_data.json ni ninguna salida parcial en disco.
+
+    A diferencia de los casos 16-21 (que solo comprueban ausencia del
+    artefacto final), este test instrumenta las 4 fases del template method
+    (mismo patron que el caso 2, CA-11) para verificar explicitamente que
+    execute() y write_outputs() NUNCA se invocan cuando validate() lanza
+    FlowContractError: calls == ["load_inputs", "validate"], sin "execute"
+    ni "write_outputs". Se reutiliza la inconsistencia del caso 16
+    (product_hierarchy.levels == []) como representante de "cualquier
+    inconsistencia" (CA-14..CA-19 comparten el mismo mecanismo: validate()
+    lanza FlowContractError antes de que execute()/write_outputs() corran).
+
+    Nota (D-037/D-060, verde directo): Flow.run() (core CONFORME,
+    src/foda/core/flow.py) invoca load_inputs -> validate -> execute ->
+    write_outputs en linea recta; si validate() lanza una excepcion, Python
+    interrumpe la ejecucion de run() antes de alcanzar las lineas
+    result = self.execute(ctx) y self.write_outputs(ctx, result) -- no hay
+    manera de que execute()/write_outputs() se invoquen tras una excepcion
+    en la linea anterior. Ademas, Onboarding.validate() (casos 16-21,
+    TSK-07) ya lanza FlowContractError para product_hierarchy.levels == []
+    sin haber escrito nada en disco (load_inputs()/validate() son de solo
+    lectura; unicamente write_outputs() escribe, y write_outputs() nunca se
+    alcanza). Por lo tanto este test se confirma EMPIRICAMENTE en verde
+    directo, sin necesidad de codigo de produccion nuevo: no hay rojo
+    genuino que forzar."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    contrato = _contrato_valido()
+    contrato["product_hierarchy"]["levels"] = []
+
+    contrato_path = ctx.outputs_dir / "010_discovery/contract_data.json"
+    contrato_path.parent.mkdir(parents=True)
+    contrato_path.write_text(
+        json.dumps(contrato, ensure_ascii=False), encoding="utf-8"
+    )
+
+    calls: list[str] = []
+
+    class Instrumented(Onboarding):
+        def load_inputs(self, ctx: ClientContext) -> None:
+            calls.append("load_inputs")
+            super().load_inputs(ctx)
+
+        def validate(self, ctx: ClientContext) -> None:
+            calls.append("validate")
+            super().validate(ctx)
+
+        def execute(self, ctx: ClientContext) -> FlowResult:
+            calls.append("execute")
+            return super().execute(ctx)
+
+        def write_outputs(self, ctx: ClientContext, result: FlowResult) -> None:
+            calls.append("write_outputs")
+            super().write_outputs(ctx, result)
+
+    ruta_salida = ctx.outputs_dir / "020_onboarding/map_client_data.json"
+
+    with pytest.raises(FlowContractError):
+        Instrumented().run(ctx)
+
+    assert calls == ["load_inputs", "validate"]
+    assert not ruta_salida.exists()
+    assert not ruta_salida.parent.exists()
