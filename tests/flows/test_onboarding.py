@@ -942,6 +942,52 @@ def test_maps_to_con_level_inexistente_lanza_flow_contract_error_y_no_crea_outpu
     assert not ruta_salida.exists()
 
 
+def test_enum_invalido_en_field_type_lanza_flow_contract_error_y_no_crea_output(
+    tmp_path: Path,
+) -> None:
+    """Caso 19 (CA-17, TSK-29/TSK-07): si field.type (o kind/source_medium/
+    periodicity) no pertenece a su vocabulario cerrado (DS-ONB-2, Sec.
+    Contratos de Datos de la spec: field.type in {string, integer, number,
+    date, boolean}), run(ctx) lanza FlowContractError en validate() --
+    validacion de coherencia de contenido, TSK-07 -- antes de llegar a
+    execute()/write_outputs(), y no se crea map_client_data.json.
+
+    Aqui: el field "clase" del dataset "ventas" declara type="texto", valor
+    fuera del vocabulario cerrado de field.type ({string, integer, number,
+    date, boolean}).
+
+    Hoy Onboarding.validate() (casos 16-18, CA-14/CA-15/CA-16, TSK-07) valida
+    levels no vacios, claves de miembro y maps_to valido; no inspecciona el
+    vocabulario cerrado de field.type/kind/source_medium/periodicity. Con
+    este fixture, ningun error se dispara en validate() y _dataset() (caso
+    8, CA-08) hace pass-through puro de type sin validarlo, por lo que
+    run(ctx) completa exitosamente y escribe map_client_data.json. Este test
+    debe fallar hoy (rojo genuino) porque no se lanza FlowContractError: la
+    validacion de enums (TSK-07) todavia no existe."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    contrato = _contrato_valido()
+    # "clase" del dataset "ventas" pasa de type="string" (valido) a
+    # type="texto": "texto" no pertenece al vocabulario cerrado de
+    # field.type ({string, integer, number, date, boolean}).
+    contrato["historical_data"]["datasets"][0]["fields"][2]["type"] = "texto"
+
+    contrato_path = ctx.outputs_dir / "010_discovery/contract_data.json"
+    contrato_path.parent.mkdir(parents=True)
+    contrato_path.write_text(
+        json.dumps(contrato, ensure_ascii=False), encoding="utf-8"
+    )
+
+    ruta_salida = ctx.outputs_dir / "020_onboarding/map_client_data.json"
+
+    with pytest.raises(FlowContractError):
+        Onboarding().run(ctx)
+
+    assert not ruta_salida.exists()
+
+
 def test_miembro_con_claves_que_no_coinciden_con_levels_lanza_flow_contract_error_y_no_crea_output(
     tmp_path: Path,
 ) -> None:
