@@ -2,12 +2,31 @@
   "feature": "flow_orchestrator",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "spec_writer",
+  "current_stage": "plan_builder",
   "stages": {
     "feature_definer":    { "status": "done",    "artifact": "definition.md" },
-    "spec_writer":        { "status": "done",  "artifact": "spec.md",  "gate": "human", "awaiting_approval": true },
-    "plan_builder":       { "status": "pending",  "artifact": "plan.md",  "gate": "human", "awaiting_approval": false },
-    "tdd":                { "status": "pending",  "cases": [] },
+    "spec_writer":        { "status": "done",  "artifact": "spec.md",  "gate": "human", "awaiting_approval": false, "approved": true },
+    "plan_builder":       { "status": "done",  "artifact": "plan.md",  "gate": "human", "awaiting_approval": true },
+    "tdd": {
+      "status": "pending",
+      "cases": [
+        { "id": 1,  "desc": "resolve_flow(\"onboarding\") devuelve una instancia de Onboarding (subclase de Flow).", "status": "pending" },
+        { "id": 2,  "desc": "FLOWS es un mapeo explicito nombre->clase Flow que contiene \"onboarding\" -> Onboarding.", "status": "pending" },
+        { "id": 3,  "desc": "resolve_flow(nombre no registrado) lanza ValueError.", "status": "pending" },
+        { "id": 4,  "desc": "main([\"run\",\"ABC\",\"--flow\",\"onboarding\"]) con ABC existente y contract_data.json presente devuelve 0 y deja escrito map_client_data.json.", "status": "pending" },
+        { "id": 5,  "desc": "En el exito, stdout confirma legiblemente el flujo onboarding, el cliente ABC y la ruta del artefacto producido (map_client_data.json).", "status": "pending" },
+        { "id": 6,  "desc": "Con Onboarding.run/flow.run espiado, run lo invoca exactamente una vez con un ctx cuyo name == \"ABC\".", "status": "pending" },
+        { "id": 7,  "desc": "main([\"run\",\"ABC\",\"--flow\",\"inexistente\"]) devuelve 1, stderr nombra el flujo desconocido, sin Traceback, sin artefacto escrito.", "status": "pending" },
+        { "id": 8,  "desc": "main([\"run\",\"GHOST\",\"--flow\",\"onboarding\"]) (cliente inexistente) devuelve 1, stderr nombra el cliente, sin Traceback, nada escrito.", "status": "pending" },
+        { "id": 9,  "desc": "main([\"run\",\"ABC\",\"--flow\",\"onboarding\"]) sin contract_data.json devuelve 1, stderr refleja FlowContractError, sin Traceback, no se escribe map_client_data.json.", "status": "pending" },
+        { "id": 10, "desc": "main([\"status\",\"ABC\"]) con ABC existente devuelve 0 y stdout lista onboarding con contract_data y map_client_data, cada uno con marcador [presente]/[ausente].", "status": "pending" },
+        { "id": 11, "desc": "foda status refleja el disco: contract_data presente / map_client_data ausente; tras un run exitoso, un nuevo status marca ambos presentes.", "status": "pending" },
+        { "id": 12, "desc": "main([\"status\",\"GHOST\"]) (cliente inexistente) devuelve 1, stderr nombra el cliente (estilo run), sin Traceback.", "status": "pending" },
+        { "id": 13, "desc": "Ante cliente inexistente, ni run GHOST ni status GHOST crean <raiz>/clients/ ni la carpeta clients/GHOST/.", "status": "pending" },
+        { "id": 14, "desc": "Un flujo falso en FLOWS (monkeypatch) es descubierto por status ABC (lo lista) y por run ABC --flow fake (despacha a FakeFlow.run), sin tocar la logica de run/status.", "status": "pending" },
+        { "id": 15, "desc": "Errores de parseo de argparse -> codigo 2: run ABC (falta --flow), run (falta cliente) y status (falta cliente).", "status": "pending" }
+      ]
+    },
     "integration_tester": { "status": "pending" },
     "spec_verifier":      { "status": "pending",  "artifact": "verification.md" }
   }
