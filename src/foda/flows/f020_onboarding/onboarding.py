@@ -24,11 +24,17 @@ referencie un <level> existente en la jerarquia correspondiente
 de cada dataset pertenezcan a su vocabulario cerrado (spec.md, Contratos de
 Datos) delegando en el helper _check_enum(label, value, allowed) para las
 4 comprobaciones identicas en forma (valor no en el set permitido -> mismo
-mensaje de FlowContractError). El resto de reglas de contenido (CA-18,
-CA-19: fechas, name duplicado) queda para casos posteriores del bucle.
+mensaje de FlowContractError); caso 20 (CA-18, TSK-07) cerrado: validate()
+llama ademas a _validate_dates(historical_data), que por cada file de cada
+dataset exige que period_start/period_end sean fechas YYYY-MM-DD validas
+(via el helper _parse_date, formato + calendario real) y que
+period_start <= period_end (rango no invertido). El resto de reglas de
+contenido (CA-19: name duplicado) queda para casos posteriores del bucle.
 """
 
 import json
+import re
+from datetime import date
 
 from foda.core.context import ClientContext
 from foda.core.flow import Artifact, Flow, FlowContractError, FlowResult
@@ -148,6 +154,41 @@ def _validate_enums(historical_data: dict) -> None:
             _check_enum("field.type", field.get("type"), _FIELD_TYPES)
 
 
+_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def _parse_date(label: str, value: object) -> date:
+    """DS-ONB-1 (TSK-07, CA-18): valida que value sea una fecha en formato
+    YYYY-MM-DD valida (calendario real, no solo el patron) y la devuelve
+    parseada; lanza FlowContractError en caso contrario."""
+    if not isinstance(value, str) or not _DATE_RE.match(value):
+        raise FlowContractError(
+            f"{label} '{value}' no tiene el formato de fecha YYYY-MM-DD."
+        )
+    try:
+        return date.fromisoformat(value)
+    except ValueError as exc:
+        raise FlowContractError(
+            f"{label} '{value}' no tiene el formato de fecha YYYY-MM-DD."
+        ) from exc
+
+
+def _validate_dates(historical_data: dict) -> None:
+    """DS-ONB-1 (TSK-07, CA-18): valida que period_start/period_end de cada
+    file de historical_data.datasets sean fechas YYYY-MM-DD validas y que
+    period_start <= period_end (rango no invertido)."""
+    for dataset in historical_data.get("datasets", []):
+        for file_ in dataset.get("files", []):
+            period_start = _parse_date("period_start", file_.get("period_start"))
+            period_end = _parse_date("period_end", file_.get("period_end"))
+            if period_start > period_end:
+                raise FlowContractError(
+                    "period_start "
+                    f"'{file_.get('period_start')}' es mayor que period_end "
+                    f"'{file_.get('period_end')}'."
+                )
+
+
 def _dataset(dataset: dict) -> dict[str, object]:
     """DS-ONB-5: construye el bloque {kind, source_medium, periodicity,
     file_count, files, fields} de un dataset. file_count es la cantidad de
@@ -209,10 +250,11 @@ class Onboarding(Flow):
         """Fase 2a (DS-ONB-5): existencia base del require. Fase 2b (DS-ONB-1,
         TSK-07, en curso): coherencia de contenido del contrato ya cargado;
         por ahora levels no vacios (CA-14), claves de miembro coincidentes
-        con levels (CA-15), field.maps_to a nivel existente (CA-16) y enums
+        con levels (CA-15), field.maps_to a nivel existente (CA-16), enums
         de field.type/kind/source_medium/periodicity dentro de su vocabulario
-        cerrado (CA-17). Resto de reglas de contenido (CA-18..CA-19) quedan
-        para casos posteriores del bucle."""
+        cerrado (CA-17) y period_start/period_end de cada file en formato
+        YYYY-MM-DD valido con period_start <= period_end (CA-18). Resto de
+        reglas de contenido (CA-19) queda para casos posteriores del bucle."""
         super().validate(ctx)
         contract = self._contract or {}
         hierarchies: dict[str, dict] = {}
@@ -223,6 +265,7 @@ class Onboarding(Flow):
         historical_data = contract.get("historical_data", {})
         _validate_maps_to(hierarchies, historical_data)
         _validate_enums(historical_data)
+        _validate_dates(historical_data)
 
     def execute(self, ctx: ClientContext) -> FlowResult:
         """Deriva en memoria el mapa canonico (identidad del cliente +
