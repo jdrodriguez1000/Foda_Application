@@ -298,3 +298,34 @@ def test_hierarchies_geography_levels_y_depth(tmp_path: Path) -> None:
     geography = mapa.get("hierarchies", {}).get("geography", {})
     assert geography.get("levels") == ["region", "pais", "ciudad", "sede"]
     assert geography.get("depth") == 4
+
+
+def test_hierarchies_unique_values_y_unique_counts_por_nivel(tmp_path: Path) -> None:
+    """Caso 5 (CA-04, DS-ONB-3): para cada nivel de product y geography,
+    unique_values reporta los valores distintos observados en members en
+    orden alfabetico ascendente y unique_counts el conteo correspondiente.
+    Con el fixture: product.unique_values.familia == ["Bebidas","Snacks"]
+    (unique_counts.familia == 2) y geography.unique_values.ciudad ==
+    ["Bogota","Medellin"] (unique_counts.ciudad == 2)."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    contrato_path = ctx.outputs_dir / "010_discovery/contract_data.json"
+    contrato_path.parent.mkdir(parents=True)
+    contrato_path.write_text(
+        json.dumps(_contrato_valido(), ensure_ascii=False), encoding="utf-8"
+    )
+
+    Onboarding().run(ctx)
+
+    ruta_salida = ctx.outputs_dir / "020_onboarding/map_client_data.json"
+    mapa = json.loads(ruta_salida.read_text(encoding="utf-8"))
+
+    product = mapa.get("hierarchies", {}).get("product", {})
+    geography = mapa.get("hierarchies", {}).get("geography", {})
+
+    assert product.get("unique_values", {}).get("familia") == ["Bebidas", "Snacks"]
+    assert product.get("unique_counts", {}).get("familia") == 2
+    assert geography.get("unique_values", {}).get("ciudad") == ["Bogota", "Medellin"]
+    assert geography.get("unique_counts", {}).get("ciudad") == 2
