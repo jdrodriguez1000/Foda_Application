@@ -9,7 +9,7 @@ import json
 from pathlib import Path
 
 from foda.core.context import ClientContext
-from foda.core.flow import FlowResult
+from foda.core.flow import Artifact, Flow, FlowResult
 from foda.core.scaffold import create_client
 from foda.flows.f020_onboarding.onboarding import Onboarding
 
@@ -180,3 +180,70 @@ def test_run_sobre_fixture_valido_escribe_map_client_data_y_devuelve_flow_result
     assert result.success is True
     assert result.outputs == [ruta_esperada]
     assert ruta_esperada.exists()
+
+
+def test_onboarding_hereda_flow_declara_contratos_y_completa_las_4_fases(
+    tmp_path: Path,
+) -> None:
+    """Caso 2 (CA-11): Onboarding hereda Flow, declara requires/produces con
+    los Artifact esperados y completa las 4 fases del template method sin
+    sobreescribir run.
+
+    Nota TDD (D-037, plan.md Sec.5): este caso nace en verde directo. El
+    esqueleto de Onboarding construido para el caso 1 (CA-01, TSK-02) ya
+    hereda de Flow, declara requires/produces con los Artifact exactos del
+    contrato y no sobreescribe run(), por lo que las 4 fases del template
+    method (load_inputs -> validate -> execute -> write_outputs) ya se
+    ejecutan en el orden correcto. No hubo ciclo rojo->verde para este caso:
+    se confirmo empiricamente (tdd_tester) que el test pasa sin cambios de
+    produccion, y el humano aprobo tratarlo como verde directo, sin pasar
+    por tdd_coder/tdd_refactor."""
+    assert issubclass(Onboarding, Flow)
+    assert Onboarding.requires == [
+        Artifact(
+            name="contract_data",
+            base="outputs",
+            relative="010_discovery/contract_data.json",
+        )
+    ]
+    assert Onboarding.produces == [
+        Artifact(
+            name="map_client_data",
+            base="outputs",
+            relative="020_onboarding/map_client_data.json",
+        )
+    ]
+    assert Onboarding.run is Flow.run
+
+    calls: list[str] = []
+
+    class Instrumented(Onboarding):
+        def load_inputs(self, ctx: ClientContext) -> None:
+            calls.append("load_inputs")
+            super().load_inputs(ctx)
+
+        def validate(self, ctx: ClientContext) -> None:
+            calls.append("validate")
+            super().validate(ctx)
+
+        def execute(self, ctx: ClientContext) -> FlowResult:
+            calls.append("execute")
+            return super().execute(ctx)
+
+        def write_outputs(self, ctx: ClientContext, result: FlowResult) -> None:
+            calls.append("write_outputs")
+            super().write_outputs(ctx, result)
+
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    contrato_path = ctx.outputs_dir / "010_discovery/contract_data.json"
+    contrato_path.parent.mkdir(parents=True)
+    contrato_path.write_text(
+        json.dumps(_contrato_valido(), ensure_ascii=False), encoding="utf-8"
+    )
+
+    Instrumented().run(ctx)
+
+    assert calls == ["load_inputs", "validate", "execute", "write_outputs"]
