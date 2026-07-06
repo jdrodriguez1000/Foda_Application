@@ -892,6 +892,56 @@ def test_product_levels_vacio_lanza_flow_contract_error_y_no_crea_output(
     assert not ruta_salida.exists()
 
 
+def test_maps_to_con_level_inexistente_lanza_flow_contract_error_y_no_crea_output(
+    tmp_path: Path,
+) -> None:
+    """Caso 18 (CA-16, TSK-28/TSK-07): si un field.maps_to referencia
+    "product.<level>" o "geography.<level>" con un <level> que NO existe en
+    los `levels` declarados de esa jerarquia, run(ctx) lanza
+    FlowContractError en validate() -- validacion de coherencia de
+    contenido, TSK-07 -- antes de llegar a execute()/write_outputs(), y no
+    se crea map_client_data.json.
+
+    Aqui: el field "clase" del dataset "ventas" declara
+    maps_to="product.talla", pero "talla" no esta en
+    product_hierarchy.levels (["familia","categoria","subcategoria","clase"]).
+    maps_to=None (precio_unitario) y maps_to="measure"/"time" (sin punto)
+    siguen siendo validos y no deben disparar este error.
+
+    Hoy Onboarding.validate() (casos 16-17, CA-14/CA-15, TSK-07) solo valida
+    levels no vacios y claves de miembro; no inspecciona los maps_to de los
+    fields de datasets. Con este fixture, ningun error se dispara en
+    validate() y _dataset() (caso 8, CA-08) hace pass-through puro de
+    maps_to sin validarlo, por lo que run(ctx) completa exitosamente y
+    escribe map_client_data.json. Este test debe fallar hoy (rojo genuino)
+    porque no se lanza FlowContractError: la validacion de maps_to (TSK-07)
+    todavia no existe."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    contrato = _contrato_valido()
+    # "clase" del dataset "ventas" pasa de maps_to="product.clase" (valido)
+    # a maps_to="product.talla": "talla" no existe en
+    # product_hierarchy.levels.
+    contrato["historical_data"]["datasets"][0]["fields"][2]["maps_to"] = (
+        "product.talla"
+    )
+
+    contrato_path = ctx.outputs_dir / "010_discovery/contract_data.json"
+    contrato_path.parent.mkdir(parents=True)
+    contrato_path.write_text(
+        json.dumps(contrato, ensure_ascii=False), encoding="utf-8"
+    )
+
+    ruta_salida = ctx.outputs_dir / "020_onboarding/map_client_data.json"
+
+    with pytest.raises(FlowContractError):
+        Onboarding().run(ctx)
+
+    assert not ruta_salida.exists()
+
+
 def test_miembro_con_claves_que_no_coinciden_con_levels_lanza_flow_contract_error_y_no_crea_output(
     tmp_path: Path,
 ) -> None:
