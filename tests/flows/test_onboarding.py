@@ -854,3 +854,39 @@ def test_contract_data_ausente_lanza_flow_contract_error_y_no_crea_output(
         Onboarding().run(ctx)
 
     assert not ruta_salida.exists()
+
+
+def test_product_levels_vacio_lanza_flow_contract_error_y_no_crea_output(
+    tmp_path: Path,
+) -> None:
+    """Caso 16 (CA-14, TSK-26/TSK-07): si product_hierarchy.levels == []
+    (jerarquia declarada sin niveles), run(ctx) lanza FlowContractError en
+    validate() -- validacion de coherencia de contenido, TSK-07 -- antes de
+    llegar a execute()/write_outputs(), y no se crea map_client_data.json.
+
+    Hoy Onboarding.validate() (caso 1, CA-01, TSK-02) delega integramente en
+    super().validate(ctx) (Flow.validate, existencia base del require) y no
+    valida el contenido del contrato ya cargado; con levels == [] no se
+    lanza ningun error y run(ctx) completa exitosamente, escribiendo
+    map_client_data.json. Este test debe fallar hoy (rojo genuino) porque
+    no se lanza FlowContractError: la validacion de contenido (TSK-07)
+    todavia no existe."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    contrato = _contrato_valido()
+    contrato["product_hierarchy"]["levels"] = []
+
+    contrato_path = ctx.outputs_dir / "010_discovery/contract_data.json"
+    contrato_path.parent.mkdir(parents=True)
+    contrato_path.write_text(
+        json.dumps(contrato, ensure_ascii=False), encoding="utf-8"
+    )
+
+    ruta_salida = ctx.outputs_dir / "020_onboarding/map_client_data.json"
+
+    with pytest.raises(FlowContractError):
+        Onboarding().run(ctx)
+
+    assert not ruta_salida.exists()
