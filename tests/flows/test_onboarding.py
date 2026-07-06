@@ -579,6 +579,66 @@ def test_maps_to_proviene_del_contrato_no_del_nombre_de_columna(
     ]
 
 
+def test_hierarchies_product_levels_de_3_niveles_depth_igual_a_3(
+    tmp_path: Path,
+) -> None:
+    """Caso 11 (CA-05, TSK-21/TSK-03): dado un contrato cuya
+    product_hierarchy.levels tiene 3 niveles (no 4) con miembros coherentes
+    (exactamente esas 3 claves), el mapa refleja hierarchies.product.levels
+    en el orden declarado y hierarchies.product.depth == 3, sin asumir 4
+    niveles.
+
+    Nota TDD (D-037, plan.md Sec.7, precedente casos 2/CA-11 y 9/CA-09): este
+    caso nace en verde directo. _hierarchy() (cerrado en el caso 4, CA-03)
+    ya deriva depth = len(levels) e itera unique_values/unique_counts sobre
+    la lista `levels` recibida, sin asumir ni hardcodear 4 niveles ni claves
+    fijas (familia/categoria/subcategoria/clase); plan.md Sec.7 anticipa
+    explicitamente que esta genericidad cubre las variantes de 3 y 5
+    niveles (CA-05/CA-05b). Se confirmo empiricamente (tdd_tester) que este
+    test pasa sin cambios de produccion, y el humano aprobo tratarlo como
+    verde directo, sin pasar por tdd_coder/tdd_refactor."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    contrato = _contrato_valido()
+    contrato["product_hierarchy"] = {
+        "levels": ["categoria", "subcategoria", "clase"],
+        "members": [
+            {
+                "categoria": "Aguas",
+                "subcategoria": "Sin gas",
+                "clase": "Agua 600ml",
+            },
+            {
+                "categoria": "Gaseosas",
+                "subcategoria": "Cola",
+                "clase": "Cola 1.5L",
+            },
+            {
+                "categoria": "Papas",
+                "subcategoria": "Fritas",
+                "clase": "Papas 45g",
+            },
+        ],
+    }
+
+    contrato_path = ctx.outputs_dir / "010_discovery/contract_data.json"
+    contrato_path.parent.mkdir(parents=True)
+    contrato_path.write_text(
+        json.dumps(contrato, ensure_ascii=False), encoding="utf-8"
+    )
+
+    Onboarding().run(ctx)
+
+    ruta_salida = ctx.outputs_dir / "020_onboarding/map_client_data.json"
+    mapa = json.loads(ruta_salida.read_text(encoding="utf-8"))
+
+    product = mapa.get("hierarchies", {}).get("product", {})
+    assert product.get("levels") == ["categoria", "subcategoria", "clase"]
+    assert product.get("depth") == 3
+
+
 def test_totals_dataset_count_y_file_count(tmp_path: Path) -> None:
     """Caso 10 (CA-10): el mapa expone totals.dataset_count == 2 (ventas +
     inventario) y totals.file_count == 3 (1 archivo de ventas + 2 archivos
