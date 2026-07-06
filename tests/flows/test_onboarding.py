@@ -247,3 +247,29 @@ def test_onboarding_hereda_flow_declara_contratos_y_completa_las_4_fases(
     Instrumented().run(ctx)
 
     assert calls == ["load_inputs", "validate", "execute", "write_outputs"]
+
+
+def test_hierarchies_product_levels_y_depth(tmp_path: Path) -> None:
+    """Caso 3 (CA-02): en el mapa, hierarchies.product.levels ==
+    ["familia","categoria","subcategoria","clase"] (orden declarado tal como
+    figura en product_hierarchy.levels del contrato) y
+    hierarchies.product.depth == 4 (DS-ONB-2, esquema de map_client_data.json,
+    Sec. Salida de la spec)."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    contrato_path = ctx.outputs_dir / "010_discovery/contract_data.json"
+    contrato_path.parent.mkdir(parents=True)
+    contrato_path.write_text(
+        json.dumps(_contrato_valido(), ensure_ascii=False), encoding="utf-8"
+    )
+
+    Onboarding().run(ctx)
+
+    ruta_salida = ctx.outputs_dir / "020_onboarding/map_client_data.json"
+    mapa = json.loads(ruta_salida.read_text(encoding="utf-8"))
+
+    product = mapa.get("hierarchies", {}).get("product", {})
+    assert product.get("levels") == ["familia", "categoria", "subcategoria", "clase"]
+    assert product.get("depth") == 4
