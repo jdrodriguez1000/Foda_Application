@@ -10,11 +10,13 @@ local `datasets` compartida con la seccion "datasets", sin mutacion
 posterior del mapa-); casos 11-15 cerrados como verde directo (profundidad
 variable de niveles, determinismo de la serializacion -TSK-06- y ausencia
 de artefactos parciales, ya cubiertos por el diseno existente); casos 16
-(CA-14) y 17 (CA-15, TSK-07) cerrados: validate() ahora exige levels no
-vacios en product_hierarchy/geography y que las claves de cada miembro
-coincidan exactamente con levels (ni falten ni sobren). El resto de reglas
-de contenido (CA-16..CA-19: maps_to a nivel inexistente, enums, fechas,
-name duplicado) queda para casos posteriores del bucle.
+(CA-14) y 17 (CA-15, TSK-07) cerrados: validate() delega en el helper
+_validate_hierarchy(name, hierarchy) -mismo patron que _hierarchy/_dataset
+en execute()- que exige levels no vacios en product_hierarchy/geography y
+que las claves de cada miembro coincidan exactamente con levels (ni falten
+ni sobren). El resto de reglas de contenido (CA-16..CA-19: maps_to a nivel
+inexistente, enums, fechas, name duplicado) queda para casos posteriores
+del bucle.
 """
 
 import json
@@ -55,6 +57,24 @@ def _hierarchy(levels: list[str], members: list[dict[str, str]]) -> dict[str, ob
         "unique_values": unique_values,
         "unique_counts": unique_counts,
     }
+
+
+def _validate_hierarchy(name: str, hierarchy: dict) -> None:
+    """DS-ONB-1 (TSK-07): valida el contenido de una jerarquia
+    (product_hierarchy o geography) ya cargada. Levels no vacios (CA-14) y
+    claves de cada miembro coincidentes exactamente con levels -ni falten ni
+    sobren- (CA-15). Lanza FlowContractError con el mismo mensaje que antes
+    de este refactor; el resto de reglas de contenido (CA-16..CA-19) queda
+    para casos posteriores del bucle."""
+    levels = hierarchy.get("levels", [])
+    if not levels:
+        raise FlowContractError(f"{name}.levels no puede estar vacio.")
+    for member in hierarchy.get("members", []):
+        if set(member.keys()) != set(levels):
+            raise FlowContractError(
+                f"{name}: un miembro tiene claves {sorted(member.keys())} "
+                f"que no coinciden con levels {sorted(levels)}."
+            )
 
 
 def _dataset(dataset: dict) -> dict[str, object]:
@@ -123,19 +143,7 @@ class Onboarding(Flow):
         super().validate(ctx)
         contract = self._contract or {}
         for hierarchy_name in ("product_hierarchy", "geography"):
-            hierarchy = contract.get(hierarchy_name, {})
-            levels = hierarchy.get("levels", [])
-            if not levels:
-                raise FlowContractError(
-                    f"{hierarchy_name}.levels no puede estar vacio."
-                )
-            for member in hierarchy.get("members", []):
-                if set(member.keys()) != set(levels):
-                    raise FlowContractError(
-                        f"{hierarchy_name}: un miembro tiene claves "
-                        f"{sorted(member.keys())} que no coinciden con "
-                        f"levels {sorted(levels)}."
-                    )
+            _validate_hierarchy(hierarchy_name, contract.get(hierarchy_name, {}))
 
     def execute(self, ctx: ClientContext) -> FlowResult:
         """Deriva en memoria el mapa canonico (identidad del cliente +
