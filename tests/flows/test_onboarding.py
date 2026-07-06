@@ -890,3 +890,47 @@ def test_product_levels_vacio_lanza_flow_contract_error_y_no_crea_output(
         Onboarding().run(ctx)
 
     assert not ruta_salida.exists()
+
+
+def test_miembro_con_claves_que_no_coinciden_con_levels_lanza_flow_contract_error_y_no_crea_output(
+    tmp_path: Path,
+) -> None:
+    """Caso 17 (CA-15, TSK-27/TSK-07): si un miembro de product_hierarchy o
+    geography tiene claves que no coinciden EXACTAMENTE con su `levels`
+    declarado (aqui: falta la clave "clase" en el segundo miembro de
+    product_hierarchy, que solo declara 3 de las 4 claves de levels), run(ctx)
+    lanza FlowContractError en validate() -- validacion de coherencia de
+    contenido, TSK-07 -- antes de llegar a execute()/write_outputs(), y no se
+    crea map_client_data.json.
+
+    Hoy Onboarding.validate() (caso 16, CA-14, TSK-07 primera regla) solo
+    valida que levels no este vacio; no compara las claves de cada miembro
+    contra `levels`. Con este fixture, todos los miembros de members siguen
+    siendo dicts validos (solo le falta una clave a uno de ellos) y ningun
+    error se dispara hoy: _hierarchy() itera `for level in levels: member[level]`
+    y fallaria con KeyError (no FlowContractError) al llegar a execute(), asi
+    que este test debe fallar hoy (rojo genuino) porque no se lanza
+    FlowContractError: la validacion de claves de miembro (TSK-07) todavia no
+    existe."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    contrato = _contrato_valido()
+    # Segundo miembro de product_hierarchy pierde la clave "clase": sus
+    # claves ({"familia","categoria","subcategoria"}) ya no coinciden
+    # exactamente con levels (["familia","categoria","subcategoria","clase"]).
+    del contrato["product_hierarchy"]["members"][1]["clase"]
+
+    contrato_path = ctx.outputs_dir / "010_discovery/contract_data.json"
+    contrato_path.parent.mkdir(parents=True)
+    contrato_path.write_text(
+        json.dumps(contrato, ensure_ascii=False), encoding="utf-8"
+    )
+
+    ruta_salida = ctx.outputs_dir / "020_onboarding/map_client_data.json"
+
+    with pytest.raises(FlowContractError):
+        Onboarding().run(ctx)
+
+    assert not ruta_salida.exists()
