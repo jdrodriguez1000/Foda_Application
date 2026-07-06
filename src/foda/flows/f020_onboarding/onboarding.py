@@ -8,9 +8,10 @@ caso 9 (CA-09, verde directo) y caso 10 (CA-10, TSK-20/TSK-05) cerrados:
 derivacion de hierarchies.product y hierarchies.geography (levels/depth/
 unique_values/unique_counts), de datasets (kind/source_medium/periodicity/
 file_count/files/fields, en el orden del contrato; maps_to se toma tal cual
-del contrato) y de totals (dataset_count/file_count, sumado desde datasets).
-La serializacion determinista (TSK-06) y la validacion de contenido (TSK-07)
-quedan para casos posteriores del bucle.
+del contrato) y de totals (dataset_count/file_count, derivados de una
+variable local `datasets` compartida con la seccion "datasets", sin
+mutacion posterior del mapa). La serializacion determinista (TSK-06) y la
+validacion de contenido (TSK-07) quedan para casos posteriores del bucle.
 """
 
 import json
@@ -123,7 +124,10 @@ class Onboarding(Flow):
         product = contract.get("product_hierarchy", {})
         geography = contract.get("geography", {})
         historical_data = contract.get("historical_data", {})
-        mapa = {
+        datasets = [
+            _dataset(dataset) for dataset in historical_data.get("datasets", [])
+        ]
+        self._mapa = {
             "schema_version": contract.get("schema_version"),
             "client": contract.get("client"),
             "hierarchies": {
@@ -134,17 +138,12 @@ class Onboarding(Flow):
                     geography.get("levels", []), geography.get("members", [])
                 ),
             },
-            "datasets": [
-                _dataset(dataset) for dataset in historical_data.get("datasets", [])
-            ],
+            "datasets": datasets,
+            "totals": {
+                "dataset_count": len(datasets),
+                "file_count": sum(dataset["file_count"] for dataset in datasets),
+            },
         }
-        mapa["totals"] = {
-            "dataset_count": len(mapa["datasets"]),
-            "file_count": sum(
-                dataset["file_count"] for dataset in mapa["datasets"]
-            ),
-        }
-        self._mapa = mapa
         return FlowResult(success=True, outputs=[self.produces[0].path(ctx)])
 
     def write_outputs(self, ctx: ClientContext, result: FlowResult) -> None:
