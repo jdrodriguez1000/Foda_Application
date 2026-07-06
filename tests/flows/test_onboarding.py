@@ -1079,3 +1079,53 @@ def test_period_start_mayor_que_period_end_lanza_flow_contract_error_y_no_crea_o
         Onboarding().run(ctx)
 
     assert not ruta_salida.exists()
+
+
+def test_field_name_duplicado_en_dataset_lanza_flow_contract_error_y_no_crea_output(
+    tmp_path: Path,
+) -> None:
+    """Caso 21 (CA-19, TSK-31/TSK-07): si dos fields de un mismo dataset de
+    historical_data comparten el mismo `name` (duplicado), run(ctx) lanza
+    FlowContractError en validate() -- validacion de coherencia de
+    contenido, TSK-07 -- antes de llegar a execute()/write_outputs(), y no
+    se crea map_client_data.json.
+
+    Aqui: el dataset "ventas" gana un field adicional con name="cantidad",
+    duplicando el name del field "cantidad" ya existente (measure); el resto
+    de fields (fecha/sede/clase/precio_unitario) queda intacto.
+
+    Hoy Onboarding.validate() (casos 16-20, CA-14/CA-15/CA-16/CA-17/CA-18,
+    TSK-07) valida levels no vacios, claves de miembro, maps_to, enums y
+    fechas/rango; no inspecciona si los `name` de los fields de un dataset
+    son unicos. Con este fixture, ningun error se dispara en validate() y
+    _dataset() (caso 8, CA-08) hace pass-through puro de fields sin validar
+    unicidad de name, por lo que run(ctx) completa exitosamente y escribe
+    map_client_data.json. Este test debe fallar hoy (rojo genuino) porque no
+    se lanza FlowContractError: la validacion de name duplicado (TSK-07)
+    todavia no existe."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    contrato = _contrato_valido()
+    contrato["historical_data"]["datasets"][0]["fields"].append(
+        {
+            "name": "cantidad",
+            "type": "integer",
+            "required": True,
+            "maps_to": "measure",
+        }
+    )
+
+    contrato_path = ctx.outputs_dir / "010_discovery/contract_data.json"
+    contrato_path.parent.mkdir(parents=True)
+    contrato_path.write_text(
+        json.dumps(contrato, ensure_ascii=False), encoding="utf-8"
+    )
+
+    ruta_salida = ctx.outputs_dir / "020_onboarding/map_client_data.json"
+
+    with pytest.raises(FlowContractError):
+        Onboarding().run(ctx)
+
+    assert not ruta_salida.exists()
