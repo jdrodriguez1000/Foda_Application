@@ -2,13 +2,13 @@
 
 Fuente: 600_features/onboarding/tracer_bullet/spec.md (DS-ONB-1..5) y plan.md
 (TSK-01..TSK-09). Bucle TDD en curso: caso 1 (CA-01, TSK-02), caso 3 (CA-02),
-caso 4 (CA-03, TSK-03), caso 5 (CA-04, TSK-15/TSK-03) y caso 6 (CA-06,
-TSK-16/TSK-04) cerrados: derivacion de hierarchies.product y
-hierarchies.geography (levels/depth/unique_values/unique_counts) y de
-datasets (kind/source_medium/periodicity, en el orden del contrato). El resto
-de datasets (file_count/files, TSK-04), fields/maps_to (TSK-05), totals, la
-serializacion determinista (TSK-06) y la validacion de contenido (TSK-07)
-quedan para casos posteriores del bucle.
+caso 4 (CA-03, TSK-03), caso 5 (CA-04, TSK-15/TSK-03), caso 6 (CA-06,
+TSK-16/TSK-04) y caso 7 (CA-07, TSK-17/TSK-04) cerrados: derivacion de
+hierarchies.product y hierarchies.geography (levels/depth/unique_values/
+unique_counts) y de datasets (kind/source_medium/periodicity/file_count/
+files, en el orden del contrato). El resto de datasets (fields/maps_to,
+TSK-05), totals, la serializacion determinista (TSK-06) y la validacion de
+contenido (TSK-07) quedan para casos posteriores del bucle.
 """
 
 import json
@@ -48,6 +48,27 @@ def _hierarchy(levels: list[str], members: list[dict[str, str]]) -> dict[str, ob
         "depth": len(levels),
         "unique_values": unique_values,
         "unique_counts": unique_counts,
+    }
+
+
+def _dataset(dataset: dict) -> dict[str, object]:
+    """DS-ONB-5: construye el bloque {kind, source_medium, periodicity,
+    file_count, files} de un dataset. file_count es la cantidad de archivos y
+    cada files[*] refleja name/period_start/period_end del archivo fuente."""
+    files = dataset.get("files", [])
+    return {
+        "kind": dataset.get("kind"),
+        "source_medium": dataset.get("source_medium"),
+        "periodicity": dataset.get("periodicity"),
+        "file_count": len(files),
+        "files": [
+            {
+                "name": file_.get("name"),
+                "period_start": file_.get("period_start"),
+                "period_end": file_.get("period_end"),
+            }
+            for file_ in files
+        ],
     }
 
 
@@ -97,21 +118,7 @@ class Onboarding(Flow):
                 ),
             },
             "datasets": [
-                {
-                    "kind": dataset.get("kind"),
-                    "source_medium": dataset.get("source_medium"),
-                    "periodicity": dataset.get("periodicity"),
-                    "file_count": len(dataset.get("files", [])),
-                    "files": [
-                        {
-                            "name": file_.get("name"),
-                            "period_start": file_.get("period_start"),
-                            "period_end": file_.get("period_end"),
-                        }
-                        for file_ in dataset.get("files", [])
-                    ],
-                }
-                for dataset in historical_data.get("datasets", [])
+                _dataset(dataset) for dataset in historical_data.get("datasets", [])
             ],
         }
         self._mapa = mapa
