@@ -2,7 +2,7 @@
   "feature": "onboarding",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "tdd_tester",
+  "current_stage": "tdd_coder",
   "stages": {
     "feature_definer":    { "status": "done",    "artifact": "definition.md" },
     "spec_writer":        { "status": "done", "artifact": "spec.md",  "gate": "human", "awaiting_approval": false, "approved": true },
@@ -11,7 +11,7 @@
       "status": "ready",
       "next_case": 1,
       "cases": [
-        { "id": 1,  "desc": "run(ctx) sobre el fixture valido escribe map_client_data.json en la ruta esperada y devuelve FlowResult(success=True, outputs=[esa ruta]); el archivo existe.", "status": "red", "ca": "CA-01", "test": "tests/flows/test_onboarding.py::test_run_sobre_fixture_valido_escribe_map_client_data_y_devuelve_flow_result", "red_reason": "NotImplementedError: Flow.execute() debe ser sobreescrito por la subclase concreta (Onboarding aun no sobreescribe execute/write_outputs)." },
+        { "id": 1,  "desc": "run(ctx) sobre el fixture valido escribe map_client_data.json en la ruta esperada y devuelve FlowResult(success=True, outputs=[esa ruta]); el archivo existe.", "status": "green", "ca": "CA-01", "test": "tests/flows/test_onboarding.py::test_run_sobre_fixture_valido_escribe_map_client_data_y_devuelve_flow_result", "tsk": "TSK-02", "files": ["src/foda/flows/f020_onboarding/onboarding.py"] },
         { "id": 2,  "desc": "Onboarding hereda Flow, declara requires/produces con los Artifact esperados y completa las 4 fases sin sobreescribir run.", "status": "pending", "ca": "CA-11" },
         { "id": 3,  "desc": "hierarchies.product.levels == [familia,categoria,subcategoria,clase] (orden declarado) y depth == 4.", "status": "pending", "ca": "CA-02" },
         { "id": 4,  "desc": "hierarchies.geography.levels == [region,pais,ciudad,sede] y depth == 4.", "status": "pending", "ca": "CA-03" },
