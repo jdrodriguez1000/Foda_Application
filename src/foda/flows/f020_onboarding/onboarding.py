@@ -82,6 +82,7 @@ class Onboarding(Flow):
         contract = self._contract or {}
         product = contract.get("product_hierarchy", {})
         geography = contract.get("geography", {})
+        historical_data = contract.get("historical_data", {})
         mapa = {
             "schema_version": contract.get("schema_version"),
             "client": contract.get("client"),
@@ -93,6 +94,14 @@ class Onboarding(Flow):
                     geography.get("levels", []), geography.get("members", [])
                 ),
             },
+            "datasets": [
+                {
+                    "kind": dataset.get("kind"),
+                    "source_medium": dataset.get("source_medium"),
+                    "periodicity": dataset.get("periodicity"),
+                }
+                for dataset in historical_data.get("datasets", [])
+            ],
         }
         self._mapa = mapa
         return FlowResult(success=True, outputs=[self.produces[0].path(ctx)])
