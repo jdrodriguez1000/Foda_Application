@@ -1,17 +1,19 @@
 """Flujo 020: Onboarding (feature onboarding, banda tracer_bullet).
 
 Fuente: 600_features/onboarding/tracer_bullet/spec.md (DS-ONB-1..5) y plan.md
-(TSK-01..TSK-09). Bucle TDD en curso: caso 1 (CA-01, TSK-02), caso 3 (CA-02),
-caso 4 (CA-03, TSK-03), caso 5 (CA-04, TSK-15/TSK-03), caso 6 (CA-06,
-TSK-16/TSK-04), caso 7 (CA-07, TSK-17/TSK-04), caso 8 (CA-08, TSK-18/TSK-04),
-caso 9 (CA-09, verde directo) y caso 10 (CA-10, TSK-20/TSK-05) cerrados:
-derivacion de hierarchies.product y hierarchies.geography (levels/depth/
-unique_values/unique_counts), de datasets (kind/source_medium/periodicity/
-file_count/files/fields, en el orden del contrato; maps_to se toma tal cual
-del contrato) y de totals (dataset_count/file_count, derivados de una
-variable local `datasets` compartida con la seccion "datasets", sin
-mutacion posterior del mapa). La serializacion determinista (TSK-06) y la
-validacion de contenido (TSK-07) quedan para casos posteriores del bucle.
+(TSK-01..TSK-09). Bucle TDD en curso: casos 1-10 cerrados (derivacion de
+hierarchies.product y hierarchies.geography -levels/depth/unique_values/
+unique_counts-, de datasets -kind/source_medium/periodicity/file_count/
+files/fields, en el orden del contrato; maps_to se toma tal cual del
+contrato- y de totals -dataset_count/file_count, derivados de una variable
+local `datasets` compartida con la seccion "datasets", sin mutacion
+posterior del mapa-); casos 11-15 cerrados como verde directo (profundidad
+variable de niveles, determinismo de la serializacion -TSK-06- y ausencia
+de artefactos parciales, ya cubiertos por el diseno existente); caso 16
+(CA-14, TSK-07 primera regla) cerrado: validate() ahora tambien exige
+levels no vacios en product_hierarchy/geography. El resto de reglas de
+contenido (CA-15..CA-19: claves de miembro, maps_to a nivel inexistente,
+enums, fechas, name duplicado) queda para casos posteriores del bucle.
 """
 
 import json
