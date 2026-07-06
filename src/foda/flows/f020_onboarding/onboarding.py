@@ -17,7 +17,7 @@ validacion de contenido (TSK-07) quedan para casos posteriores del bucle.
 import json
 
 from foda.core.context import ClientContext
-from foda.core.flow import Artifact, Flow, FlowResult
+from foda.core.flow import Artifact, Flow, FlowContractError, FlowResult
 
 # DS-ONB-5: requires/produces declarados; no se amplia ClientContext.
 _REQUIRES = [
@@ -112,9 +112,18 @@ class Onboarding(Flow):
             self._contract = json.loads(path.read_text(encoding="utf-8"))
 
     def validate(self, ctx: ClientContext) -> None:
-        """Fase 2a (DS-ONB-5): existencia base del require. La coherencia de
-        contenido (fase 2b) se agrega en casos posteriores del bucle."""
+        """Fase 2a (DS-ONB-5): existencia base del require. Fase 2b (DS-ONB-1,
+        TSK-07, en curso): coherencia de contenido del contrato ya cargado;
+        por ahora solo levels no vacios (CA-14). Resto de reglas de contenido
+        (CA-15..CA-19) quedan para casos posteriores del bucle."""
         super().validate(ctx)
+        contract = self._contract or {}
+        for hierarchy_name in ("product_hierarchy", "geography"):
+            levels = contract.get(hierarchy_name, {}).get("levels", [])
+            if not levels:
+                raise FlowContractError(
+                    f"{hierarchy_name}.levels no puede estar vacio."
+                )
 
     def execute(self, ctx: ClientContext) -> FlowResult:
         """Deriva en memoria el mapa canonico (identidad del cliente +
