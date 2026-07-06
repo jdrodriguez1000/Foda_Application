@@ -10,18 +10,20 @@ local `datasets` compartida con la seccion "datasets", sin mutacion
 posterior del mapa-); casos 11-15 cerrados como verde directo (profundidad
 variable de niveles, determinismo de la serializacion -TSK-06- y ausencia
 de artefactos parciales, ya cubiertos por el diseno existente); casos 16
-(CA-14), 17 (CA-15, TSK-07) y 18 (CA-16, TSK-07) cerrados: validate() delega
-en el helper _validate_hierarchy(name, hierarchy) -mismo patron que
-_hierarchy/_dataset en execute()- que exige levels no vacios en
-product_hierarchy/geography y que las claves de cada miembro coincidan
-exactamente con levels (ni falten ni sobren); ademas, validate() acumula un
-dict {product_hierarchy, geography} con las jerarquias ya validadas y lo
-pasa al helper _validate_maps_to(hierarchies, historical_data), que exige
-que cada field.maps_to con dominio "product."/"geography." referencie un
-<level> existente en la jerarquia correspondiente (maps_to=None/"time"/
-"measure" siguen siendo validos). El resto de reglas de contenido
-(CA-17..CA-19: enums, fechas, name duplicado) queda para casos posteriores
-del bucle.
+(CA-14), 17 (CA-15, TSK-07), 18 (CA-16, TSK-07) y 19 (CA-17, TSK-07)
+cerrados: validate() delega en el helper _validate_hierarchy(name, hierarchy)
+-mismo patron que _hierarchy/_dataset en execute()- que exige levels no
+vacios en product_hierarchy/geography y que las claves de cada miembro
+coincidan exactamente con levels (ni falten ni sobren); ademas, validate()
+acumula un dict {product_hierarchy, geography} con las jerarquias ya
+validadas y lo pasa al helper _validate_maps_to(hierarchies, historical_data),
+que exige que cada field.maps_to con dominio "product."/"geography."
+referencie un <level> existente en la jerarquia correspondiente
+(maps_to=None/"time"/"measure" siguen siendo validos), y a _validate_enums
+(historical_data), que exige que field.type/kind/source_medium/periodicity
+de cada dataset pertenezcan a su vocabulario cerrado (spec.md, Contratos de
+Datos). El resto de reglas de contenido (CA-18, CA-19: fechas, name
+duplicado) queda para casos posteriores del bucle.
 """
 
 import json
@@ -103,6 +105,53 @@ def _validate_maps_to(hierarchies: dict[str, dict], historical_data: dict) -> No
                 )
 
 
+_FIELD_TYPES = {"string", "integer", "number", "date", "boolean"}
+_KINDS = {
+    "ventas",
+    "inventario",
+    "ordenes_compra",
+    "devoluciones",
+    "promociones",
+    "precios",
+}
+_SOURCE_MEDIUMS = {"csv", "xlsx", "database", "api"}
+_PERIODICITIES = {
+    "diaria",
+    "semanal",
+    "quincenal",
+    "mensual",
+    "trimestral",
+    "semestral",
+    "anual",
+}
+
+
+def _validate_enums(historical_data: dict) -> None:
+    """DS-ONB-1 (TSK-07, CA-17): valida que field.type, kind, source_medium y
+    periodicity de cada dataset pertenezcan a su vocabulario cerrado (spec.md,
+    Contratos de Datos -> Vocabularios cerrados)."""
+    for dataset in historical_data.get("datasets", []):
+        kind = dataset.get("kind")
+        if kind not in _KINDS:
+            raise FlowContractError(f"kind '{kind}' no pertenece al vocabulario cerrado.")
+        source_medium = dataset.get("source_medium")
+        if source_medium not in _SOURCE_MEDIUMS:
+            raise FlowContractError(
+                f"source_medium '{source_medium}' no pertenece al vocabulario cerrado."
+            )
+        periodicity = dataset.get("periodicity")
+        if periodicity not in _PERIODICITIES:
+            raise FlowContractError(
+                f"periodicity '{periodicity}' no pertenece al vocabulario cerrado."
+            )
+        for field in dataset.get("fields", []):
+            field_type = field.get("type")
+            if field_type not in _FIELD_TYPES:
+                raise FlowContractError(
+                    f"field.type '{field_type}' no pertenece al vocabulario cerrado."
+                )
+
+
 def _dataset(dataset: dict) -> dict[str, object]:
     """DS-ONB-5: construye el bloque {kind, source_medium, periodicity,
     file_count, files, fields} de un dataset. file_count es la cantidad de
@@ -164,9 +213,10 @@ class Onboarding(Flow):
         """Fase 2a (DS-ONB-5): existencia base del require. Fase 2b (DS-ONB-1,
         TSK-07, en curso): coherencia de contenido del contrato ya cargado;
         por ahora levels no vacios (CA-14), claves de miembro coincidentes
-        con levels (CA-15) y field.maps_to a nivel existente (CA-16). Resto
-        de reglas de contenido (CA-17..CA-19) quedan para casos posteriores
-        del bucle."""
+        con levels (CA-15), field.maps_to a nivel existente (CA-16) y enums
+        de field.type/kind/source_medium/periodicity dentro de su vocabulario
+        cerrado (CA-17). Resto de reglas de contenido (CA-18..CA-19) quedan
+        para casos posteriores del bucle."""
         super().validate(ctx)
         contract = self._contract or {}
         hierarchies: dict[str, dict] = {}
@@ -174,7 +224,9 @@ class Onboarding(Flow):
             hierarchy = contract.get(hierarchy_name, {})
             _validate_hierarchy(hierarchy_name, hierarchy)
             hierarchies[hierarchy_name] = hierarchy
-        _validate_maps_to(hierarchies, contract.get("historical_data", {}))
+        historical_data = contract.get("historical_data", {})
+        _validate_maps_to(hierarchies, historical_data)
+        _validate_enums(historical_data)
 
     def execute(self, ctx: ClientContext) -> FlowResult:
         """Deriva en memoria el mapa canonico (identidad del cliente +
