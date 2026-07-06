@@ -28,14 +28,12 @@ mensaje de FlowContractError); caso 20 (CA-18, TSK-07) cerrado: validate()
 llama ademas a _validate_dates(historical_data), que por cada file de cada
 dataset exige que period_start/period_end sean fechas YYYY-MM-DD validas
 (via el helper _parse_date, formato + calendario real) y que
-period_start <= period_end (rango no invertido). El resto de reglas de
-contenido (CA-19: name duplicado) queda para casos posteriores del bucle.
-Refactor del caso 20: sin cambios de diseno significativos (el patron
-establecido por _validate_hierarchy/_validate_maps_to/_validate_enums ya
-encajaba para _validate_dates/_parse_date); unico ajuste, en
-_validate_dates, extraer raw_start/raw_end como variables locales para
-evitar leer dos veces file_.get('period_start')/file_.get('period_end')
-(una vez para parsear, otra para el mensaje de error).
+period_start <= period_end (rango no invertido). Caso 21 (CA-19, TSK-07)
+cerrado: validate() llama ademas a _validate_field_names(historical_data),
+que por cada dataset exige que field.name sea unico (dos fields con el
+mismo name en un mismo dataset -> FlowContractError). El resto de reglas
+de contenido (CA-21: el fallo ocurre en validate, antes de execute/
+write_outputs) queda para casos posteriores del bucle.
 """
 
 import json
@@ -196,6 +194,21 @@ def _validate_dates(historical_data: dict) -> None:
                 )
 
 
+def _validate_field_names(historical_data: dict) -> None:
+    """DS-ONB-1 (TSK-07, CA-19): valida que field.name sea unico dentro de
+    cada dataset de historical_data.datasets; lanza FlowContractError si hay
+    dos fields con el mismo name en un mismo dataset."""
+    for dataset in historical_data.get("datasets", []):
+        seen: set[str] = set()
+        for field in dataset.get("fields", []):
+            name = field.get("name")
+            if name in seen:
+                raise FlowContractError(
+                    f"dataset '{dataset.get('kind')}': field.name '{name}' esta duplicado."
+                )
+            seen.add(name)
+
+
 def _dataset(dataset: dict) -> dict[str, object]:
     """DS-ONB-5: construye el bloque {kind, source_medium, periodicity,
     file_count, files, fields} de un dataset. file_count es la cantidad de
@@ -273,6 +286,7 @@ class Onboarding(Flow):
         _validate_maps_to(hierarchies, historical_data)
         _validate_enums(historical_data)
         _validate_dates(historical_data)
+        _validate_field_names(historical_data)
 
     def execute(self, ctx: ClientContext) -> FlowResult:
         """Deriva en memoria el mapa canonico (identidad del cliente +
