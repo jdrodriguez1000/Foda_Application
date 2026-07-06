@@ -268,13 +268,15 @@ class Onboarding(Flow):
 
     def validate(self, ctx: ClientContext) -> None:
         """Fase 2a (DS-ONB-5): existencia base del require. Fase 2b (DS-ONB-1,
-        TSK-07, en curso): coherencia de contenido del contrato ya cargado;
-        por ahora levels no vacios (CA-14), claves de miembro coincidentes
-        con levels (CA-15), field.maps_to a nivel existente (CA-16), enums
-        de field.type/kind/source_medium/periodicity dentro de su vocabulario
-        cerrado (CA-17) y period_start/period_end de cada file en formato
-        YYYY-MM-DD valido con period_start <= period_end (CA-18). Resto de
-        reglas de contenido (CA-19) queda para casos posteriores del bucle."""
+        TSK-07): coherencia de contenido del contrato ya cargado: levels no
+        vacios (CA-14), claves de miembro coincidentes con levels (CA-15),
+        field.maps_to a nivel existente (CA-16), enums de field.type/kind/
+        source_medium/periodicity dentro de su vocabulario cerrado (CA-17),
+        period_start/period_end de cada file en formato YYYY-MM-DD valido con
+        period_start <= period_end (CA-18) y field.name unico dentro de cada
+        dataset (CA-19). El fallo ocurre siempre en validate, antes de
+        execute/write_outputs (CA-21), cuyo test explicito queda para un caso
+        posterior del bucle."""
         super().validate(ctx)
         contract = self._contract or {}
         hierarchies: dict[str, dict] = {}
