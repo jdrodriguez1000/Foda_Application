@@ -417,3 +417,78 @@ def test_datasets_file_count_y_files_name_period_start_period_end(
             "period_end": "2025-12-31",
         },
     ]
+
+
+def test_datasets_fields_name_type_required_maps_to(tmp_path: Path) -> None:
+    """Caso 8 (CA-08): cada dataset expone fields con name/type/required/
+    maps_to por columna, en el orden en que figuran en el contrato, incluido
+    precio_unitario (dataset ventas) con required=False y maps_to=None
+    (DS-ONB-2, Sec. Salida de la spec)."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    contrato_path = ctx.outputs_dir / "010_discovery/contract_data.json"
+    contrato_path.parent.mkdir(parents=True)
+    contrato_path.write_text(
+        json.dumps(_contrato_valido(), ensure_ascii=False), encoding="utf-8"
+    )
+
+    Onboarding().run(ctx)
+
+    ruta_salida = ctx.outputs_dir / "020_onboarding/map_client_data.json"
+    mapa = json.loads(ruta_salida.read_text(encoding="utf-8"))
+
+    datasets = mapa.get("datasets", [])
+    ventas = datasets[0]
+    inventario = datasets[1]
+
+    assert ventas.get("fields") == [
+        {"name": "fecha", "type": "date", "required": True, "maps_to": "time"},
+        {
+            "name": "sede",
+            "type": "string",
+            "required": True,
+            "maps_to": "geography.sede",
+        },
+        {
+            "name": "clase",
+            "type": "string",
+            "required": True,
+            "maps_to": "product.clase",
+        },
+        {
+            "name": "cantidad",
+            "type": "integer",
+            "required": True,
+            "maps_to": "measure",
+        },
+        {
+            "name": "precio_unitario",
+            "type": "number",
+            "required": False,
+            "maps_to": None,
+        },
+    ]
+
+    assert inventario.get("fields") == [
+        {"name": "fecha", "type": "date", "required": True, "maps_to": "time"},
+        {
+            "name": "sede",
+            "type": "string",
+            "required": True,
+            "maps_to": "geography.sede",
+        },
+        {
+            "name": "clase",
+            "type": "string",
+            "required": True,
+            "maps_to": "product.clase",
+        },
+        {
+            "name": "stock",
+            "type": "integer",
+            "required": True,
+            "maps_to": "measure",
+        },
+    ]
