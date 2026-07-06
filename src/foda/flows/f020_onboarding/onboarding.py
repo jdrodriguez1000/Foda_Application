@@ -10,12 +10,17 @@ local `datasets` compartida con la seccion "datasets", sin mutacion
 posterior del mapa-); casos 11-15 cerrados como verde directo (profundidad
 variable de niveles, determinismo de la serializacion -TSK-06- y ausencia
 de artefactos parciales, ya cubiertos por el diseno existente); casos 16
-(CA-14) y 17 (CA-15, TSK-07) cerrados: validate() delega en el helper
-_validate_hierarchy(name, hierarchy) -mismo patron que _hierarchy/_dataset
-en execute()- que exige levels no vacios en product_hierarchy/geography y
-que las claves de cada miembro coincidan exactamente con levels (ni falten
-ni sobren). El resto de reglas de contenido (CA-16..CA-19: maps_to a nivel
-inexistente, enums, fechas, name duplicado) queda para casos posteriores
+(CA-14), 17 (CA-15, TSK-07) y 18 (CA-16, TSK-07) cerrados: validate() delega
+en el helper _validate_hierarchy(name, hierarchy) -mismo patron que
+_hierarchy/_dataset en execute()- que exige levels no vacios en
+product_hierarchy/geography y que las claves de cada miembro coincidan
+exactamente con levels (ni falten ni sobren); ademas, validate() acumula un
+dict {product_hierarchy, geography} con las jerarquias ya validadas y lo
+pasa al helper _validate_maps_to(hierarchies, historical_data), que exige
+que cada field.maps_to con dominio "product."/"geography." referencie un
+<level> existente en la jerarquia correspondiente (maps_to=None/"time"/
+"measure" siguen siendo validos). El resto de reglas de contenido
+(CA-17..CA-19: enums, fechas, name duplicado) queda para casos posteriores
 del bucle.
 """
 
