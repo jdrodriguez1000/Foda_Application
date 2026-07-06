@@ -577,3 +577,28 @@ def test_maps_to_proviene_del_contrato_no_del_nombre_de_columna(
         },
         {"name": "sede", "type": "string", "required": True, "maps_to": None},
     ]
+
+
+def test_totals_dataset_count_y_file_count(tmp_path: Path) -> None:
+    """Caso 10 (CA-10): el mapa expone totals.dataset_count == 2 (ventas +
+    inventario) y totals.file_count == 3 (1 archivo de ventas + 2 archivos
+    de inventario), es decir la suma de file_count de cada dataset
+    (DS-ONB-2, Sec. Salida de la spec; plan.md Sec.1 'totals')."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    contrato_path = ctx.outputs_dir / "010_discovery/contract_data.json"
+    contrato_path.parent.mkdir(parents=True)
+    contrato_path.write_text(
+        json.dumps(_contrato_valido(), ensure_ascii=False), encoding="utf-8"
+    )
+
+    Onboarding().run(ctx)
+
+    ruta_salida = ctx.outputs_dir / "020_onboarding/map_client_data.json"
+    mapa = json.loads(ruta_salida.read_text(encoding="utf-8"))
+
+    totals = mapa.get("totals", {})
+    assert totals.get("dataset_count") == 2
+    assert totals.get("file_count") == 3
