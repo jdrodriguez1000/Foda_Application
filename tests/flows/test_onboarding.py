@@ -743,3 +743,47 @@ def test_totals_dataset_count_y_file_count(tmp_path: Path) -> None:
     totals = mapa.get("totals", {})
     assert totals.get("dataset_count") == 2
     assert totals.get("file_count") == 3
+
+
+def test_dos_run_con_mismo_input_producen_map_client_data_identico_byte_a_byte(
+    tmp_path: Path,
+) -> None:
+    """Caso 13 (CA-13, DS-ONB-4): dos ejecuciones de run(ctx) con el mismo
+    contract_data.json producen un map_client_data.json identico byte a
+    byte. Se ejecuta run() dos veces (instancias frescas de Onboarding,
+    sobre el mismo ctx/contrato) y se comparan los bytes crudos
+    (read_bytes()) del archivo de salida entre ambas corridas.
+
+    Nota TDD (D-037, plan.md Sec.5, precedente casos 2/CA-11, 9/CA-09,
+    11/CA-05 y 12/CA-05b): este caso nace en verde directo. write_outputs()
+    (cerrado desde el caso 1, CA-01, TSK-02) ya serializa con
+    json.dumps(self._mapa, ensure_ascii=False, indent=2, sort_keys=True) +
+    "\n" -- exactamente el criterio de determinismo exigido por DS-ONB-4
+    (TSK-06), aunque plan.md aun listaba TSK-06 como no_implementada:
+    sort_keys=True hace irrelevante el orden de insercion de las claves de
+    objeto, y unique_values ya usa sorted() (caso 5, CA-04), por lo que no
+    queda ninguna fuente real de no-determinismo entre corridas con el
+    mismo input. Se confirmo empiricamente (tdd_tester) que este test pasa
+    sin cambios de produccion, y el humano aprobo tratarlo como verde
+    directo, sin pasar por tdd_coder/tdd_refactor."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    contrato_path = ctx.outputs_dir / "010_discovery/contract_data.json"
+    contrato_path.parent.mkdir(parents=True)
+    contrato_path.write_text(
+        json.dumps(_contrato_valido(), ensure_ascii=False), encoding="utf-8"
+    )
+
+    ruta_salida = ctx.outputs_dir / "020_onboarding/map_client_data.json"
+
+    Onboarding().run(ctx)
+    primera_corrida = ruta_salida.read_bytes()
+
+    ruta_salida.unlink()
+
+    Onboarding().run(ctx)
+    segunda_corrida = ruta_salida.read_bytes()
+
+    assert primera_corrida == segunda_corrida
