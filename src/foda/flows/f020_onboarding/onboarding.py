@@ -30,6 +30,12 @@ dataset exige que period_start/period_end sean fechas YYYY-MM-DD validas
 (via el helper _parse_date, formato + calendario real) y que
 period_start <= period_end (rango no invertido). El resto de reglas de
 contenido (CA-19: name duplicado) queda para casos posteriores del bucle.
+Refactor del caso 20: sin cambios de diseno significativos (el patron
+establecido por _validate_hierarchy/_validate_maps_to/_validate_enums ya
+encajaba para _validate_dates/_parse_date); unico ajuste, en
+_validate_dates, extraer raw_start/raw_end como variables locales para
+evitar leer dos veces file_.get('period_start')/file_.get('period_end')
+(una vez para parsear, otra para el mensaje de error).
 """
 
 import json
@@ -179,13 +185,14 @@ def _validate_dates(historical_data: dict) -> None:
     period_start <= period_end (rango no invertido)."""
     for dataset in historical_data.get("datasets", []):
         for file_ in dataset.get("files", []):
-            period_start = _parse_date("period_start", file_.get("period_start"))
-            period_end = _parse_date("period_end", file_.get("period_end"))
+            raw_start = file_.get("period_start")
+            raw_end = file_.get("period_end")
+            period_start = _parse_date("period_start", raw_start)
+            period_end = _parse_date("period_end", raw_end)
             if period_start > period_end:
                 raise FlowContractError(
-                    "period_start "
-                    f"'{file_.get('period_start')}' es mayor que period_end "
-                    f"'{file_.get('period_end')}'."
+                    f"period_start '{raw_start}' es mayor que period_end "
+                    f"'{raw_end}'."
                 )
 
 
