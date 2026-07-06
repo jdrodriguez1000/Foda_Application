@@ -492,3 +492,88 @@ def test_datasets_fields_name_type_required_maps_to(tmp_path: Path) -> None:
             "maps_to": "measure",
         },
     ]
+
+
+def test_maps_to_proviene_del_contrato_no_del_nombre_de_columna(
+    tmp_path: Path,
+) -> None:
+    """Caso 9 (CA-09): maps_to se toma del contrato, no se infiere del
+    nombre de columna. Fixture deliberadamente disenado para romper
+    cualquier coincidencia nombre<->maps_to (a diferencia del fixture
+    canonico del caso 8, donde el nombre de columna y su maps_to coinciden
+    semanticamente): una columna cuyo nombre NO sugiere ninguna jerarquia
+    (articulo_id) mapea a "product.clase", y una columna cuyo nombre SI
+    sugiere "product.clase" (clase) mapea a null en el contrato; simetrico
+    para geography.sede (punto_venta / sede). Si la implementacion
+    infiriera maps_to del nombre de la columna en lugar de leerlo del
+    contrato, este test fallaria.
+
+    Nota TDD (D-037, plan.md Sec.5, precedente caso 2/CA-11): este caso
+    nace en verde directo. _dataset() (cerrado en el caso 8, CA-08,
+    TSK-18/TSK-04, con refactor incluido) ya hace un pass-through puro de
+    field.get("maps_to") sin ninguna logica de inferencia por nombre, por
+    lo que ningun fixture puede producir un rojo legitimo para CA-09: no
+    hay funcionalidad pendiente que codificar. Se confirmo empiricamente
+    (tdd_tester) que este test pasa sin cambios de produccion, y el humano
+    aprobo tratarlo como verde directo, sin pasar por
+    tdd_coder/tdd_refactor."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    contrato = _contrato_valido()
+    contrato["historical_data"]["datasets"][0]["fields"] = [
+        {
+            "name": "articulo_id",
+            "type": "string",
+            "required": True,
+            "maps_to": "product.clase",
+        },
+        {
+            "name": "clase",
+            "type": "string",
+            "required": True,
+            "maps_to": None,
+        },
+        {
+            "name": "punto_venta",
+            "type": "string",
+            "required": True,
+            "maps_to": "geography.sede",
+        },
+        {
+            "name": "sede",
+            "type": "string",
+            "required": True,
+            "maps_to": None,
+        },
+    ]
+
+    contrato_path = ctx.outputs_dir / "010_discovery/contract_data.json"
+    contrato_path.parent.mkdir(parents=True)
+    contrato_path.write_text(
+        json.dumps(contrato, ensure_ascii=False), encoding="utf-8"
+    )
+
+    Onboarding().run(ctx)
+
+    ruta_salida = ctx.outputs_dir / "020_onboarding/map_client_data.json"
+    mapa = json.loads(ruta_salida.read_text(encoding="utf-8"))
+
+    ventas = mapa.get("datasets", [])[0]
+    assert ventas.get("fields") == [
+        {
+            "name": "articulo_id",
+            "type": "string",
+            "required": True,
+            "maps_to": "product.clase",
+        },
+        {"name": "clase", "type": "string", "required": True, "maps_to": None},
+        {
+            "name": "punto_venta",
+            "type": "string",
+            "required": True,
+            "maps_to": "geography.sede",
+        },
+        {"name": "sede", "type": "string", "required": True, "maps_to": None},
+    ]
