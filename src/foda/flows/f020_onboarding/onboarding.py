@@ -101,6 +101,15 @@ class Onboarding(Flow):
                     "kind": dataset.get("kind"),
                     "source_medium": dataset.get("source_medium"),
                     "periodicity": dataset.get("periodicity"),
+                    "file_count": len(dataset.get("files", [])),
+                    "files": [
+                        {
+                            "name": file_.get("name"),
+                            "period_start": file_.get("period_start"),
+                            "period_end": file_.get("period_end"),
+                        }
+                        for file_ in dataset.get("files", [])
+                    ],
                 }
                 for dataset in historical_data.get("datasets", [])
             ],
