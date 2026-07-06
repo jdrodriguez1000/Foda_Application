@@ -329,3 +329,40 @@ def test_hierarchies_unique_values_y_unique_counts_por_nivel(tmp_path: Path) -> 
     assert product.get("unique_counts", {}).get("familia") == 2
     assert geography.get("unique_values", {}).get("ciudad") == ["Bogota", "Medellin"]
     assert geography.get("unique_counts", {}).get("ciudad") == 2
+
+
+def test_datasets_kind_source_medium_periodicity_en_orden_de_contrato(
+    tmp_path: Path,
+) -> None:
+    """Caso 6 (CA-06): el mapa lista los 2 datasets del fixture con su
+    kind/source_medium/periodicity correctos y en el orden en que aparecen
+    en el contrato (ventas, luego inventario); DS-ONB-2 (Sec. Salida de la
+    spec)."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    contrato_path = ctx.outputs_dir / "010_discovery/contract_data.json"
+    contrato_path.parent.mkdir(parents=True)
+    contrato_path.write_text(
+        json.dumps(_contrato_valido(), ensure_ascii=False), encoding="utf-8"
+    )
+
+    Onboarding().run(ctx)
+
+    ruta_salida = ctx.outputs_dir / "020_onboarding/map_client_data.json"
+    mapa = json.loads(ruta_salida.read_text(encoding="utf-8"))
+
+    datasets = mapa.get("datasets", [])
+    resumen = [
+        {
+            "kind": ds.get("kind"),
+            "source_medium": ds.get("source_medium"),
+            "periodicity": ds.get("periodicity"),
+        }
+        for ds in datasets
+    ]
+    assert resumen == [
+        {"kind": "ventas", "source_medium": "csv", "periodicity": "mensual"},
+        {"kind": "inventario", "source_medium": "csv", "periodicity": "mensual"},
+    ]
