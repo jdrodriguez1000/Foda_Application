@@ -1,11 +1,11 @@
 """Flujo 020: Onboarding (feature onboarding, banda tracer_bullet).
 
 Fuente: 600_features/onboarding/tracer_bullet/spec.md (DS-ONB-1..5) y plan.md
-(TSK-01..TSK-09). Bucle TDD en curso: caso 1 (CA-01, TSK-02) y caso 3 (CA-02,
-TSK-03 parcial) cerrados (derivacion minima de hierarchies.product.levels/
-depth). El resto de jerarquias/datasets/totals (TSK-03..TSK-05), la
-serializacion determinista (TSK-06) y la validacion de contenido (TSK-07)
-quedan para casos posteriores del bucle.
+(TSK-01..TSK-09). Bucle TDD en curso: caso 1 (CA-01, TSK-02), caso 3 (CA-02)
+y caso 4 (CA-03, TSK-03) cerrados (derivacion de hierarchies.product y
+hierarchies.geography, cada una con levels/depth). El resto de
+datasets/totals (TSK-04..TSK-05), la serializacion determinista (TSK-06) y
+la validacion de contenido (TSK-07) quedan para casos posteriores del bucle.
 """
 
 import json
@@ -28,6 +28,12 @@ _PRODUCES = [
         relative="020_onboarding/map_client_data.json",
     )
 ]
+
+
+def _hierarchy(levels: list) -> dict:
+    """DS-ONB-5: construye el bloque {levels, depth} comun a las jerarquias
+    (product, geography); depth se deriva siempre de la cantidad de niveles."""
+    return {"levels": levels, "depth": len(levels)}
 
 
 class Onboarding(Flow):
@@ -67,14 +73,8 @@ class Onboarding(Flow):
             "schema_version": contract.get("schema_version"),
             "client": contract.get("client"),
             "hierarchies": {
-                "product": {
-                    "levels": product_levels,
-                    "depth": len(product_levels),
-                },
-                "geography": {
-                    "levels": geography_levels,
-                    "depth": len(geography_levels),
-                },
+                "product": _hierarchy(product_levels),
+                "geography": _hierarchy(geography_levels),
             },
         }
         self._mapa = mapa
