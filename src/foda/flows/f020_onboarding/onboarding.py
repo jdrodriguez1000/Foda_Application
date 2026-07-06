@@ -30,10 +30,22 @@ _PRODUCES = [
 ]
 
 
-def _hierarchy(levels: list) -> dict:
-    """DS-ONB-5: construye el bloque {levels, depth} comun a las jerarquias
-    (product, geography); depth se deriva siempre de la cantidad de niveles."""
-    return {"levels": levels, "depth": len(levels)}
+def _hierarchy(levels: list, members: list) -> dict:
+    """DS-ONB-5/DS-ONB-3: construye el bloque {levels, depth, unique_values,
+    unique_counts} comun a las jerarquias (product, geography); depth se
+    deriva siempre de la cantidad de niveles. Por cada nivel, unique_values
+    reporta los valores distintos observados en members en orden alfabetico
+    ascendente y unique_counts su conteo."""
+    unique_values = {
+        level: sorted({member[level] for member in members}) for level in levels
+    }
+    unique_counts = {level: len(values) for level, values in unique_values.items()}
+    return {
+        "levels": levels,
+        "depth": len(levels),
+        "unique_values": unique_values,
+        "unique_counts": unique_counts,
+    }
 
 
 class Onboarding(Flow):
@@ -67,14 +79,18 @@ class Onboarding(Flow):
         jerarquia de producto) y devuelve FlowResult(success=True,
         outputs=[ruta de produces[0]])."""
         contract = self._contract or {}
-        product_levels = contract.get("product_hierarchy", {}).get("levels", [])
-        geography_levels = contract.get("geography", {}).get("levels", [])
+        product = contract.get("product_hierarchy", {})
+        geography = contract.get("geography", {})
         mapa = {
             "schema_version": contract.get("schema_version"),
             "client": contract.get("client"),
             "hierarchies": {
-                "product": _hierarchy(product_levels),
-                "geography": _hierarchy(geography_levels),
+                "product": _hierarchy(
+                    product.get("levels", []), product.get("members", [])
+                ),
+                "geography": _hierarchy(
+                    geography.get("levels", []), geography.get("members", [])
+                ),
             },
         }
         self._mapa = mapa
