@@ -62,6 +62,7 @@ class Onboarding(Flow):
         outputs=[ruta de produces[0]])."""
         contract = self._contract or {}
         product_levels = contract.get("product_hierarchy", {}).get("levels", [])
+        geography_levels = contract.get("geography", {}).get("levels", [])
         mapa = {
             "schema_version": contract.get("schema_version"),
             "client": contract.get("client"),
@@ -69,7 +70,11 @@ class Onboarding(Flow):
                 "product": {
                     "levels": product_levels,
                     "depth": len(product_levels),
-                }
+                },
+                "geography": {
+                    "levels": geography_levels,
+                    "depth": len(geography_levels),
+                },
             },
         }
         self._mapa = mapa
