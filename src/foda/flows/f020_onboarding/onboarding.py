@@ -3,13 +3,14 @@
 Fuente: 600_features/onboarding/tracer_bullet/spec.md (DS-ONB-1..5) y plan.md
 (TSK-01..TSK-09). Bucle TDD en curso: caso 1 (CA-01, TSK-02), caso 3 (CA-02),
 caso 4 (CA-03, TSK-03), caso 5 (CA-04, TSK-15/TSK-03), caso 6 (CA-06,
-TSK-16/TSK-04), caso 7 (CA-07, TSK-17/TSK-04) y caso 8 (CA-08, TSK-18/TSK-04)
-cerrados: derivacion de hierarchies.product y hierarchies.geography
-(levels/depth/unique_values/unique_counts) y de datasets (kind/source_medium/
-periodicity/file_count/files/fields, en el orden del contrato; maps_to se
-toma tal cual del contrato). maps_to derivado del contrato (no del nombre,
-TSK-05), totals, la serializacion determinista (TSK-06) y la validacion de
-contenido (TSK-07) quedan para casos posteriores del bucle.
+TSK-16/TSK-04), caso 7 (CA-07, TSK-17/TSK-04), caso 8 (CA-08, TSK-18/TSK-04),
+caso 9 (CA-09, verde directo) y caso 10 (CA-10, TSK-20/TSK-05) cerrados:
+derivacion de hierarchies.product y hierarchies.geography (levels/depth/
+unique_values/unique_counts), de datasets (kind/source_medium/periodicity/
+file_count/files/fields, en el orden del contrato; maps_to se toma tal cual
+del contrato) y de totals (dataset_count/file_count, sumado desde datasets).
+La serializacion determinista (TSK-06) y la validacion de contenido (TSK-07)
+quedan para casos posteriores del bucle.
 """
 
 import json
@@ -136,6 +137,12 @@ class Onboarding(Flow):
             "datasets": [
                 _dataset(dataset) for dataset in historical_data.get("datasets", [])
             ],
+        }
+        mapa["totals"] = {
+            "dataset_count": len(mapa["datasets"]),
+            "file_count": sum(
+                dataset["file_count"] for dataset in mapa["datasets"]
+            ),
         }
         self._mapa = mapa
         return FlowResult(success=True, outputs=[self.produces[0].path(ctx)])
