@@ -1,9 +1,9 @@
 {
   "feature": "onboarding",
   "band": "tracer_bullet",
-  "status": "in_progress",
-  "current_stage": "spec_verifier",
-  "note": "Bucle TDD completo: 22/22 casos done (caso 22/CA-21 cerrado como verde directo bajo D-060, precedente D-037; ver stages.tdd.cases[21].note). Integracion (integration_tester) cerrada: 5 tests nuevos en tests/integration/test_onboarding_integration.py (run end-to-end vs esperado fijo, invariante bronze/silver/gold, fallo temprano FlowContractError con cliente real, interaccion con flujo vecino consumidor de map_client_data.json, aislamiento multi-tenant entre 2 clientes reales). Suite completa: 121 passed (116 previos + 5 nuevos), sin regresion. Siguiente etapa: spec_verifier.",
+  "status": "done",
+  "current_stage": "completed",
+  "note": "Feature CERRADA (CONFORME) por spec_verifier (etapa 8/8). Verificacion contra spec.md: 22/22 criterios de aceptacion (CA-01..CA-21 + CA-05b) cubiertos por test/comportamiento; suite completa 121 passed (0 failed), sin regresion; alcance de definition.md cumplido (in scope hecho, out of scope respetado) y restricciones satisfechas (determinismo byte a byte, FlowContractError unico, no toca bronze/silver/gold, sin LLM). Observacion menor OBS-1 (no bloqueante): la regla 'field.required es booleano' del Comportamiento 2b de spec.md no esta codificada como CA ni tiene test; candidata a stab_1 via spec_writer + bucle TDD si se decide exigirla. Artefacto: verification.md. Bucle TDD completo: 22/22 casos done (caso 22/CA-21 cerrado como verde directo bajo D-060, precedente D-037; ver stages.tdd.cases[21].note). Integracion (integration_tester) cerrada: 5 tests nuevos en tests/integration/test_onboarding_integration.py (run end-to-end vs esperado fijo, invariante bronze/silver/gold, fallo temprano FlowContractError con cliente real, interaccion con flujo vecino consumidor de map_client_data.json, aislamiento multi-tenant entre 2 clientes reales). Suite completa: 121 passed (116 previos + 5 nuevos), sin regresion. Siguiente etapa: spec_verifier.",
   "stages": {
     "feature_definer":    { "status": "done",    "artifact": "definition.md" },
     "spec_writer":        { "status": "done", "artifact": "spec.md",  "gate": "human", "awaiting_approval": false, "approved": true },
@@ -48,6 +48,6 @@
       ],
       "evidence": "python -m pytest tests/integration/test_onboarding_integration.py -q -> 5 passed; python -m pytest -q -> 121 passed (116 previos del bucle TDD + 5 nuevos de integracion), sin regresion."
     },
-    "spec_verifier":      { "status": "pending", "artifact": "verification.md" }
+    "spec_verifier":      { "status": "done", "artifact": "verification.md", "verdict": "CONFORME", "evidence": "22/22 criterios de aceptacion cubiertos (matriz de trazabilidad en verification.md); python -m pytest -q -> 121 passed, 0 failed, sin regresion; alcance y restricciones OK. OBS-1 menor no bloqueante (field.required booleano sin CA/test, candidata a stab_1)." }
   }
 }
