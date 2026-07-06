@@ -1030,3 +1030,52 @@ def test_miembro_con_claves_que_no_coinciden_con_levels_lanza_flow_contract_erro
         Onboarding().run(ctx)
 
     assert not ruta_salida.exists()
+
+
+def test_period_start_mayor_que_period_end_lanza_flow_contract_error_y_no_crea_output(
+    tmp_path: Path,
+) -> None:
+    """Caso 20 (CA-18, TSK-30/TSK-07): si un file de historical_data.datasets
+    tiene period_start > period_end (rango invertido), run(ctx) lanza
+    FlowContractError en validate() -- validacion de coherencia de
+    contenido, TSK-07 -- antes de llegar a execute()/write_outputs(), y no
+    se crea map_client_data.json.
+
+    Aqui: el (unico) file del dataset "ventas" pasa de
+    period_start="2023-01-01"/period_end="2025-12-31" (valido) a
+    period_start="2025-01-01"/period_end="2024-01-01": el rango queda
+    invertido (period_start > period_end).
+
+    Hoy Onboarding.validate() (casos 16-19, CA-14/CA-15/CA-16/CA-17, TSK-07)
+    valida levels no vacios, claves de miembro, maps_to y enums; no
+    inspecciona period_start/period_end de los files de datasets. Con este
+    fixture, ningun error se dispara en validate() y _dataset() (caso 8,
+    CA-08) hace pass-through puro de period_start/period_end sin validarlos,
+    por lo que run(ctx) completa exitosamente y escribe
+    map_client_data.json. Este test debe fallar hoy (rojo genuino) porque no
+    se lanza FlowContractError: la validacion de fechas/rango (TSK-07)
+    todavia no existe."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    contrato = _contrato_valido()
+    contrato["historical_data"]["datasets"][0]["files"][0]["period_start"] = (
+        "2025-01-01"
+    )
+    contrato["historical_data"]["datasets"][0]["files"][0]["period_end"] = (
+        "2024-01-01"
+    )
+
+    contrato_path = ctx.outputs_dir / "010_discovery/contract_data.json"
+    contrato_path.parent.mkdir(parents=True)
+    contrato_path.write_text(
+        json.dumps(contrato, ensure_ascii=False), encoding="utf-8"
+    )
+
+    ruta_salida = ctx.outputs_dir / "020_onboarding/map_client_data.json"
+
+    with pytest.raises(FlowContractError):
+        Onboarding().run(ctx)
+
+    assert not ruta_salida.exists()
