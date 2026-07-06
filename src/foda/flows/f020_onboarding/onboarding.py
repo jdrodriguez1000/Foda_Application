@@ -2,9 +2,11 @@
 
 Fuente: 600_features/onboarding/tracer_bullet/spec.md (DS-ONB-1..5) y plan.md
 (TSK-01..TSK-09). Bucle TDD en curso: caso 1 (CA-01) en verde via TSK-02
-(esqueleto + happy path minimo). Los helpers de jerarquias/datasets/totals
-(TSK-03..TSK-05), la serializacion determinista (TSK-06) y la validacion de
-contenido (TSK-07) quedan para casos posteriores del bucle.
+(esqueleto + happy path minimo); caso 3 (CA-02) en verde via TSK-03 parcial
+(derivacion minima de hierarchies.product.levels/depth). El resto de
+jerarquias/datasets/totals (TSK-03..TSK-05), la serializacion determinista
+(TSK-06) y la validacion de contenido (TSK-07) quedan para casos posteriores
+del bucle.
 """
 
 import json
@@ -55,12 +57,20 @@ class Onboarding(Flow):
         super().validate(ctx)
 
     def execute(self, ctx: ClientContext) -> FlowResult:
-        """Deriva en memoria el mapa canonico minimo (identidad del cliente)
-        y devuelve FlowResult(success=True, outputs=[ruta de produces[0]])."""
+        """Deriva en memoria el mapa canonico (identidad del cliente +
+        jerarquia de producto) y devuelve FlowResult(success=True,
+        outputs=[ruta de produces[0]])."""
         contract = self._contract or {}
+        product_levels = contract.get("product_hierarchy", {}).get("levels", [])
         mapa = {
             "schema_version": contract.get("schema_version"),
             "client": contract.get("client"),
+            "hierarchies": {
+                "product": {
+                    "levels": product_levels,
+                    "depth": len(product_levels),
+                }
+            },
         }
         self._mapa = mapa
         return FlowResult(success=True, outputs=[self.produces[0].path(ctx)])

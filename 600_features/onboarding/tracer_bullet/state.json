@@ -2,7 +2,7 @@
   "feature": "onboarding",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "tdd_tester",
+  "current_stage": "tdd_coder",
   "stages": {
     "feature_definer":    { "status": "done",    "artifact": "definition.md" },
     "spec_writer":        { "status": "done", "artifact": "spec.md",  "gate": "human", "awaiting_approval": false, "approved": true },
@@ -13,7 +13,7 @@
       "cases": [
         { "id": 1,  "desc": "run(ctx) sobre el fixture valido escribe map_client_data.json en la ruta esperada y devuelve FlowResult(success=True, outputs=[esa ruta]); el archivo existe.", "status": "done", "ca": "CA-01", "test": "tests/flows/test_onboarding.py::test_run_sobre_fixture_valido_escribe_map_client_data_y_devuelve_flow_result", "tsk": "TSK-02", "files": ["src/foda/flows/f020_onboarding/onboarding.py"] },
         { "id": 2,  "desc": "Onboarding hereda Flow, declara requires/produces con los Artifact esperados y completa las 4 fases sin sobreescribir run.", "status": "done", "ca": "CA-11", "test": "tests/flows/test_onboarding.py::test_onboarding_hereda_flow_declara_contratos_y_completa_las_4_fases", "tsk": "TSK-12", "note": "verde directo (D-037, plan.md Sec.5): satisfecho integramente por el codigo del caso 1 (TSK-02); sin ciclo rojo->verde; no paso por tdd_coder/tdd_refactor; aprobado por el humano.", "files": [] },
-        { "id": 3,  "desc": "hierarchies.product.levels == [familia,categoria,subcategoria,clase] (orden declarado) y depth == 4.", "status": "red", "ca": "CA-02" },
+        { "id": 3,  "desc": "hierarchies.product.levels == [familia,categoria,subcategoria,clase] (orden declarado) y depth == 4.", "status": "green", "ca": "CA-02", "test": "tests/flows/test_onboarding.py::test_hierarchies_product_levels_y_depth", "tsk": "TSK-03", "files": ["src/foda/flows/f020_onboarding/onboarding.py"] },
         { "id": 4,  "desc": "hierarchies.geography.levels == [region,pais,ciudad,sede] y depth == 4.", "status": "pending", "ca": "CA-03" },
         { "id": 5,  "desc": "unique_values/unique_counts por nivel = distintos observados en orden alfabetico (familia==[Bebidas,Snacks], ciudad==[Bogota,Medellin]).", "status": "pending", "ca": "CA-04" },
         { "id": 6,  "desc": "Los 2 datasets aparecen con kind/source_medium/periodicity correctos, en orden de contrato (ventas, inventario).", "status": "pending", "ca": "CA-06" },
