@@ -366,3 +366,54 @@ def test_datasets_kind_source_medium_periodicity_en_orden_de_contrato(
         {"kind": "ventas", "source_medium": "csv", "periodicity": "mensual"},
         {"kind": "inventario", "source_medium": "csv", "periodicity": "mensual"},
     ]
+
+
+def test_datasets_file_count_y_files_name_period_start_period_end(
+    tmp_path: Path,
+) -> None:
+    """Caso 7 (CA-07): el mapa refleja file_count == 1 para ventas y
+    file_count == 2 para inventario, y cada files[*] del dataset expone
+    name/period_start/period_end tal como figuran en el contrato, incluido
+    el archivo multi-anio de ventas (2023-01-01 -> 2025-12-31); DS-ONB-2
+    (Sec. Salida de la spec)."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    contrato_path = ctx.outputs_dir / "010_discovery/contract_data.json"
+    contrato_path.parent.mkdir(parents=True)
+    contrato_path.write_text(
+        json.dumps(_contrato_valido(), ensure_ascii=False), encoding="utf-8"
+    )
+
+    Onboarding().run(ctx)
+
+    ruta_salida = ctx.outputs_dir / "020_onboarding/map_client_data.json"
+    mapa = json.loads(ruta_salida.read_text(encoding="utf-8"))
+
+    datasets = mapa.get("datasets", [])
+    ventas = datasets[0]
+    inventario = datasets[1]
+
+    assert ventas.get("file_count") == 1
+    assert ventas.get("files") == [
+        {
+            "name": "ventas_2023_2025.csv",
+            "period_start": "2023-01-01",
+            "period_end": "2025-12-31",
+        }
+    ]
+
+    assert inventario.get("file_count") == 2
+    assert inventario.get("files") == [
+        {
+            "name": "inventario_2024.csv",
+            "period_start": "2024-01-01",
+            "period_end": "2024-12-31",
+        },
+        {
+            "name": "inventario_2025.csv",
+            "period_start": "2025-01-01",
+            "period_end": "2025-12-31",
+        },
+    ]
