@@ -53,9 +53,13 @@ def _hierarchy(levels: list[str], members: list[dict[str, str]]) -> dict[str, ob
 
 def _dataset(dataset: dict) -> dict[str, object]:
     """DS-ONB-5: construye el bloque {kind, source_medium, periodicity,
-    file_count, files} de un dataset. file_count es la cantidad de archivos y
-    cada files[*] refleja name/period_start/period_end del archivo fuente."""
+    file_count, files, fields} de un dataset. file_count es la cantidad de
+    archivos y cada files[*] refleja name/period_start/period_end del archivo
+    fuente; cada fields[*] refleja name/type/required/maps_to de la columna,
+    en el orden del contrato (maps_to se toma tal cual del contrato, incl.
+    null para columnas no mapeadas como precio_unitario)."""
     files = dataset.get("files", [])
+    fields = dataset.get("fields", [])
     return {
         "kind": dataset.get("kind"),
         "source_medium": dataset.get("source_medium"),
@@ -68,6 +72,15 @@ def _dataset(dataset: dict) -> dict[str, object]:
                 "period_end": file_.get("period_end"),
             }
             for file_ in files
+        ],
+        "fields": [
+            {
+                "name": field.get("name"),
+                "type": field.get("type"),
+                "required": field.get("required"),
+                "maps_to": field.get("maps_to"),
+            }
+            for field in fields
         ],
     }
 
