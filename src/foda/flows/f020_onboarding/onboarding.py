@@ -77,6 +77,27 @@ def _validate_hierarchy(name: str, hierarchy: dict) -> None:
             )
 
 
+def _validate_maps_to(hierarchies: dict[str, dict], historical_data: dict) -> None:
+    """DS-ONB-1 (TSK-07): valida que cada field.maps_to de historical_data.datasets
+    sea uno de los valores permitidos por el contrato (null, "time", "measure",
+    "product.<level>", "geography.<level>") y que, para "product."/"geography.",
+    <level> exista en los levels de la jerarquia correspondiente (CA-16)."""
+    domains = {"product": "product_hierarchy", "geography": "geography"}
+    for dataset in historical_data.get("datasets", []):
+        for field in dataset.get("fields", []):
+            maps_to = field.get("maps_to")
+            if maps_to in (None, "time", "measure"):
+                continue
+            domain, _, level = maps_to.partition(".")
+            hierarchy_name = domains.get(domain)
+            levels = hierarchies.get(hierarchy_name, {}).get("levels", []) if hierarchy_name else []
+            if hierarchy_name is None or level not in levels:
+                raise FlowContractError(
+                    f"field.maps_to '{maps_to}' no es valido: el nivel no existe "
+                    "en la jerarquia referenciada."
+                )
+
+
 def _dataset(dataset: dict) -> dict[str, object]:
     """DS-ONB-5: construye el bloque {kind, source_medium, periodicity,
     file_count, files, fields} de un dataset. file_count es la cantidad de
@@ -137,13 +158,18 @@ class Onboarding(Flow):
     def validate(self, ctx: ClientContext) -> None:
         """Fase 2a (DS-ONB-5): existencia base del require. Fase 2b (DS-ONB-1,
         TSK-07, en curso): coherencia de contenido del contrato ya cargado;
-        por ahora levels no vacios (CA-14) y claves de miembro coincidentes
-        con levels (CA-15). Resto de reglas de contenido (CA-16..CA-19)
-        quedan para casos posteriores del bucle."""
+        por ahora levels no vacios (CA-14), claves de miembro coincidentes
+        con levels (CA-15) y field.maps_to a nivel existente (CA-16). Resto
+        de reglas de contenido (CA-17..CA-19) quedan para casos posteriores
+        del bucle."""
         super().validate(ctx)
         contract = self._contract or {}
+        hierarchies: dict[str, dict] = {}
         for hierarchy_name in ("product_hierarchy", "geography"):
-            _validate_hierarchy(hierarchy_name, contract.get(hierarchy_name, {}))
+            hierarchy = contract.get(hierarchy_name, {})
+            _validate_hierarchy(hierarchy_name, hierarchy)
+            hierarchies[hierarchy_name] = hierarchy
+        _validate_maps_to(hierarchies, contract.get("historical_data", {}))
 
     def execute(self, ctx: ClientContext) -> FlowResult:
         """Deriva en memoria el mapa canonico (identidad del cliente +
