@@ -47,12 +47,12 @@
 ## 3. Tareas En Progreso
 | ID | Tarea | Prioridad | Notas |
 |---|---|---|---|
-| _Ninguna._ | | | |
+| T-028 | Construir la feature `flow_orchestrator` (orquestador CLI `foda run <cliente> --flow <flujo>` + `foda status <cliente>`, banda `tracer_bullet`) ejecutando la cadena de 8 agentes | 🔴 Alta | Etapas 1-3/8 completadas: `feature_definer` (`feature_contract.md` + `definition.md`, 5 HU, commit `c132a9b`) → `spec_writer` (`spec.md`, 14 CA-xx, GATE humano **APROBADO SIN CAMBIOS**, resolvió DS-ORQ-1 a DS-ORQ-4, commit `ed28ccd`) → `plan_builder` (`plan.md`, 20 TSK, 15 casos TDD en `state.json`, commit `774ba4c`). **GATE humano del plan PENDIENTE** (`state.json`: `awaiting_approval:true`, `gate:human`, `current_stage:"plan_builder"`); la sesión se suspendió antes de arrancar el bucle TDD. Puntos abiertos para la revisión del GATE: A-014 (granularidad casos 1-3), A-015 (uso de `FakeFlow` para HU-05/caso 14), A-016 (fixture `contract_data.json` mínimo para camino feliz, casos 4/5/6/11). Próxima sesión: tras el OK humano del plan, invocar `tdd_tester` con el caso 1 (`resolve_flow("onboarding")`, CA-10). Ver D-062 a D-066, A-014 a A-016. |
 
 ## 4. Tareas Pendientes
 | ID | Tarea | Prioridad | Notas |
 |---|---|---|---|
-| T-028 | Construir la feature `flow_orchestrator` (orquestador CLI `foda run <cliente> --flow <flujo>` + `foda status <cliente>`, banda `tracer_bullet`) ejecutando la cadena de 8 agentes | 🔴 Alta | Alcance acordado con el humano tras cerrar `onboarding` (ver D-062): `foda run <cliente> --flow <flujo>` ejecuta UN flujo de punta a punta con manejo de error claro (p. ej. `FlowContractError` si falta un require); `foda status <cliente>` muestra qué flujos corrieron y qué artefactos existen. Fuera de alcance de esta banda: rangos `--from/--to`, `--pipeline new/recurring`, `foda export`. Arranca en la próxima sesión invocando `feature_definer`. |
+| _Ninguna._ | | | |
 
 ## 5. Backlog
 | ID | Tarea | Notas |

@@ -79,6 +79,10 @@ Cada decisión sigue el formato: **ID**, **título**, **estado** (Propuesta / Ac
 | D-060 | `onboarding` — pre-autorización del humano para el cierre automático de casos "verde directo" sin GATE individual | Aceptada | 2026-07-06 |
 | D-061 | Cierre CONFORME de `onboarding` (banda `tracer_bullet`) con hallazgo no bloqueante OBS-1 | Aceptada | 2026-07-06 |
 | D-062 | Próxima feature = `flow_orchestrator` (orquestador `foda run`/`foda status`), banda `tracer_bullet` acotada | Aceptada | 2026-07-06 |
+| D-063 | `flow_orchestrator` — módulo `src/foda/orchestrator.py` con registro literal `FLOWS` y `resolve_flow(name)` (DS-ORQ-1) | Aceptada | 2026-07-06 |
+| D-064 | `flow_orchestrator` — `ValueError` para flujo desconocido (DS-ORQ-2) | Aceptada | 2026-07-06 |
+| D-065 | `flow_orchestrator` — `foda status` en texto plano determinista (DS-ORQ-3) | Aceptada | 2026-07-06 |
+| D-066 | `flow_orchestrator` — orden de validación flujo→cliente→ejecución, códigos de salida 0/1/2, sin crear `clients/` (DS-ORQ-4) | Aceptada | 2026-07-06 |
 
 ## 3. Detalle de Decisiones
 
@@ -515,3 +519,31 @@ Cada decisión sigue el formato: **ID**, **título**, **estado** (Propuesta / Ac
 - **Contexto:** Cerrada `onboarding`, el humano preguntó en qué punto puede probar/inspeccionar resultados sin esperar a los 14 flujos del pipeline. Se aclaró (respaldado por `system_design.md` §5 Principio 5 "Idempotencia y reanudación", D-006/D-014/E6 y el rol del DS como revisor/aprobador, D-006) que NO hay que esperar: cada flujo es un slice vertical que deja un artefacto inspeccionable (el `map_client_data.json` de `onboarding` ya lo es). Se identificó la brecha: hoy no se puede disparar un flujo desde la terminal porque el orquestador `foda run`/`foda status` (diseñado en `system_design.md` §11) fue diferido por D-054/T-026, y `onboarding` consume un `contract_data.json` fabricado (fixture, D-055). Estaban sobre la mesa (A) el orquestador y (B) el flujo `ingestion` (030); el humano priorizó tener una forma tangible de correr e inspeccionar cada flujo terminado.
 - **Decisión:** La siguiente feature es **`flow_orchestrator`** (banda `tracer_bullet`), materializando la CLI de orquestación diseñada en `system_design.md` §11 y retomando la "opción c" que T-026/D-054 habían diferido. Alcance de la banda `tracer_bullet` acordado con el humano: **EN ALCANCE** — `foda run <cliente> --flow <flujo>` (ejecuta UN flujo por su nombre de punta a punta, con manejo de error claro, p. ej. `FlowContractError` si falta un require) + `foda status <cliente>` (muestra qué flujos corrieron y qué artefactos existen). **FUERA DE ALCANCE** (diferido a bandas/features posteriores) — rangos `foda run --from/--to`, `foda run --pipeline new/recurring`, y `foda export`.
 - **Consecuencias:** Da al humano un checkpoint usable (correr + inspeccionar) tras cada flujo, sin esperar al pipeline completo; refuerza el rol del DS como revisor/aprobador (D-006). Nueva tarea T-028 (alta prioridad): la cadena SDD/TDD de `flow_orchestrator` arranca con `feature_definer` en la próxima sesión.
+
+### D-063 — `flow_orchestrator`: módulo `src/foda/orchestrator.py` con registro literal y `resolve_flow(name)` (DS-ORQ-1)
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-06
+- **Contexto:** `spec_writer` necesitaba fijar cómo `foda run`/`foda status` localizan la clase `Flow` concreta a partir del nombre de flujo pasado por el humano (`--flow onboarding`). Se evaluó también un mecanismo de descubrimiento dinámico (autodiscovery por convención de paquete/carpeta).
+- **Decisión:** Se crea un módulo nuevo `src/foda/orchestrator.py`, fuera de `src/foda/core/`, con un registro literal `FLOWS = {"onboarding": Onboarding}` y una función `resolve_flow(name)` que lo consulta. Vive fuera de `core/` para no invertir la dirección de dependencias (`core` no debe conocer flujos concretos). Se descarta el descubrimiento dinámico por ser sobre-diseño para un registro de un solo flujo (E4/NC-2).
+- **Consecuencias:** Añadir un flujo nuevo al orquestador requiere una línea en `FLOWS`, sin mecanismo de reflexión/plugins. Si el número de flujos crece mucho, el registro literal puede revisarse en una banda de estabilización futura.
+
+### D-064 — `flow_orchestrator`: `ValueError` para flujo desconocido (DS-ORQ-2)
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-06
+- **Contexto:** Había que fijar qué excepción lanza `resolve_flow(name)` cuando el nombre de flujo no está en `FLOWS`. Se evaluó también definir una excepción de dominio propia (como `FlowContractError` en `flow_base`, D-047).
+- **Decisión:** Se lanza `ValueError` con mensaje claro indicando el flujo desconocido, siguiendo el mismo patrón ya usado en `client_new_cli` (D-025) para nombre de cliente inválido. Se descarta una excepción propia por no haber, todavía, un consumidor que necesite distinguirla de otros `ValueError` de la CLI.
+- **Consecuencias:** La CLI captura `ValueError` de forma uniforme (igual patrón que `client_new_cli`), simplificando el manejo de errores en `cli.py` sin añadir un nuevo tipo de excepción de dominio.
+
+### D-065 — `flow_orchestrator`: `foda status` en texto plano determinista (DS-ORQ-3)
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-06
+- **Contexto:** Había que fijar el formato de salida de `foda status <cliente>`: texto plano legible por humano vs. JSON estructurado para consumo de máquina.
+- **Decisión:** Salida en texto plano determinista: una sección por flujo registrado, y por cada artefacto declarado (`requires`/`produces`) se imprime su rol, nombre, estado `[presente]`/`[ausente]` (vía `Artifact.exists`) y ruta relativa. Se descarta JSON por no existir todavía ningún consumidor de máquina de este comando en la banda `tracer_bullet`.
+- **Consecuencias:** `foda status` es legible directamente en terminal por el científico de datos (su rol de revisor/aprobador, D-006); si en el futuro se necesita consumo programático, se puede añadir una bandera `--json` sin romper el formato de texto por defecto.
+
+### D-066 — `flow_orchestrator`: orden de validación, códigos de salida y sin creación de `clients/` (DS-ORQ-4)
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-06
+- **Contexto:** Había que fijar el orden de validación de `foda run`/`foda status` (¿se valida primero el nombre de flujo o la existencia del cliente?), los códigos de salida, y si estos comandos deben crear el árbol de `clients/` como sí hace `client new` (D-036).
+- **Decisión:** Orden de validación: flujo → cliente → ejecución (se valida primero que el nombre de flujo sea conocido, luego que el cliente exista, y solo entonces se ejecuta). Códigos de salida alineados con el patrón ya usado en `client_new_cli` (D-025/D-038): `0` éxito, `1` error de validación/negocio (flujo desconocido, cliente inexistente, `FlowContractError`), `2` uso incorrecto de la CLI. `foda run`/`foda status` NO crean `clients/` ni la carpeta del cliente si no existe, a diferencia de `client new` — ambos comandos operan solo sobre clientes ya existentes.
+- **Consecuencias:** Comportamiento predecible y consistente con la CLI ya construida; un cliente inexistente produce un mensaje de error claro en vez de crearse implícitamente por accidente al correr `foda run`/`foda status`.
