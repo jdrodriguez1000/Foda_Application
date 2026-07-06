@@ -22,8 +22,10 @@ referencie un <level> existente en la jerarquia correspondiente
 (maps_to=None/"time"/"measure" siguen siendo validos), y a _validate_enums
 (historical_data), que exige que field.type/kind/source_medium/periodicity
 de cada dataset pertenezcan a su vocabulario cerrado (spec.md, Contratos de
-Datos). El resto de reglas de contenido (CA-18, CA-19: fechas, name
-duplicado) queda para casos posteriores del bucle.
+Datos) delegando en el helper _check_enum(label, value, allowed) para las
+4 comprobaciones identicas en forma (valor no en el set permitido -> mismo
+mensaje de FlowContractError). El resto de reglas de contenido (CA-18,
+CA-19: fechas, name duplicado) queda para casos posteriores del bucle.
 """
 
 import json
@@ -126,30 +128,24 @@ _PERIODICITIES = {
 }
 
 
+def _check_enum(label: str, value: object, allowed: set[str]) -> None:
+    """Lanza FlowContractError si value no pertenece al vocabulario cerrado
+    allowed, con un mensaje uniforme que identifica el campo (label) y el
+    valor recibido."""
+    if value not in allowed:
+        raise FlowContractError(f"{label} '{value}' no pertenece al vocabulario cerrado.")
+
+
 def _validate_enums(historical_data: dict) -> None:
     """DS-ONB-1 (TSK-07, CA-17): valida que field.type, kind, source_medium y
     periodicity de cada dataset pertenezcan a su vocabulario cerrado (spec.md,
     Contratos de Datos -> Vocabularios cerrados)."""
     for dataset in historical_data.get("datasets", []):
-        kind = dataset.get("kind")
-        if kind not in _KINDS:
-            raise FlowContractError(f"kind '{kind}' no pertenece al vocabulario cerrado.")
-        source_medium = dataset.get("source_medium")
-        if source_medium not in _SOURCE_MEDIUMS:
-            raise FlowContractError(
-                f"source_medium '{source_medium}' no pertenece al vocabulario cerrado."
-            )
-        periodicity = dataset.get("periodicity")
-        if periodicity not in _PERIODICITIES:
-            raise FlowContractError(
-                f"periodicity '{periodicity}' no pertenece al vocabulario cerrado."
-            )
+        _check_enum("kind", dataset.get("kind"), _KINDS)
+        _check_enum("source_medium", dataset.get("source_medium"), _SOURCE_MEDIUMS)
+        _check_enum("periodicity", dataset.get("periodicity"), _PERIODICITIES)
         for field in dataset.get("fields", []):
-            field_type = field.get("type")
-            if field_type not in _FIELD_TYPES:
-                raise FlowContractError(
-                    f"field.type '{field_type}' no pertenece al vocabulario cerrado."
-                )
+            _check_enum("field.type", field.get("type"), _FIELD_TYPES)
 
 
 def _dataset(dataset: dict) -> dict[str, object]:
