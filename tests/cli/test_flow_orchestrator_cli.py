@@ -14,6 +14,8 @@ import json
 from pathlib import Path
 
 from foda.cli import main
+from foda.core.flow import FlowResult
+from foda.flows.f020_onboarding.onboarding import Onboarding
 
 
 def _contrato_valido() -> dict:
@@ -219,3 +221,30 @@ def test_run_onboarding_exitoso_stdout_confirma_flujo_cliente_y_artefacto(
     assert "onboarding" in captured.out
     assert "ABC" in captured.out
     assert "map_client_data.json" in captured.out
+
+
+def test_run_invoca_flow_run_una_sola_vez_con_ctx_cuyo_name_es_abc(
+    tmp_path, monkeypatch
+):
+    """Caso 6 (CA-03, TSK-10): con Onboarding.run espiado (sin ejecutar el
+    flujo real), main(["run","ABC","--flow","onboarding"]) lo invoca
+    EXACTAMENTE UNA VEZ con un ctx cuyo name == "ABC" (verifica delegacion
+    estricta: el orquestador no deriva el mapa por su cuenta ni reimplementa
+    la logica de flujo, solo despacha a flow.run(ctx))."""
+    (tmp_path / "pyproject.toml").write_text("", encoding="utf-8")
+    _seed_cliente_abc(tmp_path, con_contrato=False)
+    monkeypatch.chdir(tmp_path)
+
+    calls = []
+
+    def fake_run(self, ctx):
+        calls.append(ctx)
+        return FlowResult(success=True, outputs=[])
+
+    monkeypatch.setattr(Onboarding, "run", fake_run)
+
+    result = main(["run", "ABC", "--flow", "onboarding"])
+
+    assert result == 0
+    assert len(calls) == 1
+    assert calls[0].name == "ABC"
