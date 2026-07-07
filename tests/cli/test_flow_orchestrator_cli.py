@@ -250,6 +250,30 @@ def test_run_invoca_flow_run_una_sola_vez_con_ctx_cuyo_name_es_abc(
     assert calls[0].name == "ABC"
 
 
+def test_run_cliente_inexistente_devuelve_1_stderr_nombra_cliente_sin_traceback_ni_artefacto(
+    tmp_path, monkeypatch, capsys
+):
+    """Caso 8 (CA-05, TSK-12): main(["run","GHOST","--flow","onboarding"])
+    con GHOST inexistente (no sembrado bajo clients/) devuelve 1, stderr
+    menciona el cliente GHOST/que no existe, la salida no contiene
+    "Traceback" y no se crea ningun artefacto ni carpeta del cliente GHOST.
+    _dispatch_run construye ClientContext(args.name, clients_root) y traduce
+    el FileNotFoundError resultante (mensaje "No existe el cliente 'GHOST'...")
+    a stderr + return 1 antes de invocar flow.run."""
+    (tmp_path / "pyproject.toml").write_text("", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    result = main(["run", "GHOST", "--flow", "onboarding"])
+
+    assert result == 1
+    captured = capsys.readouterr()
+    assert "GHOST" in captured.err
+    assert "Traceback" not in captured.out
+    assert "Traceback" not in captured.err
+    ghost_dir = tmp_path / "clients" / "GHOST"
+    assert not ghost_dir.exists()
+
+
 def test_run_flujo_inexistente_devuelve_1_stderr_nombra_flujo_sin_traceback_ni_artefacto(
     tmp_path, monkeypatch, capsys
 ):
