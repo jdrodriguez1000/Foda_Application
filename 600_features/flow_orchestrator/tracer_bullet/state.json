@@ -1,8 +1,8 @@
 {
   "feature": "flow_orchestrator",
   "band": "tracer_bullet",
-  "status": "in_progress",
-  "current_stage": "spec_verifier",
+  "status": "done",
+  "current_stage": "completed",
   "next_case_id": null,
   "stages": {
     "feature_definer":    { "status": "done",    "artifact": "definition.md" },
@@ -41,6 +41,6 @@
       "suite_evidence": "python -m pytest tests/integration/test_flow_orchestrator_integration.py -q -> 9 passed; python -m pytest tests/integration -q -> 37 passed (sin regresiones en las demas suites de integracion); python -m pytest -q (suite completa) -> 145 passed (136 previos + 9 nuevos), sin regresiones.",
       "findings": "Ningun defecto de integracion detectado: la cadena orchestrator/cli/ClientContext/Flow/Onboarding integra limpiamente con las piezas CONFORMES reales (create_client, ClientContext, Flow.run, Artifact.exists/.path, Onboarding), sin necesidad de tocar src/foda/. El entry point declarado en pyproject.toml ([project.scripts] foda = 'foda.cli:main') ya cubria run/status sin cambios adicionales (la extension de cli.py de la etapa TDD reutilizo el mismo main())."
     },
-    "spec_verifier":      { "status": "pending",  "artifact": "verification.md" }
+    "spec_verifier":      { "status": "done",  "artifact": "verification.md", "verdict": "CONFORME" }
   }
 }
