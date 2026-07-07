@@ -248,3 +248,34 @@ def test_run_invoca_flow_run_una_sola_vez_con_ctx_cuyo_name_es_abc(
     assert result == 0
     assert len(calls) == 1
     assert calls[0].name == "ABC"
+
+
+def test_run_flujo_inexistente_devuelve_1_stderr_nombra_flujo_sin_traceback_ni_artefacto(
+    tmp_path, monkeypatch, capsys
+):
+    """Caso 7 (CA-04, TSK-11): main(["run","ABC","--flow","inexistente"])
+    devuelve 1, stderr menciona el flujo desconocido ("inexistente"), la
+    salida no contiene "Traceback" y no se escribe ningun artefacto de
+    salida. resolve_flow(args.flow) es lo primero que hace _dispatch_run
+    (antes de tocar disco), asi que basta con comprobar que
+    map_client_data.json no existe."""
+    (tmp_path / "pyproject.toml").write_text("", encoding="utf-8")
+    _seed_cliente_abc(tmp_path, con_contrato=True)
+    monkeypatch.chdir(tmp_path)
+
+    result = main(["run", "ABC", "--flow", "inexistente"])
+
+    assert result == 1
+    captured = capsys.readouterr()
+    assert "inexistente" in captured.err
+    assert "Traceback" not in captured.out
+    assert "Traceback" not in captured.err
+    map_client_data = (
+        tmp_path
+        / "clients"
+        / "ABC"
+        / "020_outputs"
+        / "020_onboarding"
+        / "map_client_data.json"
+    )
+    assert not map_client_data.exists()
