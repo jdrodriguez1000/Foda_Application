@@ -511,3 +511,146 @@ def test_reporte_registra_rows_columns_correctos_y_separator_null_para_precios_x
     assert archivo["separator"] is None
 
     assert result.success is True
+
+
+def _contract_data_completo() -> dict:
+    """DS-ING-7/DS-ING-8: fixture completo (fuente de los archivos
+    esperados), 3 datasets ("ventas", "inventario" con 2 archivos,
+    "precios"), 4 archivos en total. Reutiliza los kinds/archivos ya
+    definidos en los fixtures aislados de los casos 3-6 (mismos nombres y
+    separadores)."""
+    return {
+        "schema_version": "0.1",
+        "client": {"code": "ABC", "name": "Cliente ABC S.A.", "sector": "retail"},
+        "historical_data": {
+            "datasets": [
+                {
+                    "kind": "ventas",
+                    "source_medium": "csv",
+                    "periodicity": "mensual",
+                    "files": [
+                        {
+                            "name": "ventas.csv",
+                            "period_start": "2023-01-01",
+                            "period_end": "2025-12-31",
+                        }
+                    ],
+                },
+                {
+                    "kind": "inventario",
+                    "source_medium": "csv",
+                    "periodicity": "mensual",
+                    "files": [
+                        {
+                            "name": "inventario_2024.txt",
+                            "period_start": "2023-01-01",
+                            "period_end": "2025-12-31",
+                        },
+                        {
+                            "name": "inventario_2025.csv",
+                            "period_start": "2023-01-01",
+                            "period_end": "2025-12-31",
+                        },
+                    ],
+                },
+                {
+                    "kind": "precios",
+                    "source_medium": "xlsx",
+                    "periodicity": "mensual",
+                    "files": [
+                        {
+                            "name": "precios.xlsx",
+                            "period_start": "2023-01-01",
+                            "period_end": "2025-12-31",
+                        }
+                    ],
+                },
+            ]
+        },
+    }
+
+
+def _map_client_data_completo() -> dict:
+    """DS-ING-8: fuente de las columnas esperadas de los 3 datasets del
+    fixture completo, coherente con _contract_data_completo (mismos
+    kinds). Reutiliza los fields[] ya definidos en los fixtures aislados de
+    los casos 3-6."""
+    return {
+        "schema_version": "0.1",
+        "client": {"code": "ABC", "name": "Cliente ABC S.A.", "sector": "retail"},
+        "datasets": [
+            _map_client_data_minimo()["datasets"][0],
+            _map_client_data_inventario_2024()["datasets"][0],
+            _map_client_data_precios()["datasets"][0],
+        ],
+    }
+
+
+def _build_ctx_fixture_completo(tmp_path: Path) -> ClientContext:
+    """DS-ING-7 (fixture completo, caso 7): ClientContext con
+    contract_data.json + map_client_data.json coherentes entre si (3
+    datasets) y los 4 archivos crudos del landing (ventas.csv coma,
+    inventario_2024.txt ';', inventario_2025.csv '|', precios.xlsx)."""
+    return _build_ctx(
+        tmp_path,
+        _contract_data_completo(),
+        _map_client_data_completo(),
+        {
+            "ventas.csv": "\n".join([_VENTAS_HEADER, *_VENTAS_ROWS]) + "\n",
+            "inventario_2024.txt": "\n".join(
+                [_INVENTARIO_HEADER, *_INVENTARIO_ROWS]
+            )
+            + "\n",
+            "inventario_2025.csv": "\n".join(
+                [_INVENTARIO_2025_HEADER, *_INVENTARIO_2025_ROWS]
+            )
+            + "\n",
+            "precios.xlsx": _precios_xlsx_bytes(),
+        },
+    )
+
+
+def test_reporte_expone_por_archivo_name_rows_y_columns_para_los_4_archivos_del_fixture_completo(
+    tmp_path: Path,
+) -> None:
+    """Caso 7 (CA-15): sobre el fixture completo (DS-ING-7, 3 datasets, 4
+    archivos con distintos separadores/formato) el reporte expone, por
+    CADA archivo, los campos name/rows/columns con los valores correctos.
+    A diferencia de los casos 3-6 (que aislaban un unico dataset/archivo
+    por fixture), este caso ejercita varios datasets con mas de un archivo
+    por dataset ("inventario" con 2 archivos) para confirmar que ningun
+    archivo del reporte queda sin su name/rows/columns."""
+    ctx = _build_ctx_fixture_completo(tmp_path)
+
+    flow = Ingestion()
+    result = flow.run(ctx)
+
+    ruta_reporte = ctx.outputs_dir / "030_ingestion/ingestion_report.json"
+    reporte = json.loads(ruta_reporte.read_text(encoding="utf-8"))
+
+    esperado_por_nombre = {
+        "ventas.csv": (len(_VENTAS_ROWS), len(_VENTAS_HEADER.split(","))),
+        "inventario_2024.txt": (
+            len(_INVENTARIO_ROWS),
+            len(_INVENTARIO_HEADER.split(";")),
+        ),
+        "inventario_2025.csv": (
+            len(_INVENTARIO_2025_ROWS),
+            len(_INVENTARIO_2025_HEADER.split("|")),
+        ),
+        "precios.xlsx": (len(_PRECIOS_ROWS), len(_PRECIOS_HEADER)),
+    }
+
+    archivos_vistos = []
+    for dataset in reporte["datasets"]:
+        for archivo in dataset["files"]:
+            archivos_vistos.append(archivo["name"])
+            assert "name" in archivo
+            assert "rows" in archivo
+            assert "columns" in archivo
+            rows_esperadas, columns_esperadas = esperado_por_nombre[archivo["name"]]
+            assert archivo["rows"] == rows_esperadas
+            assert archivo["columns"] == columns_esperadas
+
+    assert sorted(archivos_vistos) == sorted(esperado_por_nombre.keys())
+    assert result.success is True
