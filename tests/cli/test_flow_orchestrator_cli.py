@@ -14,8 +14,9 @@ import json
 from pathlib import Path
 
 from foda.cli import main
-from foda.core.flow import FlowResult
+from foda.core.flow import Artifact, Flow, FlowResult
 from foda.flows.f020_onboarding.onboarding import Onboarding
+from foda.orchestrator import FLOWS
 
 
 def _contrato_valido() -> dict:
@@ -424,6 +425,47 @@ def test_run_y_status_cliente_inexistente_no_crean_arbol_de_clients(
     assert result_status == 1
     assert not clients_root.exists()
     assert not (clients_root / "GHOST").exists()
+
+
+def test_flujo_falso_en_flows_es_descubierto_por_status_y_run_sin_tocar_logica(
+    tmp_path, monkeypatch, capsys
+):
+    """Caso 14 (CA-11, TSK-18): un flujo falso (FakeFlow, subclase minima de
+    Flow) inyectado en FLOWS via monkeypatch.setitem es descubierto SIN tocar
+    la logica de _dispatch_run/_dispatch_status: main(["status","ABC"]) lo
+    lista (nombre "fake" + su artefacto de produces, con marcador de
+    presencia) y main(["run","ABC","--flow","fake"]) lo resuelve via
+    resolve_flow("fake") y despacha a FakeFlow.run (que internamente invoca
+    execute exactamente una vez). FakeFlow.requires = [] para que
+    Flow.validate no exija ningun artefacto en disco (el flujo termina con
+    exito sin sembrar contract_data.json)."""
+    (tmp_path / "pyproject.toml").write_text("", encoding="utf-8")
+    _seed_cliente_abc(tmp_path, con_contrato=False)
+    monkeypatch.chdir(tmp_path)
+
+    calls = []
+
+    class FakeFlow(Flow):
+        name = "fake"
+        requires: list[Artifact] = []
+        produces = [Artifact(name="fake_output", base="outputs", relative="fake_output.json")]
+
+        def execute(self, ctx):
+            calls.append(ctx)
+            return FlowResult(success=True, outputs=[])
+
+    monkeypatch.setitem(FLOWS, "fake", FakeFlow)
+
+    result_status = main(["status", "ABC"])
+    assert result_status == 0
+    captured_status = capsys.readouterr().out
+    assert "fake:" in captured_status
+    assert "fake_output" in captured_status
+
+    result_run = main(["run", "ABC", "--flow", "fake"])
+    assert result_run == 0
+    assert len(calls) == 1
+    assert calls[0].name == "ABC"
 
 
 def test_run_flujo_inexistente_devuelve_1_stderr_nombra_flujo_sin_traceback_ni_artefacto(
