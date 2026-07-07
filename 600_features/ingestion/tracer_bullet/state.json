@@ -2,12 +2,38 @@
   "feature": "ingestion",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "spec_writer",
+  "current_stage": "plan_builder",
   "stages": {
     "feature_definer":   { "status": "done",    "artifact": "definition.md" },
-    "spec_writer":       { "status": "done",  "artifact": "spec.md",      "gate": "human", "awaiting_approval": true },
-    "plan_builder":      { "status": "pending",  "artifact": "plan.md",      "gate": "human" },
-    "tdd":               { "status": "pending",  "cases": [] },
+    "spec_writer":       { "status": "done",    "artifact": "spec.md",  "gate": "human", "awaiting_approval": false },
+    "plan_builder":      { "status": "done",    "artifact": "plan.md",  "gate": "human", "awaiting_approval": true },
+    "tdd": {
+      "status": "pending",
+      "cases": [
+        { "id": 1,  "desc": "run(ctx) sobre el fixture minimo (dataset ventas/ventas.csv coma) escribe ingestion_report.json en ctx.outputs_dir/030_ingestion/ingestion_report.json y lo incluye en FlowResult.outputs (CA-14).", "status": "pending" },
+        { "id": 2,  "desc": "Ingestion hereda Flow, declara requires=[contract_data, map_client_data]/produces=[ingestion_report] y completa las 4 fases sin sobreescribir run (CA-20).", "status": "pending" },
+        { "id": 3,  "desc": "Para ventas.csv (coma) el reporte registra rows/columns correctos y separator == ',' (CA-01).", "status": "pending" },
+        { "id": 4,  "desc": "Para inventario_2024.txt (;) el reporte registra rows/columns correctos y separator == ';' (CA-02).", "status": "pending" },
+        { "id": 5,  "desc": "Para inventario_2025.csv (|) el reporte registra rows/columns correctos y separator == '|' (CA-03).", "status": "pending" },
+        { "id": 6,  "desc": "Para precios.xlsx el reporte registra rows/columns correctos (primera hoja) y separator == null (CA-04).", "status": "pending" },
+        { "id": 7,  "desc": "El reporte expone, por archivo, name, rows y columns (CA-15).", "status": "pending" },
+        { "id": 8,  "desc": "Para cada archivo valido existe en ctx.bronze_dir/<name> una copia byte a byte identica al original (CA-11).", "status": "pending" },
+        { "id": 9,  "desc": "La copia en bronze conserva formato/separador/extension (el | sigue |; el .xlsx identico) (CA-12).", "status": "pending" },
+        { "id": 10, "desc": "Presentes == declarados => sin missing_file/unexpected_file, unexpected_files == [], summary.files_ingested == summary.files_declared (CA-05).", "status": "pending" },
+        { "id": 11, "desc": "Archivo declarado no presente => status=='missing' + missing_file; sin copia en bronze; success == False (CA-06).", "status": "pending" },
+        { "id": 12, "desc": "Archivo presente no declarado => en unexpected_files + unexpected_file; no se copia; success == False (CA-07).", "status": "pending" },
+        { "id": 13, "desc": "Archivo sin una columna required==true => status=='rejected' + missing_column; no se copia; success == False (CA-08).", "status": "pending" },
+        { "id": 14, "desc": "Archivo con columna no declarada en fields => status=='rejected' + unexpected_column; no se copia; success == False (CA-09).", "status": "pending" },
+        { "id": 15, "desc": "Archivo al que le falta una columna required==false (precio_unitario) => no es inconsistencia; queda ingested (CA-10).", "status": "pending" },
+        { "id": 16, "desc": "Cada inconsistencia tiene type del vocabulario cerrado y un detail legible no vacio (CA-16).", "status": "pending" },
+        { "id": 17, "desc": "summary reporta datasets_declared/files_declared/files_ingested/files_with_inconsistencies coherentes con el detalle (CA-17).", "status": "pending" },
+        { "id": 18, "desc": "success == True sii sin inconsistencias; en caso contrario False y el reporte se escribe igualmente (CA-19).", "status": "pending" },
+        { "id": 19, "desc": "Inconsistencia parcial (3 validos, 1 invalido) => los validos se copian, el invalido no; reporte refleja ambos; success == False (CA-18).", "status": "pending" },
+        { "id": 20, "desc": "Dos run(ctx) con las mismas entradas => ingestion_report.json y copias en bronze byte-identicos (CA-13).", "status": "pending" },
+        { "id": 21, "desc": "contract_data.json ausente => FlowContractError en validate (base); sin reporte ni copia (CA-21).", "status": "pending" },
+        { "id": 22, "desc": "map_client_data.json ausente => FlowContractError en validate (base); sin reporte ni copia (CA-21).", "status": "pending" }
+      ]
+    },
     "integration_tester":{ "status": "pending" },
     "spec_verifier":     { "status": "pending",  "artifact": "verification.md" }
   }
