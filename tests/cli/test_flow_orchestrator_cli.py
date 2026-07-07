@@ -200,3 +200,22 @@ def test_run_onboarding_con_contrato_valido_devuelve_0_y_escribe_map_client_data
         / "map_client_data.json"
     )
     assert map_client_data.exists()
+
+
+def test_run_onboarding_exitoso_stdout_confirma_flujo_cliente_y_artefacto(
+    tmp_path, monkeypatch, capsys
+):
+    """Caso 5 (CA-02, TSK-09): en el exito del caso 4, stdout contiene una
+    confirmacion legible que menciona el flujo onboarding, el cliente ABC y
+    la ruta del artefacto producido (map_client_data.json)."""
+    (tmp_path / "pyproject.toml").write_text("", encoding="utf-8")
+    _seed_cliente_abc(tmp_path, con_contrato=True)
+    monkeypatch.chdir(tmp_path)
+
+    result = main(["run", "ABC", "--flow", "onboarding"])
+
+    assert result == 0
+    captured = capsys.readouterr()
+    assert "onboarding" in captured.out
+    assert "ABC" in captured.out
+    assert "map_client_data.json" in captured.out
