@@ -400,6 +400,32 @@ def test_status_cliente_inexistente_devuelve_1_stderr_nombra_cliente_sin_traceba
     assert "Traceback" not in captured.err
 
 
+def test_run_y_status_cliente_inexistente_no_crean_arbol_de_clients(
+    tmp_path, monkeypatch
+):
+    """Caso 13 (CA-12, TSK-17): ante un cliente inexistente, ni
+    main(["run","GHOST","--flow","onboarding"]) ni main(["status","GHOST"])
+    crean <raiz>/clients/ ni clients/GHOST/ (a diferencia de `client new`,
+    que si hace mkdir de clients_root). main resuelve clients_root =
+    project_root / "clients" antes de bifurcar a run/status, pero solo hace
+    mkdir(clients_root) en la rama de `client new` (tras el bloque
+    if/return de run y status); _dispatch_run/_dispatch_status delegan en
+    ClientContext, que solo consulta root/"client.yaml" (Path.exists(), sin
+    efecto en disco) y no crea ningun directorio."""
+    (tmp_path / "pyproject.toml").write_text("", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    clients_root = tmp_path / "clients"
+
+    result_run = main(["run", "GHOST", "--flow", "onboarding"])
+    assert result_run == 1
+    assert not clients_root.exists()
+
+    result_status = main(["status", "GHOST"])
+    assert result_status == 1
+    assert not clients_root.exists()
+    assert not (clients_root / "GHOST").exists()
+
+
 def test_run_flujo_inexistente_devuelve_1_stderr_nombra_flujo_sin_traceback_ni_artefacto(
     tmp_path, monkeypatch, capsys
 ):
