@@ -42,7 +42,7 @@ _copy_bytes(src: Path, dst: Path) y self._bronze_copies como
 list[tuple[Path, Path]]; el resto del diseño ya era minimo y coherente
 (NC-2/NC-3), sin cambios de comportamiento.
 
-Caso 11 (CA-06) en VERDE (tdd_coder, TSK-08 -sub-caso missing_file-):
+Caso 11 (CA-06) cerrado (tdd_refactor, TSK-08 -sub-caso missing_file-):
 execute() verifica, para cada archivo declarado en contract_data.json, su
 existencia en el landing ANTES de leerlo; si no existe, lo marca con
 status="missing", agrega una inconsistencia {type: "missing_file", detail}
@@ -51,7 +51,12 @@ bronze). summary.files_ingested/files_with_inconsistencies y
 FlowResult.success/report["success"] ahora se derivan del conteo real de
 inconsistencias (antes siempre files_declared/0/True). Solo se implementa
 missing_file (NC-2): unexpected_file (caso 12) y missing_column/
-unexpected_column (casos 13-14) quedan pendientes.
+unexpected_column (casos 13-14) quedan pendientes. Refactor: se extrajeron
+los helpers de modulo _missing_file_entry(name)/_ingested_file_entry(name,
+separator, columns, rows), que construyen la entrada de reporte
+(esquema DS-ING-2) por archivo; elimina la duplicacion de la forma del
+diccionario entre ambas ramas y reduce el anidamiento de execute(), sin
+cambiar el comportamiento (NC-2/NC-3).
 """
 
 import json
@@ -143,6 +148,48 @@ def _copy_bytes(src: Path, dst: Path) -> None:
     dst.write_bytes(src.read_bytes())
 
 
+def _missing_file_entry(name: str) -> dict:
+    """TSK-08 (CA-06): entrada de reporte (esquema DS-ING-2) para un archivo
+    declarado en contract_data.json pero ausente del landing: status
+    "missing", sin rows/columns/separator/bronze_path (None) y una unica
+    inconsistencia missing_file con detail legible."""
+    return {
+        "name": name,
+        "status": "missing",
+        "rows": None,
+        "columns": None,
+        "separator": None,
+        "bronze_path": None,
+        "inconsistencies": [
+            {
+                "type": "missing_file",
+                "detail": (
+                    f"'{name}' esta declarado en contract_data.json pero no "
+                    "se encontro en el landing."
+                ),
+            }
+        ],
+    }
+
+
+def _ingested_file_entry(
+    name: str, separator: str | None, columns: int, rows: int
+) -> dict:
+    """Entrada de reporte (esquema DS-ING-2) para un archivo presente y
+    leido correctamente del landing: status "ingested", con
+    rows/columns/separator provistos por _read_file y sin
+    inconsistencias."""
+    return {
+        "name": name,
+        "status": "ingested",
+        "rows": rows,
+        "columns": columns,
+        "separator": separator,
+        "bronze_path": None,
+        "inconsistencies": [],
+    }
+
+
 class Ingestion(Flow):
     """Flujo 030: carga y valida datos crudos, copia inmutable a bronze y
     emite reporte de carga (ingestion_report.json).
@@ -208,40 +255,12 @@ class Ingestion(Flow):
                     # del landing -> status="missing", inconsistencia
                     # missing_file, sin lectura ni copia a bronze.
                     files_with_inconsistencies += 1
-                    files_out.append(
-                        {
-                            "name": name,
-                            "status": "missing",
-                            "rows": None,
-                            "columns": None,
-                            "separator": None,
-                            "bronze_path": None,
-                            "inconsistencies": [
-                                {
-                                    "type": "missing_file",
-                                    "detail": (
-                                        f"'{name}' esta declarado en "
-                                        "contract_data.json pero no se "
-                                        "encontro en el landing."
-                                    ),
-                                }
-                            ],
-                        }
-                    )
+                    files_out.append(_missing_file_entry(name))
                     continue
                 separator, columns, rows = _read_file(source_path)
-                bronze_path = ctx.bronze_dir / name
-                self._bronze_copies.append((source_path, bronze_path))
+                self._bronze_copies.append((source_path, ctx.bronze_dir / name))
                 files_out.append(
-                    {
-                        "name": name,
-                        "status": "ingested",
-                        "rows": rows,
-                        "columns": columns,
-                        "separator": separator,
-                        "bronze_path": None,
-                        "inconsistencies": [],
-                    }
+                    _ingested_file_entry(name, separator, columns, rows)
                 )
             datasets_out.append(
                 {
