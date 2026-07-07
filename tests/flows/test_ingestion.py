@@ -13,6 +13,7 @@ import json
 from pathlib import Path
 
 from foda.core.context import ClientContext
+from foda.core.flow import Artifact, Flow
 from foda.core.scaffold import create_client
 from foda.flows.f030_ingestion.ingestion import Ingestion
 
@@ -118,3 +119,47 @@ def test_run_sobre_fixture_minimo_escribe_ingestion_report_y_lo_incluye_en_outpu
 
     assert ruta_esperada.exists()
     assert ruta_esperada in result.outputs
+
+
+def test_ingestion_hereda_flow_requires_produces_y_4_fases_sin_sobreescribir_run() -> None:
+    """Caso 2 (CA-20): Ingestion hereda de Flow, declara requires/produces con
+    los Artifact exactos de la spec y completa las 4 fases del template
+    method (load_inputs, validate, execute, write_outputs) sin sobreescribir
+    run. El caso 1 ya cubre que run() (heredado) produce el reporte
+    end-to-end; este caso verifica la estructura declarativa de la clase que
+    ese caso no comprueba: que Ingestion sobreescribe explicitamente las 4
+    fases (incluida validate, aunque delegue en super().validate) y no
+    sobreescribe run."""
+    assert issubclass(Ingestion, Flow)
+
+    assert Ingestion.requires == [
+        Artifact(
+            name="contract_data",
+            base="outputs",
+            relative="010_discovery/contract_data.json",
+        ),
+        Artifact(
+            name="map_client_data",
+            base="outputs",
+            relative="020_onboarding/map_client_data.json",
+        ),
+    ]
+    assert Ingestion.produces == [
+        Artifact(
+            name="ingestion_report",
+            base="outputs",
+            relative="030_ingestion/ingestion_report.json",
+        ),
+    ]
+
+    # No sobreescribe run(): usa el template method heredado de Flow.
+    assert "run" not in vars(Ingestion)
+    assert Ingestion.run is Flow.run
+
+    # Completa las 4 fases del template method (definidas explicitamente en
+    # la propia clase, no solo heredadas en silencio).
+    for hook in ("load_inputs", "validate", "execute", "write_outputs"):
+        assert hook in vars(Ingestion), (
+            f"Ingestion debe sobreescribir explicitamente el hook {hook!r} "
+            "(spec Interfaces / Firmas Publicas, CA-20)."
+        )
