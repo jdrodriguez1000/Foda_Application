@@ -307,6 +307,32 @@ def test_run_sin_contract_data_devuelve_1_stderr_refleja_flow_contract_error(
     assert not map_client_data.exists()
 
 
+def test_status_onboarding_lista_contract_data_y_map_client_data_con_marcadores(
+    tmp_path, monkeypatch, capsys
+):
+    """Caso 10 (CA-07, TSK-14): main(["status","ABC"]) con ABC existente y
+    contract_data.json presente pero map_client_data.json ausente (estado
+    inicial tipico) devuelve 0 y stdout lista el flujo onboarding incluyendo
+    contract_data y map_client_data, cada uno con su marcador de presencia
+    (DS-ORQ-3: "[presente]"/"[ausente]"). El subcomando `status` aun no esta
+    registrado en _build_parser/main, por lo que argparse lo rechaza como
+    subcomando desconocido (SystemExit(2)) en vez de devolver un codigo de
+    resultado; este es el rojo esperado hasta que TSK-14 lo implemente."""
+    (tmp_path / "pyproject.toml").write_text("", encoding="utf-8")
+    _seed_cliente_abc(tmp_path, con_contrato=True)
+    monkeypatch.chdir(tmp_path)
+
+    result = main(["status", "ABC"])
+
+    assert result == 0
+    captured = capsys.readouterr()
+    assert "onboarding" in captured.out
+    assert "contract_data" in captured.out
+    assert "map_client_data" in captured.out
+    assert "[presente]" in captured.out
+    assert "[ausente]" in captured.out
+
+
 def test_run_flujo_inexistente_devuelve_1_stderr_nombra_flujo_sin_traceback_ni_artefacto(
     tmp_path, monkeypatch, capsys
 ):
