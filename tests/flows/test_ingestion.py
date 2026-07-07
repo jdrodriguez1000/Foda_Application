@@ -682,3 +682,52 @@ def test_cada_archivo_valido_tiene_copia_byte_a_byte_identica_en_bronze(
         destino = ctx.bronze_dir / name
         assert destino.exists(), f"falta la copia en bronze de {name!r}"
         assert destino.read_bytes() == origen.read_bytes()
+
+
+def test_copia_en_bronze_conserva_formato_separador_y_extension(
+    tmp_path: Path,
+) -> None:
+    """Caso 9 (CA-12): la copia en ctx.bronze_dir conserva formato,
+    separador y extension del original, no solo bytes identicos en
+    abstracto (ya cubierto por el caso 8). Dos focos concretos:
+    - inventario_2025.csv (separador '|'): la copia en bronze sigue
+      delimitada por '|' (su cabecera, leida desde bronze y partida por
+      '|', produce las mismas 4 columnas que el original); la extension
+      .csv se conserva.
+    - precios.xlsx: la copia en bronze conserva la extension .xlsx y es
+      un .xlsx valido y abrible con openpyxl, con la misma cabecera y
+      filas que el original (no se re-serializa a otro formato)."""
+    ctx = _build_ctx_fixture_completo(tmp_path)
+
+    flow = Ingestion()
+    flow.run(ctx)
+
+    # Delimitado por '|': la copia en bronze sigue separada por '|'.
+    copia_barra = ctx.bronze_dir / "inventario_2025.csv"
+    assert copia_barra.suffix == ".csv"
+    lineas_copia = [
+        line
+        for line in copia_barra.read_text(encoding="utf-8").splitlines()
+        if line.strip() != ""
+    ]
+    cabecera_copia = lineas_copia[0].split("|")
+    assert cabecera_copia == _INVENTARIO_2025_HEADER.split("|")
+    assert len(cabecera_copia) == 4
+    # No debe haberse re-separado por coma u otro delimitador.
+    assert "," not in lineas_copia[0]
+
+    # .xlsx: la copia conserva extension y es un .xlsx valido, byte-identico.
+    copia_xlsx = ctx.bronze_dir / "precios.xlsx"
+    assert copia_xlsx.suffix == ".xlsx"
+    origen_xlsx = ctx.inputs_dir / "030_ingestion" / "precios.xlsx"
+    assert copia_xlsx.read_bytes() == origen_xlsx.read_bytes()
+
+    workbook = openpyxl.load_workbook(copia_xlsx, read_only=True, data_only=True)
+    sheet = workbook.worksheets[0]
+    filas = [
+        row
+        for row in sheet.iter_rows(values_only=True)
+        if any(cell is not None for cell in row)
+    ]
+    assert list(filas[0]) == _PRECIOS_HEADER
+    assert [list(row) for row in filas[1:]] == _PRECIOS_ROWS
