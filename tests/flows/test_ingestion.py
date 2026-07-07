@@ -73,11 +73,14 @@ def _map_client_data_minimo() -> dict:
     }
 
 
-def _build_ctx_fixture_minimo(tmp_path: Path) -> ClientContext:
-    """DS-ING-7 (subconjunto minimo, casos 1-3): construye un ClientContext
-    bajo tmp_path con contract_data.json + map_client_data.json coherentes
-    entre si (dataset "ventas" unico) bajo ctx.outputs_dir, y el archivo
-    crudo ventas.csv (separador coma) bajo ctx.inputs_dir/"030_ingestion"."""
+def _build_ctx(
+    tmp_path: Path, contract_data: dict, map_client_data: dict, files: dict[str, str]
+) -> ClientContext:
+    """DS-ING-7/DS-ING-8: construye un ClientContext bajo tmp_path con
+    contract_data.json + map_client_data.json bajo ctx.outputs_dir, y uno o
+    mas archivos crudos (name -> contenido ya delimitado) bajo
+    ctx.inputs_dir/"030_ingestion". Helper compartido por las fixtures de
+    cada caso del bucle TDD (evita duplicar el andamiaje de directorios)."""
     clients_root = tmp_path / "clients"
     create_client("ABC", clients_root)
     ctx = ClientContext("ABC", clients_root)
@@ -85,22 +88,33 @@ def _build_ctx_fixture_minimo(tmp_path: Path) -> ClientContext:
     contrato_path = ctx.outputs_dir / "010_discovery/contract_data.json"
     contrato_path.parent.mkdir(parents=True)
     contrato_path.write_text(
-        json.dumps(_contract_data_minimo(), ensure_ascii=False), encoding="utf-8"
+        json.dumps(contract_data, ensure_ascii=False), encoding="utf-8"
     )
 
     mapa_path = ctx.outputs_dir / "020_onboarding/map_client_data.json"
     mapa_path.parent.mkdir(parents=True)
     mapa_path.write_text(
-        json.dumps(_map_client_data_minimo(), ensure_ascii=False), encoding="utf-8"
+        json.dumps(map_client_data, ensure_ascii=False), encoding="utf-8"
     )
 
     landing_dir = ctx.inputs_dir / "030_ingestion"
     landing_dir.mkdir(parents=True)
-    (landing_dir / "ventas.csv").write_text(
-        "\n".join([_VENTAS_HEADER, *_VENTAS_ROWS]) + "\n", encoding="utf-8"
-    )
+    for name, content in files.items():
+        (landing_dir / name).write_text(content, encoding="utf-8")
 
     return ctx
+
+
+def _build_ctx_fixture_minimo(tmp_path: Path) -> ClientContext:
+    """DS-ING-7 (subconjunto minimo, casos 1-3): ClientContext con
+    contract_data.json + map_client_data.json coherentes entre si (dataset
+    "ventas" unico) y el archivo crudo ventas.csv (separador coma)."""
+    return _build_ctx(
+        tmp_path,
+        _contract_data_minimo(),
+        _map_client_data_minimo(),
+        {"ventas.csv": "\n".join([_VENTAS_HEADER, *_VENTAS_ROWS]) + "\n"},
+    )
 
 
 def test_run_sobre_fixture_minimo_escribe_ingestion_report_y_lo_incluye_en_outputs(
@@ -221,35 +235,16 @@ def _map_client_data_inventario_2024() -> dict:
 
 
 def _build_ctx_fixture_inventario_2024(tmp_path: Path) -> ClientContext:
-    """DS-ING-7 (subconjunto aislado, caso 4): construye un ClientContext bajo
-    tmp_path con contract_data.json + map_client_data.json coherentes entre
-    si (dataset "inventario" unico) bajo ctx.outputs_dir, y el archivo crudo
-    inventario_2024.txt (separador ';') bajo ctx.inputs_dir/"030_ingestion"."""
-    clients_root = tmp_path / "clients"
-    create_client("ABC", clients_root)
-    ctx = ClientContext("ABC", clients_root)
-
-    contrato_path = ctx.outputs_dir / "010_discovery/contract_data.json"
-    contrato_path.parent.mkdir(parents=True)
-    contrato_path.write_text(
-        json.dumps(_contract_data_inventario_2024(), ensure_ascii=False),
-        encoding="utf-8",
+    """DS-ING-7 (subconjunto aislado, caso 4): ClientContext con
+    contract_data.json + map_client_data.json coherentes entre si (dataset
+    "inventario" unico) y el archivo crudo inventario_2024.txt (separador
+    ';')."""
+    return _build_ctx(
+        tmp_path,
+        _contract_data_inventario_2024(),
+        _map_client_data_inventario_2024(),
+        {"inventario_2024.txt": "\n".join([_INVENTARIO_HEADER, *_INVENTARIO_ROWS]) + "\n"},
     )
-
-    mapa_path = ctx.outputs_dir / "020_onboarding/map_client_data.json"
-    mapa_path.parent.mkdir(parents=True)
-    mapa_path.write_text(
-        json.dumps(_map_client_data_inventario_2024(), ensure_ascii=False),
-        encoding="utf-8",
-    )
-
-    landing_dir = ctx.inputs_dir / "030_ingestion"
-    landing_dir.mkdir(parents=True)
-    (landing_dir / "inventario_2024.txt").write_text(
-        "\n".join([_INVENTARIO_HEADER, *_INVENTARIO_ROWS]) + "\n", encoding="utf-8"
-    )
-
-    return ctx
 
 
 def test_reporte_registra_rows_columns_y_separator_correctos_para_inventario_2024_txt_punto_y_coma(
