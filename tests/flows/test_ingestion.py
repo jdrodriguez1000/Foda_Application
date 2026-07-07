@@ -163,3 +163,28 @@ def test_ingestion_hereda_flow_requires_produces_y_4_fases_sin_sobreescribir_run
             f"Ingestion debe sobreescribir explicitamente el hook {hook!r} "
             "(spec Interfaces / Firmas Publicas, CA-20)."
         )
+
+
+def test_reporte_registra_rows_columns_y_separator_correctos_para_ventas_csv_coma(
+    tmp_path: Path,
+) -> None:
+    """Caso 3 (CA-01): para el archivo delimitado por coma (ventas.csv) el
+    reporte registra el numero correcto de rows (filas de datos, sin
+    cabecera: len(_VENTAS_ROWS) == 3) y columns (columnas de la cabecera:
+    len(_VENTAS_HEADER.split(",")) == 5), y separator == ",". Reutiliza el
+    fixture minimo (DS-ING-7, casos 1-3, un unico dataset "ventas")."""
+    ctx = _build_ctx_fixture_minimo(tmp_path)
+
+    flow = Ingestion()
+    result = flow.run(ctx)
+
+    ruta_reporte = ctx.outputs_dir / "030_ingestion/ingestion_report.json"
+    reporte = json.loads(ruta_reporte.read_text(encoding="utf-8"))
+
+    archivo = reporte["datasets"][0]["files"][0]
+    assert archivo["name"] == "ventas.csv"
+    assert archivo["rows"] == len(_VENTAS_ROWS)
+    assert archivo["columns"] == len(_VENTAS_HEADER.split(","))
+    assert archivo["separator"] == ","
+
+    assert result.success is True
