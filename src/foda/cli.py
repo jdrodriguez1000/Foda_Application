@@ -20,7 +20,10 @@ import argparse
 import sys
 from pathlib import Path
 
+from foda.core.context import ClientContext
+from foda.core.flow import FlowContractError
 from foda.core.scaffold import create_client
+from foda.orchestrator import resolve_flow
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -32,6 +35,10 @@ def _build_parser() -> argparse.ArgumentParser:
 
     new_parser = client_subparsers.add_parser("new")
     new_parser.add_argument("name")
+
+    run_parser = subparsers.add_parser("run")
+    run_parser.add_argument("name")
+    run_parser.add_argument("--flow", required=True)
 
     return parser
 
@@ -81,6 +88,10 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     clients_root = project_root / "clients"
+
+    if args.command == "run":
+        return _dispatch_run(args, clients_root)
+
     clients_root.mkdir(parents=True, exist_ok=True)
 
     try:
@@ -93,4 +104,32 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     print(created_path)
+    return 0
+
+
+def _dispatch_run(args: argparse.Namespace, clients_root: Path) -> int:
+    """Despacha `foda run <cliente> --flow <flujo>` (DS-ORQ-4): resuelve el
+    flujo (puro, sin disco), construye el ClientContext (lectura del cliente
+    existente) y ejecuta flow.run(ctx), traduciendo cada fallo a stderr +
+    codigo 1 antes de escribir salida alguna."""
+    try:
+        flow = resolve_flow(args.flow)
+    except ValueError as exc:
+        print(f"foda: {exc}", file=sys.stderr)
+        return 1
+
+    try:
+        ctx = ClientContext(args.name, clients_root)
+    except FileNotFoundError as exc:
+        print(f"foda: {exc}", file=sys.stderr)
+        return 1
+
+    try:
+        result = flow.run(ctx)
+    except FlowContractError as exc:
+        print(f"foda: {exc}", file=sys.stderr)
+        return 1
+
+    outputs = ", ".join(str(path) for path in result.outputs)
+    print(f"foda: flujo {args.flow!r} completado para el cliente {args.name!r}: {outputs}")
     return 0

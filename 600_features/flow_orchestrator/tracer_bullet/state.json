@@ -2,7 +2,7 @@
   "feature": "flow_orchestrator",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "tdd_tester",
+  "current_stage": "tdd_coder",
   "next_case_id": 4,
   "stages": {
     "feature_definer":    { "status": "done",    "artifact": "definition.md" },
@@ -14,7 +14,7 @@
         { "id": 1,  "desc": "resolve_flow(\"onboarding\") devuelve una instancia de Onboarding (subclase de Flow).", "status": "done", "test_file": "tests/test_orchestrator.py", "test_name": "test_resolve_flow_onboarding_devuelve_instancia_de_onboarding", "src_files": ["src/foda/orchestrator.py"] },
         { "id": 2,  "desc": "FLOWS es un mapeo explicito nombre->clase Flow que contiene \"onboarding\" -> Onboarding.", "status": "done", "test_file": "tests/test_orchestrator.py", "test_name": "test_flows_es_mapeo_explicito_onboarding_a_clase_onboarding", "src_files": ["src/foda/orchestrator.py"], "note": "verde inmediato: FLOWS ya existia como parte del diseno minimo del caso 1 (TSK-01 entrega FLOWS y resolve_flow juntos); no se degrado orchestrator.py para fabricar un rojo artificial (NC-2/NC-3)." },
         { "id": 3,  "desc": "resolve_flow(nombre no registrado) lanza ValueError.", "status": "done", "test_file": "tests/test_orchestrator.py", "test_name": "test_resolve_flow_nombre_no_registrado_lanza_value_error", "src_files": ["src/foda/orchestrator.py"], "note": "verde inmediato: resolve_flow ya lanzaba ValueError como parte del diseno minimo del caso 1 (TSK-01/TSK-05); no se degrado orchestrator.py para fabricar un rojo artificial (NC-2/NC-3)." },
-        { "id": 4,  "desc": "main([\"run\",\"ABC\",\"--flow\",\"onboarding\"]) con ABC existente y contract_data.json presente devuelve 0 y deja escrito map_client_data.json.", "status": "red", "test_file": "tests/cli/test_flow_orchestrator_cli.py", "test_name": "test_run_onboarding_con_contrato_valido_devuelve_0_y_escribe_map_client_data", "red_evidence": "SystemExit: 2 - argparse: \"foda: error: argument command: invalid choice: 'run' (choose from client)\" (subcomando run aun no existe en _build_parser)" },
+        { "id": 4,  "desc": "main([\"run\",\"ABC\",\"--flow\",\"onboarding\"]) con ABC existente y contract_data.json presente devuelve 0 y deja escrito map_client_data.json.", "status": "green", "test_file": "tests/cli/test_flow_orchestrator_cli.py", "test_name": "test_run_onboarding_con_contrato_valido_devuelve_0_y_escribe_map_client_data", "src_files": ["src/foda/cli.py"], "green_evidence": "pytest tests/cli/test_flow_orchestrator_cli.py::test_run_onboarding_con_contrato_valido_devuelve_0_y_escribe_map_client_data -q -> 1 passed; pytest -q (suite completa) -> 125 passed, sin regresiones." },
         { "id": 5,  "desc": "En el exito, stdout confirma legiblemente el flujo onboarding, el cliente ABC y la ruta del artefacto producido (map_client_data.json).", "status": "pending" },
         { "id": 6,  "desc": "Con Onboarding.run/flow.run espiado, run lo invoca exactamente una vez con un ctx cuyo name == \"ABC\".", "status": "pending" },
         { "id": 7,  "desc": "main([\"run\",\"ABC\",\"--flow\",\"inexistente\"]) devuelve 1, stderr nombra el flujo desconocido, sin Traceback, sin artefacto escrito.", "status": "pending" },
