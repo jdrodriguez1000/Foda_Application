@@ -12,6 +12,8 @@ si, mas el archivo crudo bajo el landing.
 import json
 from pathlib import Path
 
+import openpyxl
+
 from foda.core.context import ClientContext
 from foda.core.flow import Artifact, Flow
 from foda.core.scaffold import create_client
@@ -74,13 +76,17 @@ def _map_client_data_minimo() -> dict:
 
 
 def _build_ctx(
-    tmp_path: Path, contract_data: dict, map_client_data: dict, files: dict[str, str]
+    tmp_path: Path,
+    contract_data: dict,
+    map_client_data: dict,
+    files: dict[str, str | bytes],
 ) -> ClientContext:
     """DS-ING-7/DS-ING-8: construye un ClientContext bajo tmp_path con
     contract_data.json + map_client_data.json bajo ctx.outputs_dir, y uno o
-    mas archivos crudos (name -> contenido ya delimitado) bajo
-    ctx.inputs_dir/"030_ingestion". Helper compartido por las fixtures de
-    cada caso del bucle TDD (evita duplicar el andamiaje de directorios)."""
+    mas archivos crudos (name -> contenido, texto delimitado o bytes
+    binarios p. ej. .xlsx) bajo ctx.inputs_dir/"030_ingestion". Helper
+    compartido por las fixtures de cada caso del bucle TDD (evita duplicar
+    el andamiaje de directorios)."""
     clients_root = tmp_path / "clients"
     create_client("ABC", clients_root)
     ctx = ClientContext("ABC", clients_root)
@@ -100,7 +106,10 @@ def _build_ctx(
     landing_dir = ctx.inputs_dir / "030_ingestion"
     landing_dir.mkdir(parents=True)
     for name, content in files.items():
-        (landing_dir / name).write_text(content, encoding="utf-8")
+        if isinstance(content, bytes):
+            (landing_dir / name).write_bytes(content)
+        else:
+            (landing_dir / name).write_text(content, encoding="utf-8")
 
     return ctx
 
@@ -392,5 +401,114 @@ def test_reporte_registra_rows_columns_y_separator_correctos_para_ventas_csv_com
     assert archivo["rows"] == len(_VENTAS_ROWS)
     assert archivo["columns"] == len(_VENTAS_HEADER.split(","))
     assert archivo["separator"] == ","
+
+    assert result.success is True
+
+
+_PRECIOS_HEADER = ["clase", "precio", "moneda"]
+_PRECIOS_ROWS = [
+    ["Agua 600ml", 1200, "COP"],
+    ["Cola 1.5L", 2500, "COP"],
+    ["Papas 45g", 900, "COP"],
+]
+
+
+def _contract_data_precios() -> dict:
+    """DS-ING-8: fuente de los archivos esperados. Un unico dataset
+    "precios" con un unico archivo "precios.xlsx" (caso 6, subconjunto
+    DS-ING-7 aislado para el lector .xlsx, source_medium "xlsx")."""
+    return {
+        "schema_version": "0.1",
+        "client": {"code": "ABC", "name": "Cliente ABC S.A.", "sector": "retail"},
+        "historical_data": {
+            "datasets": [
+                {
+                    "kind": "precios",
+                    "source_medium": "xlsx",
+                    "periodicity": "mensual",
+                    "files": [
+                        {
+                            "name": "precios.xlsx",
+                            "period_start": "2023-01-01",
+                            "period_end": "2025-12-31",
+                        }
+                    ],
+                }
+            ]
+        },
+    }
+
+
+def _map_client_data_precios() -> dict:
+    """DS-ING-8: fuente de las columnas esperadas del dataset "precios"
+    (fields[] con name/required), emparejadas por kind con el dataset
+    homologo del contrato. Coherente con _contract_data_precios (mismo kind
+    "precios")."""
+    return {
+        "schema_version": "0.1",
+        "client": {"code": "ABC", "name": "Cliente ABC S.A.", "sector": "retail"},
+        "datasets": [
+            {
+                "kind": "precios",
+                "fields": [
+                    {"name": "clase", "required": True},
+                    {"name": "precio", "required": True},
+                    {"name": "moneda", "required": True},
+                ],
+            }
+        ],
+    }
+
+
+def _precios_xlsx_bytes() -> bytes:
+    """Fabrica en memoria un .xlsx (openpyxl) con cabecera _PRECIOS_HEADER
+    y filas _PRECIOS_ROWS en la primera hoja (unica hoja del workbook), y
+    devuelve su contenido binario para escribirlo bajo el landing."""
+    workbook = openpyxl.Workbook()
+    sheet = workbook.active
+    sheet.append(_PRECIOS_HEADER)
+    for row in _PRECIOS_ROWS:
+        sheet.append(row)
+
+    import io
+
+    buffer = io.BytesIO()
+    workbook.save(buffer)
+    return buffer.getvalue()
+
+
+def _build_ctx_fixture_precios(tmp_path: Path) -> ClientContext:
+    """DS-ING-7 (subconjunto aislado, caso 6): ClientContext con
+    contract_data.json + map_client_data.json coherentes entre si (dataset
+    "precios" unico) y el archivo crudo precios.xlsx (primera hoja,
+    formato Excel, sin separador delimitado)."""
+    return _build_ctx(
+        tmp_path,
+        _contract_data_precios(),
+        _map_client_data_precios(),
+        {"precios.xlsx": _precios_xlsx_bytes()},
+    )
+
+
+def test_reporte_registra_rows_columns_correctos_y_separator_null_para_precios_xlsx(
+    tmp_path: Path,
+) -> None:
+    """Caso 6 (CA-04): para el archivo Excel (precios.xlsx, primera hoja)
+    el reporte registra el numero correcto de rows (filas de datos, sin
+    cabecera: len(_PRECIOS_ROWS) == 3) y columns (columnas de la cabecera:
+    len(_PRECIOS_HEADER) == 3), y separator == null (None en Python)."""
+    ctx = _build_ctx_fixture_precios(tmp_path)
+
+    flow = Ingestion()
+    result = flow.run(ctx)
+
+    ruta_reporte = ctx.outputs_dir / "030_ingestion/ingestion_report.json"
+    reporte = json.loads(ruta_reporte.read_text(encoding="utf-8"))
+
+    archivo = reporte["datasets"][0]["files"][0]
+    assert archivo["name"] == "precios.xlsx"
+    assert archivo["rows"] == len(_PRECIOS_ROWS)
+    assert archivo["columns"] == len(_PRECIOS_HEADER)
+    assert archivo["separator"] is None
 
     assert result.success is True
