@@ -23,7 +23,7 @@ from pathlib import Path
 from foda.core.context import ClientContext
 from foda.core.flow import FlowContractError
 from foda.core.scaffold import create_client
-from foda.orchestrator import resolve_flow
+from foda.orchestrator import FLOWS, resolve_flow
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -39,6 +39,9 @@ def _build_parser() -> argparse.ArgumentParser:
     run_parser = subparsers.add_parser("run")
     run_parser.add_argument("name")
     run_parser.add_argument("--flow", required=True)
+
+    status_parser = subparsers.add_parser("status")
+    status_parser.add_argument("name")
 
     return parser
 
@@ -92,6 +95,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "run":
         return _dispatch_run(args, clients_root)
 
+    if args.command == "status":
+        return _dispatch_status(args, clients_root)
+
     clients_root.mkdir(parents=True, exist_ok=True)
 
     try:
@@ -132,4 +138,27 @@ def _dispatch_run(args: argparse.Namespace, clients_root: Path) -> int:
 
     outputs = ", ".join(str(path) for path in result.outputs)
     print(f"foda: flujo {args.flow!r} completado para el cliente {args.name!r}: {outputs}")
+    return 0
+
+
+def _dispatch_status(args: argparse.Namespace, clients_root: Path) -> int:
+    """Despacha `foda status <cliente>` (DS-ORQ-3): construye el ClientContext
+    (lectura del cliente existente) y, por cada flujo registrado en FLOWS,
+    lista sus artefactos requires/produces con un marcador de presencia en
+    disco (sin efectos en disco, sin leer contenido de artefactos)."""
+    try:
+        ctx = ClientContext(args.name, clients_root)
+    except FileNotFoundError as exc:
+        print(f"foda: {exc}", file=sys.stderr)
+        return 1
+
+    for flow_name, flow_cls in FLOWS.items():
+        flow = flow_cls()
+        print(f"{flow_name}:")
+        for role, artifacts in (("requires", flow.requires), ("produces", flow.produces)):
+            for artifact in artifacts:
+                marker = "[presente]" if artifact.exists(ctx) else "[ausente]"
+                relative_path = artifact.path(ctx).relative_to(ctx.root)
+                print(f"  {role}  {artifact.name}  {marker}  {relative_path}")
+
     return 0
