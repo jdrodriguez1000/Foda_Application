@@ -9,6 +9,7 @@ y map_client_data.json (fuente de las columnas esperadas) coherentes entre
 si, mas el archivo crudo bajo el landing.
 """
 
+import io
 import json
 from pathlib import Path
 
@@ -469,8 +470,6 @@ def _precios_xlsx_bytes() -> bytes:
     sheet.append(_PRECIOS_HEADER)
     for row in _PRECIOS_ROWS:
         sheet.append(row)
-
-    import io
 
     buffer = io.BytesIO()
     workbook.save(buffer)
