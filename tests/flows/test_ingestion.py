@@ -763,3 +763,63 @@ def test_presentes_igual_declarados_sin_missing_ni_unexpected_files_ingested_igu
     assert (
         reporte["summary"]["files_ingested"] == reporte["summary"]["files_declared"]
     )
+
+
+def _build_ctx_fixture_archivo_faltante(tmp_path: Path) -> ClientContext:
+    """DS-ING-7/DS-ING-8 (variante "Faltante", caso 11): mismo contrato +
+    mapa completos que _build_ctx_fixture_completo (3 datasets, 4 archivos
+    declarados en contract_data.json), pero el landing NO deposita
+    "inventario_2025.csv" (declarado en el dataset "inventario" del
+    contrato). Los otros 3 archivos si se depositan, para aislar el efecto
+    del faltante."""
+    return _build_ctx(
+        tmp_path,
+        _contract_data_completo(),
+        _map_client_data_completo(),
+        {
+            "ventas.csv": "\n".join([_VENTAS_HEADER, *_VENTAS_ROWS]) + "\n",
+            "inventario_2024.txt": "\n".join(
+                [_INVENTARIO_HEADER, *_INVENTARIO_ROWS]
+            )
+            + "\n",
+            "precios.xlsx": _precios_xlsx_bytes(),
+        },
+    )
+
+
+def test_archivo_declarado_en_contrato_no_presente_marca_missing_sin_copiar_y_success_false(
+    tmp_path: Path,
+) -> None:
+    """Caso 11 (CA-06): "inventario_2025.csv" esta declarado en
+    contract_data.json (dataset "inventario", DS-ING-8) pero no se deposita
+    en el landing. El reporte debe marcar ese archivo con status=="missing"
+    y registrar una inconsistencia de type "missing_file"; no debe existir
+    copia en ctx.bronze_dir/"inventario_2025.csv"; y FlowResult.success debe
+    ser False (hay al menos una inconsistencia)."""
+    ctx = _build_ctx_fixture_archivo_faltante(tmp_path)
+
+    flow = Ingestion()
+    result = flow.run(ctx)
+
+    ruta_reporte = ctx.outputs_dir / "030_ingestion/ingestion_report.json"
+    reporte = json.loads(ruta_reporte.read_text(encoding="utf-8"))
+
+    archivo_faltante = None
+    for dataset in reporte["datasets"]:
+        for archivo in dataset["files"]:
+            if archivo["name"] == "inventario_2025.csv":
+                archivo_faltante = archivo
+    assert archivo_faltante is not None, (
+        "inventario_2025.csv debe seguir apareciendo en el reporte "
+        "(declarado en el contrato) aunque no este presente en el landing"
+    )
+    assert archivo_faltante["status"] == "missing"
+    tipos_inconsistencias = [
+        inconsistencia["type"]
+        for inconsistencia in archivo_faltante["inconsistencies"]
+    ]
+    assert "missing_file" in tipos_inconsistencias
+
+    assert not (ctx.bronze_dir / "inventario_2025.csv").exists()
+
+    assert result.success is False
