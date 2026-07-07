@@ -2,15 +2,15 @@
   "feature": "ingestion",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "plan_builder",
+  "current_stage": "tdd_tester",
   "stages": {
     "feature_definer":   { "status": "done",    "artifact": "definition.md" },
     "spec_writer":       { "status": "done",    "artifact": "spec.md",  "gate": "human", "awaiting_approval": false, "note": "Spec enmendada (DS-ING-8) APROBADA por el humano: reparto contract_data.json (archivos esperados) / map_client_data.json (columnas). Habilita el re-plan." },
-    "plan_builder":      { "status": "done",    "artifact": "plan.md",  "gate": "human", "awaiting_approval": true, "note": "plan.md REGENERADO contra la spec enmendada (DS-ING-8): archivos esperados desde el contrato, columnas desde el mapa. Requiere OK humano del plan antes de arrancar el bucle TDD. No introduce decisiones nuevas (solo materializa DS-ING-8 ya aprobada)." },
+    "plan_builder":      { "status": "done",    "artifact": "plan.md",  "gate": "human", "awaiting_approval": false, "note": "plan.md REGENERADO contra la spec enmendada (DS-ING-8): archivos esperados desde el contrato, columnas desde el mapa. Plan y 22 casos TDD APROBADOS por el humano tras el GATE (aprobó los 22 casos en el GATE previo; el re-plan solo materializa DS-ING-8). Habilita el bucle TDD." },
     "tdd": {
       "status": "pending",
       "cases": [
-        { "id": 1,  "desc": "run(ctx) sobre el fixture minimo (dataset ventas/ventas.csv coma) escribe ingestion_report.json en ctx.outputs_dir/030_ingestion/ingestion_report.json y lo incluye en FlowResult.outputs (CA-14).", "status": "pending" },
+        { "id": 1,  "desc": "run(ctx) sobre el fixture minimo (dataset ventas/ventas.csv coma) escribe ingestion_report.json en ctx.outputs_dir/030_ingestion/ingestion_report.json y lo incluye en FlowResult.outputs (CA-14).", "status": "red", "test": "tests/flows/test_ingestion.py::test_run_sobre_fixture_minimo_escribe_ingestion_report_y_lo_incluye_en_outputs", "red_reason": "NotImplementedError: Flow.execute() debe ser sobreescrito por la subclase concreta (Ingestion aun no sobreescribe execute/write_outputs; solo declara requires/produces)." },
         { "id": 2,  "desc": "Ingestion hereda Flow, declara requires=[contract_data, map_client_data]/produces=[ingestion_report] y completa las 4 fases sin sobreescribir run (CA-20).", "status": "pending" },
         { "id": 3,  "desc": "Para ventas.csv (coma) el reporte registra rows/columns correctos y separator == ',' (CA-01).", "status": "pending" },
         { "id": 4,  "desc": "Para inventario_2024.txt (;) el reporte registra rows/columns correctos y separator == ';' (CA-02).", "status": "pending" },
