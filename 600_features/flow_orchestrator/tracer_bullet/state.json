@@ -2,7 +2,7 @@
   "feature": "flow_orchestrator",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "integration_tester",
+  "current_stage": "spec_verifier",
   "next_case_id": null,
   "stages": {
     "feature_definer":    { "status": "done",    "artifact": "definition.md" },
@@ -34,7 +34,13 @@
         { "id": 15, "desc": "Errores de parseo de argparse -> codigo 2: run ABC (falta --flow), run (falta cliente) y status (falta cliente).", "status": "done", "test_file": "tests/cli/test_flow_orchestrator_cli.py", "test_name": "test_argparse_falta_argumento_requerido_devuelve_codigo_2", "src_files": ["src/foda/cli.py"], "green_evidence": "pytest tests/cli/test_flow_orchestrator_cli.py::test_argparse_falta_argumento_requerido_devuelve_codigo_2 -q -> 1 passed (primer intento, sin reintentos); pytest -q (suite completa) -> 136 passed, sin regresiones.", "note": "verde inmediato: main() (TSK-01/TSK-14, casos 4 y 10) llama parser.parse_args(raw_argv) directamente sin capturar SystemExit, y run_parser.add_argument('--flow', required=True) junto con los posicionales name de run_parser/status_parser ya delegan en argparse la validacion de argumentos requeridos, que hace sys.exit(2) y se propaga sin traducir; se verifico el codigo fuente de cli.py (_build_parser y main, lineas 29-46 y 77-82) antes de escribir el test para confirmar que no hay try/except de SystemExit en el camino. No se degrado cli.py para fabricar un rojo artificial (NC-2/NC-3); no aplica tdd_coder para este caso. Este es el ultimo caso de comportamiento (id 15); el siguiente paso es el refactor final TSK-20." }
       ]
     },
-    "integration_tester": { "status": "pending" },
+    "integration_tester": {
+      "status": "done",
+      "artifact": "tests/integration/test_flow_orchestrator_integration.py",
+      "summary": "9 tests de integracion nuevos (piezas REALES, sin mocks del flujo): cadena orchestrator->cli.main->ClientContext->Flow.run->Onboarding real->disco (run end-to-end escribe map_client_data.json identico al que produce Onboarding real; status refleja el disco real antes/despues de un run real); resolve_flow('onboarding') devuelve la clase Onboarding real (flujo vecino f020, no un doble); fallo temprano con FlowContractError real traducido a stderr sin Traceback cuando falta contract_data en un cliente real; aislamiento multi-tenant end-to-end entre dos clientes reales bajo el mismo clients_root; y 4 tests del entry point real ([project.scripts] foda = foda.cli:main) en proceso separado via subprocess, mismo patron _run_foda_subprocess ya usado por tests/integration/test_client_new_cli_integration.py (run feliz que escribe artefacto, status que lista onboarding real, run con cliente inexistente que falla claro sin crear clients/GHOST9, y verificacion estatica de que el entry point declarado resuelve al mismo main() con FLOWS poblado).",
+      "suite_evidence": "python -m pytest tests/integration/test_flow_orchestrator_integration.py -q -> 9 passed; python -m pytest tests/integration -q -> 37 passed (sin regresiones en las demas suites de integracion); python -m pytest -q (suite completa) -> 145 passed (136 previos + 9 nuevos), sin regresiones.",
+      "findings": "Ningun defecto de integracion detectado: la cadena orchestrator/cli/ClientContext/Flow/Onboarding integra limpiamente con las piezas CONFORMES reales (create_client, ClientContext, Flow.run, Artifact.exists/.path, Onboarding), sin necesidad de tocar src/foda/. El entry point declarado en pyproject.toml ([project.scripts] foda = 'foda.cli:main') ya cubria run/status sin cambios adicionales (la extension de cli.py de la etapa TDD reutilizo el mismo main())."
+    },
     "spec_verifier":      { "status": "pending",  "artifact": "verification.md" }
   }
 }
