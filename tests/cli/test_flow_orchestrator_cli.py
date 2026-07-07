@@ -1,10 +1,19 @@
 """Suite de tests de la CLI de orquestacion `foda run`/`foda status`
 (feature flow_orchestrator, banda tracer_bullet). Independiente de
-tests/cli/test_client_new_cli.py (CA-14). Invoca `main(argv)` en proceso,
-bajo un proyecto+cliente temporal (`tmp_path` con `pyproject.toml` marcador,
-`clients/ABC/client.yaml` y, cuando el caso lo requiere,
-`020_outputs/010_discovery/contract_data.json` con un contrato minimo
-valido).
+tests/cli/test_client_new_cli.py (CA-14): no comparte fixtures (no hay
+conftest.py en tests/cli/), no importa nada de ese modulo y no muta estado
+de proceso fuera de tmp_path/monkeypatch (aislados por test via pytest).
+Invoca `main(argv)` en proceso, bajo un proyecto+cliente temporal.
+
+Fixtures de siembra (factorizadas en TSK-20, refactor final de la banda,
+para eliminar la duplicacion literal que existia entre los ~12 tests):
+- `proyecto`: crea `<tmp_path>/pyproject.toml` (marcador de raiz) y fija el
+  cwd en tmp_path. Base comun a todos los tests.
+- `proyecto_con_cliente_abc`: `proyecto` + `clients/ABC/client.yaml` +
+  `020_outputs/010_discovery/contract_data.json` valido (caso mas comun).
+- `_seed_cliente_abc(root, con_contrato=...)`: helper de bajo nivel, usado
+  directamente por los tests que necesitan ABC sin contrato o que no
+  siembran ABC en absoluto (cliente inexistente).
 
 Fuente: 600_features/flow_orchestrator/tracer_bullet/plan.md (Sec.6, Sec.7).
 Bucle TDD: un test por caso, ejecutado en orden (state.json -> stages.tdd.cases).
@@ -183,16 +192,36 @@ def _seed_cliente_abc(tmp_path: Path, *, con_contrato: bool) -> Path:
     return tmp_path
 
 
+@pytest.fixture
+def proyecto(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Fixture comun a todos los tests de esta suite: crea <tmp_path>/
+    pyproject.toml (marcador de raiz de proyecto que _find_project_root
+    busca) y fija el cwd del proceso en tmp_path via monkeypatch.chdir.
+    Devuelve tmp_path (la raiz del proyecto), lista para que cada test
+    siembre (o no) el cliente ABC con `_seed_cliente_abc(proyecto,
+    con_contrato=...)` segun lo que necesite verificar."""
+    (tmp_path / "pyproject.toml").write_text("", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    return tmp_path
+
+
+@pytest.fixture
+def proyecto_con_cliente_abc(proyecto: Path) -> Path:
+    """Variante de `proyecto` para el caso mas comun de esta suite: ABC ya
+    sembrado con contract_data.json valido (con_contrato=True). Los tests
+    que necesitan ABC sin contrato, o sin ABC en absoluto (cliente
+    inexistente), siguen usando `proyecto` + `_seed_cliente_abc` de forma
+    explicita."""
+    _seed_cliente_abc(proyecto, con_contrato=True)
+    return proyecto
+
+
 def test_run_onboarding_con_contrato_valido_devuelve_0_y_escribe_map_client_data(
-    tmp_path, monkeypatch
+    tmp_path: Path, proyecto_con_cliente_abc: Path
 ):
     """Caso 4 (CA-01): main(["run","ABC","--flow","onboarding"]) con ABC
     existente y contract_data.json presente/valido devuelve 0 y deja escrito
     clients/ABC/020_outputs/020_onboarding/map_client_data.json."""
-    (tmp_path / "pyproject.toml").write_text("", encoding="utf-8")
-    _seed_cliente_abc(tmp_path, con_contrato=True)
-    monkeypatch.chdir(tmp_path)
-
     result = main(["run", "ABC", "--flow", "onboarding"])
 
     assert result == 0
@@ -208,15 +237,11 @@ def test_run_onboarding_con_contrato_valido_devuelve_0_y_escribe_map_client_data
 
 
 def test_run_onboarding_exitoso_stdout_confirma_flujo_cliente_y_artefacto(
-    tmp_path, monkeypatch, capsys
+    proyecto_con_cliente_abc: Path, capsys
 ):
     """Caso 5 (CA-02, TSK-09): en el exito del caso 4, stdout contiene una
     confirmacion legible que menciona el flujo onboarding, el cliente ABC y
     la ruta del artefacto producido (map_client_data.json)."""
-    (tmp_path / "pyproject.toml").write_text("", encoding="utf-8")
-    _seed_cliente_abc(tmp_path, con_contrato=True)
-    monkeypatch.chdir(tmp_path)
-
     result = main(["run", "ABC", "--flow", "onboarding"])
 
     assert result == 0
@@ -227,16 +252,14 @@ def test_run_onboarding_exitoso_stdout_confirma_flujo_cliente_y_artefacto(
 
 
 def test_run_invoca_flow_run_una_sola_vez_con_ctx_cuyo_name_es_abc(
-    tmp_path, monkeypatch
+    proyecto: Path, monkeypatch
 ):
     """Caso 6 (CA-03, TSK-10): con Onboarding.run espiado (sin ejecutar el
     flujo real), main(["run","ABC","--flow","onboarding"]) lo invoca
     EXACTAMENTE UNA VEZ con un ctx cuyo name == "ABC" (verifica delegacion
     estricta: el orquestador no deriva el mapa por su cuenta ni reimplementa
     la logica de flujo, solo despacha a flow.run(ctx))."""
-    (tmp_path / "pyproject.toml").write_text("", encoding="utf-8")
-    _seed_cliente_abc(tmp_path, con_contrato=False)
-    monkeypatch.chdir(tmp_path)
+    _seed_cliente_abc(proyecto, con_contrato=False)
 
     calls = []
 
@@ -254,7 +277,7 @@ def test_run_invoca_flow_run_una_sola_vez_con_ctx_cuyo_name_es_abc(
 
 
 def test_run_cliente_inexistente_devuelve_1_stderr_nombra_cliente_sin_traceback_ni_artefacto(
-    tmp_path, monkeypatch, capsys
+    proyecto: Path, capsys
 ):
     """Caso 8 (CA-05, TSK-12): main(["run","GHOST","--flow","onboarding"])
     con GHOST inexistente (no sembrado bajo clients/) devuelve 1, stderr
@@ -263,9 +286,6 @@ def test_run_cliente_inexistente_devuelve_1_stderr_nombra_cliente_sin_traceback_
     _dispatch_run construye ClientContext(args.name, clients_root) y traduce
     el FileNotFoundError resultante (mensaje "No existe el cliente 'GHOST'...")
     a stderr + return 1 antes de invocar flow.run."""
-    (tmp_path / "pyproject.toml").write_text("", encoding="utf-8")
-    monkeypatch.chdir(tmp_path)
-
     result = main(["run", "GHOST", "--flow", "onboarding"])
 
     assert result == 1
@@ -273,12 +293,12 @@ def test_run_cliente_inexistente_devuelve_1_stderr_nombra_cliente_sin_traceback_
     assert "GHOST" in captured.err
     assert "Traceback" not in captured.out
     assert "Traceback" not in captured.err
-    ghost_dir = tmp_path / "clients" / "GHOST"
+    ghost_dir = proyecto / "clients" / "GHOST"
     assert not ghost_dir.exists()
 
 
 def test_run_sin_contract_data_devuelve_1_stderr_refleja_flow_contract_error(
-    tmp_path, monkeypatch, capsys
+    proyecto: Path, capsys
 ):
     """Caso 9 (CA-06, TSK-13): main(["run","ABC","--flow","onboarding"]) con
     ABC existente pero SIN 020_outputs/010_discovery/contract_data.json
@@ -288,9 +308,7 @@ def test_run_sin_contract_data_devuelve_1_stderr_refleja_flow_contract_error(
     ClientContext (que solo exige client.yaml) y delega en flow.run(ctx);
     Onboarding hereda Flow.validate, que compara self.requires contra disco
     antes de execute/write_outputs."""
-    (tmp_path / "pyproject.toml").write_text("", encoding="utf-8")
-    _seed_cliente_abc(tmp_path, con_contrato=False)
-    monkeypatch.chdir(tmp_path)
+    _seed_cliente_abc(proyecto, con_contrato=False)
 
     result = main(["run", "ABC", "--flow", "onboarding"])
 
@@ -300,7 +318,7 @@ def test_run_sin_contract_data_devuelve_1_stderr_refleja_flow_contract_error(
     assert "Traceback" not in captured.out
     assert "Traceback" not in captured.err
     map_client_data = (
-        tmp_path
+        proyecto
         / "clients"
         / "ABC"
         / "020_outputs"
@@ -325,7 +343,7 @@ def _marcador_de_linea(stdout: str, artefacto: str) -> str:
 
 
 def test_status_refleja_disco_antes_y_despues_de_run_exitoso(
-    tmp_path, monkeypatch, capsys
+    proyecto_con_cliente_abc: Path, capsys
 ):
     """Caso 11 (CA-08, TSK-15): con contract_data.json presente y
     map_client_data.json ausente, main(["status","ABC"]) marca contract_data
@@ -335,10 +353,6 @@ def test_status_refleja_disco_antes_y_despues_de_run_exitoso(
     artefactos como [presente]. Verifica que _dispatch_status lee el estado
     real del disco (artifact.exists(ctx)) en cada invocacion, no un snapshot
     cacheado."""
-    (tmp_path / "pyproject.toml").write_text("", encoding="utf-8")
-    _seed_cliente_abc(tmp_path, con_contrato=True)
-    monkeypatch.chdir(tmp_path)
-
     result_status_inicial = main(["status", "ABC"])
     assert result_status_inicial == 0
     stdout_inicial = capsys.readouterr().out
@@ -357,7 +371,7 @@ def test_status_refleja_disco_antes_y_despues_de_run_exitoso(
 
 
 def test_status_onboarding_lista_contract_data_y_map_client_data_con_marcadores(
-    tmp_path, monkeypatch, capsys
+    proyecto_con_cliente_abc: Path, capsys
 ):
     """Caso 10 (CA-07, TSK-14): main(["status","ABC"]) con ABC existente y
     contract_data.json presente pero map_client_data.json ausente (estado
@@ -367,10 +381,6 @@ def test_status_onboarding_lista_contract_data_y_map_client_data_con_marcadores(
     registrado en _build_parser/main, por lo que argparse lo rechaza como
     subcomando desconocido (SystemExit(2)) en vez de devolver un codigo de
     resultado; este es el rojo esperado hasta que TSK-14 lo implemente."""
-    (tmp_path / "pyproject.toml").write_text("", encoding="utf-8")
-    _seed_cliente_abc(tmp_path, con_contrato=True)
-    monkeypatch.chdir(tmp_path)
-
     result = main(["status", "ABC"])
 
     assert result == 0
@@ -383,7 +393,7 @@ def test_status_onboarding_lista_contract_data_y_map_client_data_con_marcadores(
 
 
 def test_status_cliente_inexistente_devuelve_1_stderr_nombra_cliente_sin_traceback(
-    tmp_path, monkeypatch, capsys
+    proyecto: Path, capsys
 ):
     """Caso 12 (CA-09, TSK-16): main(["status","GHOST"]) con GHOST inexistente
     (no sembrado bajo clients/) devuelve 1, stderr menciona el cliente GHOST
@@ -391,9 +401,6 @@ def test_status_cliente_inexistente_devuelve_1_stderr_nombra_cliente_sin_traceba
     _dispatch_status construye ClientContext(args.name, clients_root) via
     _build_client_context y traduce el FileNotFoundError resultante a stderr +
     return 1 antes de introspeccionar artefacto alguno."""
-    (tmp_path / "pyproject.toml").write_text("", encoding="utf-8")
-    monkeypatch.chdir(tmp_path)
-
     result = main(["status", "GHOST"])
 
     assert result == 1
@@ -403,9 +410,7 @@ def test_status_cliente_inexistente_devuelve_1_stderr_nombra_cliente_sin_traceba
     assert "Traceback" not in captured.err
 
 
-def test_run_y_status_cliente_inexistente_no_crean_arbol_de_clients(
-    tmp_path, monkeypatch
-):
+def test_run_y_status_cliente_inexistente_no_crean_arbol_de_clients(proyecto: Path):
     """Caso 13 (CA-12, TSK-17): ante un cliente inexistente, ni
     main(["run","GHOST","--flow","onboarding"]) ni main(["status","GHOST"])
     crean <raiz>/clients/ ni clients/GHOST/ (a diferencia de `client new`,
@@ -415,9 +420,7 @@ def test_run_y_status_cliente_inexistente_no_crean_arbol_de_clients(
     if/return de run y status); _dispatch_run/_dispatch_status delegan en
     ClientContext, que solo consulta root/"client.yaml" (Path.exists(), sin
     efecto en disco) y no crea ningun directorio."""
-    (tmp_path / "pyproject.toml").write_text("", encoding="utf-8")
-    monkeypatch.chdir(tmp_path)
-    clients_root = tmp_path / "clients"
+    clients_root = proyecto / "clients"
 
     result_run = main(["run", "GHOST", "--flow", "onboarding"])
     assert result_run == 1
@@ -430,7 +433,7 @@ def test_run_y_status_cliente_inexistente_no_crean_arbol_de_clients(
 
 
 def test_flujo_falso_en_flows_es_descubierto_por_status_y_run_sin_tocar_logica(
-    tmp_path, monkeypatch, capsys
+    proyecto: Path, monkeypatch, capsys
 ):
     """Caso 14 (CA-11, TSK-18): un flujo falso (FakeFlow, subclase minima de
     Flow) inyectado en FLOWS via monkeypatch.setitem es descubierto SIN tocar
@@ -441,9 +444,7 @@ def test_flujo_falso_en_flows_es_descubierto_por_status_y_run_sin_tocar_logica(
     execute exactamente una vez). FakeFlow.requires = [] para que
     Flow.validate no exija ningun artefacto en disco (el flujo termina con
     exito sin sembrar contract_data.json)."""
-    (tmp_path / "pyproject.toml").write_text("", encoding="utf-8")
-    _seed_cliente_abc(tmp_path, con_contrato=False)
-    monkeypatch.chdir(tmp_path)
+    _seed_cliente_abc(proyecto, con_contrato=False)
 
     calls = []
 
@@ -471,7 +472,7 @@ def test_flujo_falso_en_flows_es_descubierto_por_status_y_run_sin_tocar_logica(
 
 
 def test_run_flujo_inexistente_devuelve_1_stderr_nombra_flujo_sin_traceback_ni_artefacto(
-    tmp_path, monkeypatch, capsys
+    proyecto_con_cliente_abc: Path, capsys
 ):
     """Caso 7 (CA-04, TSK-11): main(["run","ABC","--flow","inexistente"])
     devuelve 1, stderr menciona el flujo desconocido ("inexistente"), la
@@ -479,10 +480,6 @@ def test_run_flujo_inexistente_devuelve_1_stderr_nombra_flujo_sin_traceback_ni_a
     salida. resolve_flow(args.flow) es lo primero que hace _dispatch_run
     (antes de tocar disco), asi que basta con comprobar que
     map_client_data.json no existe."""
-    (tmp_path / "pyproject.toml").write_text("", encoding="utf-8")
-    _seed_cliente_abc(tmp_path, con_contrato=True)
-    monkeypatch.chdir(tmp_path)
-
     result = main(["run", "ABC", "--flow", "inexistente"])
 
     assert result == 1
@@ -491,7 +488,7 @@ def test_run_flujo_inexistente_devuelve_1_stderr_nombra_flujo_sin_traceback_ni_a
     assert "Traceback" not in captured.out
     assert "Traceback" not in captured.err
     map_client_data = (
-        tmp_path
+        proyecto_con_cliente_abc
         / "clients"
         / "ABC"
         / "020_outputs"

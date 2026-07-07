@@ -2,14 +2,20 @@
   "feature": "flow_orchestrator",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "tdd_refactor",
+  "current_stage": "integration_tester",
   "next_case_id": null,
   "stages": {
     "feature_definer":    { "status": "done",    "artifact": "definition.md" },
     "spec_writer":        { "status": "done",  "artifact": "spec.md",  "gate": "human", "awaiting_approval": false, "approved": true },
     "plan_builder":       { "status": "done",  "artifact": "plan.md",  "gate": "human", "awaiting_approval": false, "approved": true },
     "tdd": {
-      "status": "in_progress",
+      "status": "done",
+      "refactor_final": {
+        "task": "TSK-20",
+        "traza": "CA-14",
+        "summary": "Refactor consolidado de fin de banda: (1) factorizadas las fixtures pytest `proyecto` (pyproject.toml + chdir) y `proyecto_con_cliente_abc` (ABC + contract_data.json valido) en tests/cli/test_flow_orchestrator_cli.py, eliminando la triplicacion literal de 'write pyproject.toml + _seed_cliente_abc + monkeypatch.chdir' presente en 10 de los 12 tests (los 2 restantes -- cliente inexistente sin seed y el test de argparse que documenta explicitamente no sembrar nada -- se dejaron con `proyecto` o sin fixture, segun corresponda, para no forzar sobre-abstraccion, NC-2); (2) actualizado el docstring de modulo de src/foda/cli.py para reflejar los tres subcomandos (client new / run / status), cambio cosmetico unico permitido en produccion; (3) verificada la independencia de tests/cli/test_flow_orchestrator_cli.py y tests/test_orchestrator.py respecto de tests/cli/test_client_new_cli.py (CA-14): no existe conftest.py en tests/cli/, ningun modulo importa del otro, y cada test aisla su propio tmp_path/monkeypatch (sin estado de proceso compartido). tests/test_orchestrator.py se revisó y ya era minimo (3 tests puros, sin disco); no requirió cambios. Ningun cambio de comportamiento observable: mismos argumentos, mismos mensajes, mismos codigos de salida.",
+        "suite_evidence": "python -m pytest -q -> 136 passed, sin regresiones (misma cuenta que antes del refactor)."
+      },
       "cases": [
         { "id": 1,  "desc": "resolve_flow(\"onboarding\") devuelve una instancia de Onboarding (subclase de Flow).", "status": "done", "test_file": "tests/test_orchestrator.py", "test_name": "test_resolve_flow_onboarding_devuelve_instancia_de_onboarding", "src_files": ["src/foda/orchestrator.py"] },
         { "id": 2,  "desc": "FLOWS es un mapeo explicito nombre->clase Flow que contiene \"onboarding\" -> Onboarding.", "status": "done", "test_file": "tests/test_orchestrator.py", "test_name": "test_flows_es_mapeo_explicito_onboarding_a_clase_onboarding", "src_files": ["src/foda/orchestrator.py"], "note": "verde inmediato: FLOWS ya existia como parte del diseno minimo del caso 1 (TSK-01 entrega FLOWS y resolve_flow juntos); no se degrado orchestrator.py para fabricar un rojo artificial (NC-2/NC-3)." },

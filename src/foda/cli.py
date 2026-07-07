@@ -1,17 +1,31 @@
-"""Punto de entrada de la CLI `foda` (feature client_new_cli, banda tracer_bullet).
+"""Punto de entrada de la CLI `foda`, con tres subcomandos: `client new`
+(feature client_new_cli, banda tracer_bullet) y `run` / `status` (feature
+flow_orchestrator, banda tracer_bullet).
 
-Fuente: 600_features/client_new_cli/tracer_bullet/spec.md.
+Fuente: 600_features/client_new_cli/tracer_bullet/spec.md y
+600_features/flow_orchestrator/tracer_bullet/spec.md.
 
-Implementacion completa (TDD, casos 1-12 en verde / TSK-01 a TSK-05): parser
-argparse minimo (delega en argparse el codigo 2 para NAME ausente o
-subcomando desconocido), resolucion de la raiz del proyecto (marcador
-pyproject.toml) hacia arriba desde el cwd (D-C) con su fallo controlado
-(DS-CLI-1: raiz no encontrada -> stderr + codigo 1, sin tocar disco),
-aseguramiento de clients_root, delegacion en create_client, traduccion del
-camino de exito a consola y traduccion de ValueError (nombre invalido) /
-FileExistsError (duplicado) a stderr + codigo 1. El entry point del paquete
-(`foda = "foda.cli:main"`, TSK-01) se declara en pyproject.toml
-([project.scripts]).
+Implementacion completa (TDD): parser argparse minimo (delega en argparse el
+codigo 2 para argumentos requeridos ausentes o subcomando desconocido),
+resolucion de la raiz del proyecto (marcador pyproject.toml) hacia arriba
+desde el cwd (D-C) con su fallo controlado (DS-CLI-1: raiz no encontrada ->
+stderr + codigo 1, sin tocar disco).
+
+`client new <name>`: asegura clients_root, delega en create_client,
+traduccion del camino de exito a consola y traduccion de ValueError (nombre
+invalido) / FileExistsError (duplicado) a stderr + codigo 1.
+
+`run <name> --flow <flow>` (DS-ORQ-4): resuelve el flujo via resolve_flow,
+construye el ClientContext del cliente existente y despacha a flow.run(ctx),
+traduciendo cada fallo (flujo desconocido, cliente inexistente,
+FlowContractError) a stderr + codigo 1 antes de escribir salida alguna.
+
+`status <name>` (DS-ORQ-3): construye el ClientContext y lista, por cada
+flujo registrado en FLOWS, sus artefactos requires/produces con un marcador
+de presencia en disco, sin efectos en disco.
+
+El entry point del paquete (`foda = "foda.cli:main"`, TSK-01) se declara en
+pyproject.toml ([project.scripts]).
 """
 
 from __future__ import annotations
