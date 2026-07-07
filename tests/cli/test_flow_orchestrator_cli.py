@@ -13,6 +13,8 @@ Bucle TDD: un test por caso, ejecutado en orden (state.json -> stages.tdd.cases)
 import json
 from pathlib import Path
 
+import pytest
+
 from foda.cli import main
 from foda.core.flow import Artifact, Flow, FlowResult
 from foda.flows.f020_onboarding.onboarding import Onboarding
@@ -497,3 +499,29 @@ def test_run_flujo_inexistente_devuelve_1_stderr_nombra_flujo_sin_traceback_ni_a
         / "map_client_data.json"
     )
     assert not map_client_data.exists()
+
+
+def test_argparse_falta_argumento_requerido_devuelve_codigo_2(tmp_path, monkeypatch):
+    """Caso 15 (CA-13, TSK-19): errores de parseo de argparse (argumento
+    requerido ausente) propagan SystemExit(2), ANTES de resolver la raiz del
+    proyecto o tocar disco: main(["run","ABC"]) (falta --flow, requerido en
+    run_parser), main(["run"]) (falta el posicional <cliente> de run) y
+    main(["status"]) (falta el posicional <cliente> de status). main() llama
+    parser.parse_args(raw_argv) directamente (sin capturar SystemExit), asi
+    que el SystemExit que argparse lanza en sys.exit(2) ante un argumento
+    requerido ausente se propaga sin traducir; no hace falta sembrar
+    pyproject.toml/cliente porque el fallo ocurre en el parseo, antes de
+    _find_project_root."""
+    monkeypatch.chdir(tmp_path)
+
+    with pytest.raises(SystemExit) as excinfo_falta_flow:
+        main(["run", "ABC"])
+    assert excinfo_falta_flow.value.code == 2
+
+    with pytest.raises(SystemExit) as excinfo_falta_cliente_run:
+        main(["run"])
+    assert excinfo_falta_cliente_run.value.code == 2
+
+    with pytest.raises(SystemExit) as excinfo_falta_cliente_status:
+        main(["status"])
+    assert excinfo_falta_cliente_status.value.code == 2
