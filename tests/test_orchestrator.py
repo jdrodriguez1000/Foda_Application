@@ -2,8 +2,10 @@
 banda tracer_bullet). Independiente de la CLI, sin disco.
 
 Fuente: 600_features/flow_orchestrator/tracer_bullet/spec.md (DS-ORQ-1/2, CA-10) y
-plan.md (TSK-05..TSK-07). Bucle TDD en curso: caso 1 (CA-10) en rojo.
+plan.md (TSK-05..TSK-07). Bucle TDD en curso: caso 3 (CA-10/CA-04, TSK-07).
 """
+
+import pytest
 
 from foda.core.flow import Flow
 from foda.flows.f020_onboarding.onboarding import Onboarding
@@ -30,3 +32,10 @@ def test_flows_es_mapeo_explicito_onboarding_a_clase_onboarding() -> None:
         assert isinstance(name, str)
         assert isinstance(flow_cls, type)
         assert issubclass(flow_cls, Flow)
+
+
+def test_resolve_flow_nombre_no_registrado_lanza_value_error() -> None:
+    """Caso 3 (CA-10/CA-04, TSK-07): resolve_flow(<nombre no registrado>)
+    lanza ValueError (no KeyError ni otra excepcion)."""
+    with pytest.raises(ValueError):
+        resolve_flow("inexistente")
