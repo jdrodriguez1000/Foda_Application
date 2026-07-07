@@ -31,9 +31,20 @@ read_only+data_only, primera hoja del workbook, separator=None) y
 _read_file, que enruta por extension (.xlsx -> _read_xlsx; .csv/.txt ->
 _read_delimited, sin distinguir extension para delimitados, DS-ING-7).
 execute() llama a _read_file en vez de _read_delimited directamente.
+
+Caso 8 (CA-11) cerrado (tdd_refactor, TSK-07): _copy_bytes(src, dst) copia
+byte a byte (sin re-serializar) cada archivo del landing a
+ctx.bronze_dir/<name>; execute() registra el plan de copia en
+self._bronze_copies (mismo patron de estado compartido execute()/
+write_outputs() que self._contract/self._map) y write_outputs() crea
+ctx.bronze_dir y ejecuta las copias. Refactor: solo se tipo anoto
+_copy_bytes(src: Path, dst: Path) y self._bronze_copies como
+list[tuple[Path, Path]]; el resto del diseño ya era minimo y coherente
+(NC-2/NC-3), sin cambios de comportamiento.
 """
 
 import json
+from pathlib import Path
 
 import openpyxl
 
@@ -115,7 +126,7 @@ def _read_file(path) -> tuple[str | None, int, int]:
     return _read_delimited(path)
 
 
-def _copy_bytes(src, dst) -> None:
+def _copy_bytes(src: Path, dst: Path) -> None:
     """Plan.md Sec.1 (TSK-07): copia binaria fiel byte a byte, sin
     re-serializar ni normalizar el contenido (DS-ING-6, HU-04)."""
     dst.write_bytes(src.read_bytes())
@@ -140,7 +151,7 @@ class Ingestion(Flow):
         self._contract: dict | None = None
         self._map: dict | None = None
         self._report: dict | None = None
-        self._bronze_copies: list[tuple] = []
+        self._bronze_copies: list[tuple[Path, Path]] = []
 
     def load_inputs(self, ctx: ClientContext) -> None:
         """DS-ING-8: lee y parsea contract_data.json (fuente de los archivos
