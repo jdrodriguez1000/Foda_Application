@@ -115,6 +115,12 @@ def _read_file(path) -> tuple[str | None, int, int]:
     return _read_delimited(path)
 
 
+def _copy_bytes(src, dst) -> None:
+    """Plan.md Sec.1 (TSK-07): copia binaria fiel byte a byte, sin
+    re-serializar ni normalizar el contenido (DS-ING-6, HU-04)."""
+    dst.write_bytes(src.read_bytes())
+
+
 class Ingestion(Flow):
     """Flujo 030: carga y valida datos crudos, copia inmutable a bronze y
     emite reporte de carga (ingestion_report.json).
@@ -134,6 +140,7 @@ class Ingestion(Flow):
         self._contract: dict | None = None
         self._map: dict | None = None
         self._report: dict | None = None
+        self._bronze_copies: list[tuple] = []
 
     def load_inputs(self, ctx: ClientContext) -> None:
         """DS-ING-8: lee y parsea contract_data.json (fuente de los archivos
@@ -156,18 +163,25 @@ class Ingestion(Flow):
     def execute(self, ctx: ClientContext) -> FlowResult:
         """Deriva en memoria el reporte de carga (esquema DS-ING-2) para el
         caso 1: por cada dataset del contrato, lee sus archivos declarados
-        del landing (separador coma) y cuenta rows/columns. Devuelve
-        FlowResult(success=True, outputs=[ruta del reporte])."""
+        del landing (separador coma) y cuenta rows/columns. Ademas registra
+        en self._bronze_copies el plan de copia (origen landing, destino
+        ctx.bronze_dir/<name>) de cada archivo leido (todos validos hasta
+        el caso 8; el filtrado por inconsistencias llega en casos
+        posteriores, TSK-08 en adelante). Devuelve FlowResult(success=True,
+        outputs=[ruta del reporte])."""
         contract = self._contract or {}
         landing_dir = ctx.inputs_dir / "030_ingestion"
         datasets_out = []
         files_declared = 0
+        self._bronze_copies = []
         for dataset in contract.get("historical_data", {}).get("datasets", []):
             files_out = []
             for file_ in dataset.get("files", []):
                 files_declared += 1
                 name = file_.get("name")
                 separator, columns, rows = _read_file(landing_dir / name)
+                bronze_path = ctx.bronze_dir / name
+                self._bronze_copies.append((landing_dir / name, bronze_path))
                 files_out.append(
                     {
                         "name": name,
@@ -205,7 +219,14 @@ class Ingestion(Flow):
 
     def write_outputs(self, ctx: ClientContext, result: FlowResult) -> None:
         """DS-ING-6: crea la carpeta destino y escribe ingestion_report.json
-        de forma determinista (sort_keys + indent=2 + newline final)."""
+        de forma determinista (sort_keys + indent=2 + newline final).
+        Ademas (CA-11, TSK-07) crea ctx.bronze_dir y copia byte a byte cada
+        archivo del plan self._bronze_copies (origen landing -> destino
+        ctx.bronze_dir/<name>), sin re-serializar ni normalizar el
+        contenido."""
+        ctx.bronze_dir.mkdir(parents=True, exist_ok=True)
+        for src, dst in self._bronze_copies:
+            _copy_bytes(src, dst)
         path = self.produces[0].path(ctx)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(
