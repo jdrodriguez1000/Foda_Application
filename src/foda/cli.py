@@ -113,6 +113,19 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
+def _build_client_context(name: str, clients_root: Path) -> ClientContext | None:
+    """Construye ClientContext(name, clients_root), traduciendo un cliente
+    inexistente (FileNotFoundError) a stderr; usado por _dispatch_run y
+    _dispatch_status (mismo estilo DS-CLI-1: fallo controlado, sin
+    Traceback). Devuelve None si el cliente no existe, para que el llamador
+    retorne codigo 1 sin escribir salida adicional."""
+    try:
+        return ClientContext(name, clients_root)
+    except FileNotFoundError as exc:
+        print(f"foda: {exc}", file=sys.stderr)
+        return None
+
+
 def _dispatch_run(args: argparse.Namespace, clients_root: Path) -> int:
     """Despacha `foda run <cliente> --flow <flujo>` (DS-ORQ-4): resuelve el
     flujo (puro, sin disco), construye el ClientContext (lectura del cliente
@@ -124,10 +137,8 @@ def _dispatch_run(args: argparse.Namespace, clients_root: Path) -> int:
         print(f"foda: {exc}", file=sys.stderr)
         return 1
 
-    try:
-        ctx = ClientContext(args.name, clients_root)
-    except FileNotFoundError as exc:
-        print(f"foda: {exc}", file=sys.stderr)
+    ctx = _build_client_context(args.name, clients_root)
+    if ctx is None:
         return 1
 
     try:
@@ -146,10 +157,8 @@ def _dispatch_status(args: argparse.Namespace, clients_root: Path) -> int:
     (lectura del cliente existente) y, por cada flujo registrado en FLOWS,
     lista sus artefactos requires/produces con un marcador de presencia en
     disco (sin efectos en disco, sin leer contenido de artefactos)."""
-    try:
-        ctx = ClientContext(args.name, clients_root)
-    except FileNotFoundError as exc:
-        print(f"foda: {exc}", file=sys.stderr)
+    ctx = _build_client_context(args.name, clients_root)
+    if ctx is None:
         return 1
 
     for flow_name, flow_cls in FLOWS.items():
