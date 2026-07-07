@@ -165,6 +165,119 @@ def test_ingestion_hereda_flow_requires_produces_y_4_fases_sin_sobreescribir_run
         )
 
 
+_INVENTARIO_HEADER = "fecha;sede;clase;stock"
+_INVENTARIO_ROWS = [
+    "2024-01-01;Sede Centro;Agua 600ml;120",
+    "2024-01-02;Sede Norte;Cola 1.5L;80",
+]
+
+
+def _contract_data_inventario_2024() -> dict:
+    """DS-ING-8: fuente de los archivos esperados. Un unico dataset
+    "inventario" con un unico archivo "inventario_2024.txt" (caso 4,
+    subconjunto DS-ING-7 aislado para el separador ';')."""
+    return {
+        "schema_version": "0.1",
+        "client": {"code": "ABC", "name": "Cliente ABC S.A.", "sector": "retail"},
+        "historical_data": {
+            "datasets": [
+                {
+                    "kind": "inventario",
+                    "source_medium": "csv",
+                    "periodicity": "mensual",
+                    "files": [
+                        {
+                            "name": "inventario_2024.txt",
+                            "period_start": "2023-01-01",
+                            "period_end": "2025-12-31",
+                        }
+                    ],
+                }
+            ]
+        },
+    }
+
+
+def _map_client_data_inventario_2024() -> dict:
+    """DS-ING-8: fuente de las columnas esperadas del dataset "inventario"
+    (fields[] con name/required), emparejadas por kind con el dataset
+    homologo del contrato. Coherente con _contract_data_inventario_2024
+    (mismo kind "inventario")."""
+    return {
+        "schema_version": "0.1",
+        "client": {"code": "ABC", "name": "Cliente ABC S.A.", "sector": "retail"},
+        "datasets": [
+            {
+                "kind": "inventario",
+                "fields": [
+                    {"name": "fecha", "required": True},
+                    {"name": "sede", "required": True},
+                    {"name": "clase", "required": True},
+                    {"name": "stock", "required": True},
+                ],
+            }
+        ],
+    }
+
+
+def _build_ctx_fixture_inventario_2024(tmp_path: Path) -> ClientContext:
+    """DS-ING-7 (subconjunto aislado, caso 4): construye un ClientContext bajo
+    tmp_path con contract_data.json + map_client_data.json coherentes entre
+    si (dataset "inventario" unico) bajo ctx.outputs_dir, y el archivo crudo
+    inventario_2024.txt (separador ';') bajo ctx.inputs_dir/"030_ingestion"."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    contrato_path = ctx.outputs_dir / "010_discovery/contract_data.json"
+    contrato_path.parent.mkdir(parents=True)
+    contrato_path.write_text(
+        json.dumps(_contract_data_inventario_2024(), ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+    mapa_path = ctx.outputs_dir / "020_onboarding/map_client_data.json"
+    mapa_path.parent.mkdir(parents=True)
+    mapa_path.write_text(
+        json.dumps(_map_client_data_inventario_2024(), ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+    landing_dir = ctx.inputs_dir / "030_ingestion"
+    landing_dir.mkdir(parents=True)
+    (landing_dir / "inventario_2024.txt").write_text(
+        "\n".join([_INVENTARIO_HEADER, *_INVENTARIO_ROWS]) + "\n", encoding="utf-8"
+    )
+
+    return ctx
+
+
+def test_reporte_registra_rows_columns_y_separator_correctos_para_inventario_2024_txt_punto_y_coma(
+    tmp_path: Path,
+) -> None:
+    """Caso 4 (CA-02): para el archivo delimitado por punto y coma
+    (inventario_2024.txt) el reporte registra el numero correcto de rows
+    (filas de datos, sin cabecera: len(_INVENTARIO_ROWS) == 2) y columns
+    (columnas de la cabecera: len(_INVENTARIO_HEADER.split(";")) == 4), y
+    separator == ";". La extension no determina el separador (DS-ING-7):
+    el archivo es .txt pero el contenido esta delimitado por ';'."""
+    ctx = _build_ctx_fixture_inventario_2024(tmp_path)
+
+    flow = Ingestion()
+    result = flow.run(ctx)
+
+    ruta_reporte = ctx.outputs_dir / "030_ingestion/ingestion_report.json"
+    reporte = json.loads(ruta_reporte.read_text(encoding="utf-8"))
+
+    archivo = reporte["datasets"][0]["files"][0]
+    assert archivo["name"] == "inventario_2024.txt"
+    assert archivo["rows"] == len(_INVENTARIO_ROWS)
+    assert archivo["columns"] == len(_INVENTARIO_HEADER.split(";"))
+    assert archivo["separator"] == ";"
+
+    assert result.success is True
+
+
 def test_reporte_registra_rows_columns_y_separator_correctos_para_ventas_csv_coma(
     tmp_path: Path,
 ) -> None:
