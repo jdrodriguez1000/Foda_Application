@@ -654,3 +654,31 @@ def test_reporte_expone_por_archivo_name_rows_y_columns_para_los_4_archivos_del_
 
     assert sorted(archivos_vistos) == sorted(esperado_por_nombre.keys())
     assert result.success is True
+
+
+def test_cada_archivo_valido_tiene_copia_byte_a_byte_identica_en_bronze(
+    tmp_path: Path,
+) -> None:
+    """Caso 8 (CA-11): sobre el fixture completo (DS-ING-7, 3 datasets, 4
+    archivos validos: ventas.csv coma, inventario_2024.txt ';',
+    inventario_2025.csv '|', precios.xlsx), para CADA archivo existe en
+    ctx.bronze_dir/<name> una copia byte a byte identica al original del
+    landing (ctx.inputs_dir/"030_ingestion"/<name>). Se compara con
+    Path.read_bytes() para verificar fidelidad binaria exacta, no solo
+    contenido de texto."""
+    ctx = _build_ctx_fixture_completo(tmp_path)
+    landing_dir = ctx.inputs_dir / "030_ingestion"
+
+    flow = Ingestion()
+    flow.run(ctx)
+
+    for name in (
+        "ventas.csv",
+        "inventario_2024.txt",
+        "inventario_2025.csv",
+        "precios.xlsx",
+    ):
+        origen = landing_dir / name
+        destino = ctx.bronze_dir / name
+        assert destino.exists(), f"falta la copia en bronze de {name!r}"
+        assert destino.read_bytes() == origen.read_bytes()
