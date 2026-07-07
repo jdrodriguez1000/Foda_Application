@@ -84,6 +84,16 @@ Cada decisión sigue el formato: **ID**, **título**, **estado** (Propuesta / Ac
 | D-065 | `flow_orchestrator` — `foda status` en texto plano determinista (DS-ORQ-3) | Aceptada | 2026-07-06 |
 | D-066 | `flow_orchestrator` — orden de validación flujo→cliente→ejecución, códigos de salida 0/1/2, sin crear `clients/` (DS-ORQ-4) | Aceptada | 2026-07-06 |
 | D-067 | Cierre CONFORME de `flow_orchestrator` (banda `tracer_bullet`), sexta feature completa; sin hallazgos bloqueantes | Aceptada | 2026-07-07 |
+| D-068 | Próxima feature = `ingestion` (flujo 030), determinista, sobre Discovery (LLM, aún no construido) | Aceptada | 2026-07-07 |
+| D-069 | `ingestion` — alcance tracer_bullet: CSV/TXT (`,`/`;`/`\|`) + XLSX; BD/API diferidos | Aceptada | 2026-07-07 |
+| D-070 | `ingestion` — DS-ING-1: inconsistencias soft-report, `FlowContractError` solo por ausencia física de artefactos | Aceptada | 2026-07-07 |
+| D-071 | `ingestion` — DS-ING-2: esquema de `ingestion_report.json` | Aceptada | 2026-07-07 |
+| D-072 | `ingestion` — DS-ING-3: validación de columnas solo por nombre/presencia, sin tipos | Aceptada | 2026-07-07 |
+| D-073 | `ingestion` — DS-ING-4: landing de archivos crudos en `010_inputs/030_ingestion/`, sin requires estáticos | Aceptada | 2026-07-07 |
+| D-074 | `ingestion` — DS-ING-5: inconsistencia parcial ⇒ copia parcial por archivo (unidad = archivo) | Aceptada | 2026-07-07 |
+| D-075 | `ingestion` — DS-ING-6: copia byte a byte a bronze + reporte JSON determinista | Aceptada | 2026-07-07 |
+| D-076 | `ingestion` — DS-ING-7: composición del fixture de test y dependencia `openpyxl` | Aceptada | 2026-07-07 |
+| D-077 | `ingestion` — DS-ING-8: reparto de responsabilidad `contract_data.json` (archivos)/`map_client_data.json` (columnas), sin chequeo de coherencia entre ambos; reemplaza "solo mapa" | Aceptada | 2026-07-07 |
 
 ## 3. Detalle de Decisiones
 
@@ -555,3 +565,73 @@ Cada decisión sigue el formato: **ID**, **título**, **estado** (Propuesta / Ac
 - **Contexto:** Tras el GATE humano del plan (APROBADO SIN CAMBIOS, incluyendo A-014/A-015/A-016) se ejecutó el bucle TDD completo de los 15 casos (`tdd_tester`→`tdd_coder`→`tdd_refactor`), donde solo los casos 4 y 10 requirieron ciclo rojo→verde real (los otros 13 nacieron verde-directo por D-037, cubiertos por el diseño mínimo del caso 1/caso 10). `integration_tester` añadió 9 tests de integración end-to-end (piezas reales: `orchestrator`→`cli`→`ClientContext`→`Flow.run`→`Onboarding`→disco, incluido el entry point `foda` vía subprocess), sin defectos de integración. `spec_verifier` recorrió los 14 CA-01…CA-14 de `spec.md` con evidencia real releída de cada test citado.
 - **Decisión:** Veredicto **CONFORME**: 14/14 CA cubiertos, cero parciales, cero sin cubrir, documentado en `600_features/flow_orchestrator/tracer_bullet/verification.md`. Sin hallazgos bloqueantes ni no bloqueantes nuevos. `flow_orchestrator/tracer_bullet` queda cerrada; es la SEXTA feature en recorrer la cadena de 8 agentes de punta a punta CONFORME (tras `client_scaffold`, `client_new_cli`, `client_context`, `flow_base`, `onboarding`).
 - **Consecuencias:** El proyecto cuenta ahora con orquestador CLI real (`foda run`/`foda status`) sobre el flujo `onboarding`, dando al científico de datos (rol revisor/aprobador, D-006) un checkpoint usable por flujo sin esperar al pipeline completo (cierra la motivación de negocio de D-062/L-040). Se actualizó `README.md` documentando ambos comandos nuevos (tabla-resumen de los tres comandos, modelo mental, secciones de uso, flujo típico ampliado). Suite final: 145 passed (121 previos + 24 nuevos: 15 unit/CLI + 9 integración), sin regresiones. Próxima tarea: revisar `tasks.md` para identificar la siguiente feature del backlog determinista (ingestion, profiling, cleaning, derivation, featuring, inferences, simulation, reporting, monitoring, alerting) o confirmar si el alcance actual del harness está completo.
+
+### D-068 — Próxima feature = `ingestion` (flujo 030), determinista, sobre Discovery
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-07
+- **Contexto:** Con `flow_orchestrator` cerrado, había que decidir la 7ª feature del backlog determinista. `discovery` (flujo 010, núcleo LLM) sigue bloqueada por T-020 (rúbricas de evaluación no deterministas aún no diseñadas, D-022).
+- **Decisión:** Se construye `ingestion` (flujo 030) a continuación, feature enteramente determinista, para consolidar terreno determinista del pipeline sin depender de la calidad de predicción de una rúbrica LLM todavía sin diseñar.
+- **Consecuencias:** `discovery`/`exploration` (LLM) siguen diferidas hasta resolver T-020. `ingestion` sigue produciendo/consumiendo `contract_data.json` como stand-in manual de Discovery (igual que `onboarding`, D-055), reforzando A-012.
+
+### D-069 — `ingestion`: alcance tracer_bullet (formatos soportados)
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-07
+- **Contexto:** Había que acotar qué formatos de archivo de entrada soporta la banda `tracer_bullet` de `ingestion`.
+- **Decisión:** En alcance: CSV/TXT con separadores `,`, `;`, `|`, y XLSX. Fuera de alcance, diferido: fuentes de base de datos y API.
+- **Consecuencias:** Se autoriza la dependencia `openpyxl` para XLSX (ver D-076). BD/API quedan como trabajo futuro de una banda de estabilización.
+
+### D-070 — `ingestion`: DS-ING-1, inconsistencias soft-report
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-07
+- **Contexto:** Había que decidir qué pasa cuando un archivo/columna no coincide con lo esperado por `contract_data.json`/`map_client_data.json`: ¿abortar el flujo o continuar y reportar?
+- **Decisión:** Las inconsistencias se acumulan en `ingestion_report.json` (soft-report) en vez de abortar el flujo; `FlowContractError` queda reservado exclusivamente a la ausencia física de `contract_data.json`/`map_client_data.json`. El reporte marca `success=False` si hubo inconsistencias.
+- **Consecuencias:** `ingestion` siempre corre hasta el final si los dos artefactos de contrato existen, dejando la decisión de qué hacer con los datos inconsistentes al humano/flujos posteriores, vía el reporte.
+
+### D-071 — `ingestion`: DS-ING-2, esquema de `ingestion_report.json`
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-07
+- **Contexto:** Había que fijar la forma exacta del artefacto de salida de `ingestion`.
+- **Decisión:** `ingestion_report.json` con: `client`, `summary`, `datasets[].files[]` (cada uno con `status`, `rows`, `columns`, `separator`, `bronze_path`, `inconsistencies`), `unexpected_files`, `success`.
+- **Consecuencias:** El reporte es el artefacto inspeccionable por el humano/flujos vecinos (D-006/E6); cualquier flujo posterior que necesite saber qué se ingirió lee este JSON.
+
+### D-072 — `ingestion`: DS-ING-3, validación de columnas solo por nombre
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-07
+- **Contexto:** Había que decidir el nivel de rigor de la validación de columnas de cada archivo: solo presencia/nombre, o también tipos de dato.
+- **Decisión:** En esta banda, la validación de columnas es solo por nombre/presencia (¿existen las columnas declaradas en `map_client_data.json` para ese dataset?), sin verificar tipos.
+- **Consecuencias:** La validación de tipos de columna queda diferida a `stab_1` (ver A-pendiente de esta sesión).
+
+### D-073 — `ingestion`: DS-ING-4, landing de archivos crudos
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-07
+- **Contexto:** Había que decidir dónde deja el humano/proceso externo los archivos crudos a ingerir, y si `Flow.requires` puede declararlos (sus nombres son dinámicos, no fijos).
+- **Decisión:** Los archivos crudos se depositan en `010_inputs/030_ingestion/`, reutilizando la base `"inputs"` ya existente en la abstracción `Artifact`/`ClientContext` sin ampliar el core. No son `requires` estáticos de `Flow` (sus nombres varían por cliente/corrida); `ingestion` los descubre en tiempo de ejecución.
+- **Consecuencias:** No se amplía `flow_base`/`client_context` para este caso; `ingestion` lista el directorio en vez de declarar artefactos fijos.
+
+### D-074 — `ingestion`: DS-ING-5, unidad de copia parcial = archivo
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-07
+- **Contexto:** Ante una inconsistencia parcial (p. ej. un archivo con columnas faltantes), había que decidir si se aborta la ingesta completa del cliente o solo la de ese archivo.
+- **Decisión:** La unidad de aislamiento de fallo es el archivo: una inconsistencia en un archivo no impide copiar los demás archivos correctos a bronze; se reporta por archivo en `ingestion_report.json`.
+- **Consecuencias:** Coherente con D-070 (soft-report): el flujo maximiza el trabajo útil realizado por corrida, sin abortar por un solo archivo problemático.
+
+### D-075 — `ingestion`: DS-ING-6, copia byte a byte + reporte determinista
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-07
+- **Contexto:** Había que fijar cómo se materializa la copia a bronze y el formato de serialización del reporte, para mantener determinismo (ya establecido como práctica del harness, ver `onboarding`/D-058).
+- **Decisión:** Los archivos válidos se copian byte a byte (sin transformación) a la capa bronze del cliente; `ingestion_report.json` se serializa con `indent=2, ensure_ascii=False, sort_keys=True`.
+- **Consecuencias:** Ingestion no transforma datos (esa responsabilidad es de `cleaning`/`derivation` aguas abajo); el reporte es comparable byte a byte entre corridas idénticas, igual que `map_client_data.json` de `onboarding`.
+
+### D-076 — `ingestion`: DS-ING-7, composición del fixture y dependencia `openpyxl`
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-07
+- **Contexto:** El bucle TDD necesita un fixture realista que ejercite los 3 separadores y ambas extensiones (texto/XLSX), más al menos un dataset de `kind` distinto a ventas.
+- **Decisión:** El fixture de test incluye: dataset de ventas separado por coma, dataset de inventario con variantes `;` y `|`, dataset de precios en XLSX, un archivo `.txt`, y al menos 2 datasets de `kind` ≠ ventas. Se autoriza la dependencia `openpyxl` (ya instalada, versión 3.1.5) para leer/escribir XLSX.
+- **Consecuencias:** Segunda dependencia externa declarada del proyecto tras PyYAML (D-026); debe listarse en `pyproject.toml`.
+
+### D-077 — `ingestion`: DS-ING-8, reparto de responsabilidad contrato/mapa (decisión del humano en el GATE del plan)
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-07
+- **Contexto:** El plan original (y la spec previa a esta enmienda) proponían validar la ingesta usando solo `map_client_data.json` como fuente de verdad de lo esperado. En el GATE humano del plan, el humano observó que `contract_data.json` y `map_client_data.json` deben repartirse la responsabilidad: uno declara qué archivos se esperan, el otro qué columnas tiene cada uno. Esto obligó a reabrir la etapa de spec (no solo el plan), porque la fuente de verdad de "qué se espera" es una decisión de spec.
+- **Decisión:** `contract_data.json` es la fuente del CONJUNTO de archivos esperados (nombres/número de archivos por dataset); `map_client_data.json` es la fuente de las COLUMNAS esperadas por archivo (`fields[]`, emparejando el dataset por `kind`). NO hay chequeo de coherencia entre ambos artefactos (se asume que ya son mutuamente consistentes, producidos aguas arriba). Reemplaza la decisión previa de "solo el mapa". `spec_writer` re-ejecutado: nueva spec con esta decisión y CA-05/06/07 anclados al contrato, CA-08/09/10 anclados al mapa; `plan_builder` re-ejecutado: mismos 22 casos, orden/numeración intactos, descripciones de casos 10-12 ancladas al contrato y 13-15/17 al mapa.
+- **Consecuencias:** Es la decisión más importante de la banda: fija de forma definitiva de dónde viene cada expectativa de validación de `ingestion`. Un cambio de fuente de validación pedido en un GATE de plan puede propagar hacia atrás y obligar a reabrir la spec (ver lección de esta sesión). El bucle TDD (22 casos) se ejecuta sobre el re-plan resultante.

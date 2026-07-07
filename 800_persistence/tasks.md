@@ -49,7 +49,7 @@
 ## 3. Tareas En Progreso
 | ID | Tarea | Prioridad | Notas |
 |---|---|---|---|
-| _Ninguna._ | | | |
+| T-031 | Construir la feature `ingestion` (flujo 030, banda `tracer_bullet`) ejecutando la cadena de 8 agentes | 🔴 Alta | Séptima feature en recorrer la cadena, primera determinista tras `flow_orchestrator`. Etapas 1-3/8 completadas: `feature_definer` (HU-01…HU-06, commit `b636db4`) → `spec_writer` (CA-01…CA-21, GATE APROBADO, luego enmendado por DS-ING-8/D-077, commit `942d4a3` + commit de enmienda) → `plan_builder` (22 casos TDD, commit `6d4b81b` + commit de re-plan por la enmienda). Bucle TDD: 1/22 casos cerrado (caso 1, CA-14, red→green→refactor, commits `cb8dbfd`/verde/`52b5fa6`); 21/22 casos pendientes, retoma en `tdd_tester` con el caso 2 (CA-20). Suite: 146 passed sin regresiones. Ver D-068 a D-077, L-043 a L-045, A-017. |
 
 ## 4. Tareas Pendientes
 | ID | Tarea | Prioridad | Notas |
