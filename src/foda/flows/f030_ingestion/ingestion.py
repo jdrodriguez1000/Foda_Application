@@ -25,9 +25,17 @@ Caso 4 (CA-02) en VERDE (tdd_coder): _read_comma_delimited se reemplaza por
 _detect_separator/_read_delimited (plan.md Sec.1, TSK-04), que detectan el
 separador (','/';'/'|') a partir de la cabecera en vez de asumir coma
 siempre; separator ya no esta hardcodeado en execute().
+
+Caso 6 (CA-04) en VERDE (tdd_coder): se agrega _read_xlsx (openpyxl,
+read_only+data_only, primera hoja del workbook, separator=None) y
+_read_file, que enruta por extension (.xlsx -> _read_xlsx; .csv/.txt ->
+_read_delimited, sin distinguir extension para delimitados, DS-ING-7).
+execute() llama a _read_file en vez de _read_delimited directamente.
 """
 
 import json
+
+import openpyxl
 
 from foda.core.context import ClientContext
 from foda.core.flow import Artifact, Flow, FlowResult
@@ -78,6 +86,33 @@ def _read_delimited(path) -> tuple[str, int, int]:
     separator = _detect_separator(lines[0])
     header = lines[0].split(separator)
     return separator, len(header), len(lines) - 1
+
+
+def _read_xlsx(path) -> tuple[None, int, int]:
+    """Plan.md Sec.1 (TSK-06): lee la primera hoja de un .xlsx con
+    openpyxl y cuenta columnas/filas. Devuelve (separator, columns, rows):
+    separator es siempre None (Excel no tiene separador delimitado,
+    CA-04); columns = nro de celdas de la primera fila con contenido
+    (cabecera); rows = nro de filas de datos posteriores con al menos una
+    celda no vacia."""
+    workbook = openpyxl.load_workbook(path, read_only=True, data_only=True)
+    sheet = workbook.worksheets[0]
+    all_rows = [
+        row
+        for row in sheet.iter_rows(values_only=True)
+        if any(cell is not None for cell in row)
+    ]
+    header = all_rows[0]
+    return None, len(header), len(all_rows) - 1
+
+
+def _read_file(path) -> tuple[str | None, int, int]:
+    """Enruta por extension (DS-ING-7): .xlsx via _read_xlsx (formato
+    Excel, sin separador); el resto (.csv/.txt) via _read_delimited (la
+    extension no determina el separador delimitado)."""
+    if path.suffix == ".xlsx":
+        return _read_xlsx(path)
+    return _read_delimited(path)
 
 
 class Ingestion(Flow):
@@ -132,7 +167,7 @@ class Ingestion(Flow):
             for file_ in dataset.get("files", []):
                 files_declared += 1
                 name = file_.get("name")
-                separator, columns, rows = _read_delimited(landing_dir / name)
+                separator, columns, rows = _read_file(landing_dir / name)
                 files_out.append(
                     {
                         "name": name,
