@@ -41,6 +41,17 @@ ctx.bronze_dir y ejecuta las copias. Refactor: solo se tipo anoto
 _copy_bytes(src: Path, dst: Path) y self._bronze_copies como
 list[tuple[Path, Path]]; el resto del diseño ya era minimo y coherente
 (NC-2/NC-3), sin cambios de comportamiento.
+
+Caso 11 (CA-06) en VERDE (tdd_coder, TSK-08 -sub-caso missing_file-):
+execute() verifica, para cada archivo declarado en contract_data.json, su
+existencia en el landing ANTES de leerlo; si no existe, lo marca con
+status="missing", agrega una inconsistencia {type: "missing_file", detail}
+y lo excluye de la lectura y de self._bronze_copies (no se copia a
+bronze). summary.files_ingested/files_with_inconsistencies y
+FlowResult.success/report["success"] ahora se derivan del conteo real de
+inconsistencias (antes siempre files_declared/0/True). Solo se implementa
+missing_file (NC-2): unexpected_file (caso 12) y missing_column/
+unexpected_column (casos 13-14) quedan pendientes.
 """
 
 import json
@@ -184,15 +195,43 @@ class Ingestion(Flow):
         landing_dir = ctx.inputs_dir / "030_ingestion"
         datasets_out = []
         files_declared = 0
+        files_with_inconsistencies = 0
         self._bronze_copies = []
         for dataset in contract.get("historical_data", {}).get("datasets", []):
             files_out = []
             for file_ in dataset.get("files", []):
                 files_declared += 1
                 name = file_.get("name")
-                separator, columns, rows = _read_file(landing_dir / name)
+                source_path = landing_dir / name
+                if not source_path.exists():
+                    # TSK-08 (CA-06): declarado en el contrato pero ausente
+                    # del landing -> status="missing", inconsistencia
+                    # missing_file, sin lectura ni copia a bronze.
+                    files_with_inconsistencies += 1
+                    files_out.append(
+                        {
+                            "name": name,
+                            "status": "missing",
+                            "rows": None,
+                            "columns": None,
+                            "separator": None,
+                            "bronze_path": None,
+                            "inconsistencies": [
+                                {
+                                    "type": "missing_file",
+                                    "detail": (
+                                        f"'{name}' esta declarado en "
+                                        "contract_data.json pero no se "
+                                        "encontro en el landing."
+                                    ),
+                                }
+                            ],
+                        }
+                    )
+                    continue
+                separator, columns, rows = _read_file(source_path)
                 bronze_path = ctx.bronze_dir / name
-                self._bronze_copies.append((landing_dir / name, bronze_path))
+                self._bronze_copies.append((source_path, bronze_path))
                 files_out.append(
                     {
                         "name": name,
@@ -211,22 +250,24 @@ class Ingestion(Flow):
                     "files": files_out,
                 }
             )
+        files_ingested = files_declared - files_with_inconsistencies
+        success = files_with_inconsistencies == 0
         self._report = {
             "schema_version": "0.1",
             "client": contract.get("client"),
             "flow": "ingestion",
-            "success": True,
+            "success": success,
             "summary": {
                 "datasets_declared": len(datasets_out),
                 "files_declared": files_declared,
-                "files_ingested": files_declared,
-                "files_with_inconsistencies": 0,
+                "files_ingested": files_ingested,
+                "files_with_inconsistencies": files_with_inconsistencies,
             },
             "datasets": datasets_out,
             "unexpected_files": [],
         }
         report_path = self.produces[0].path(ctx)
-        return FlowResult(success=True, outputs=[report_path])
+        return FlowResult(success=success, outputs=[report_path])
 
     def write_outputs(self, ctx: ClientContext, result: FlowResult) -> None:
         """DS-ING-6: crea la carpeta destino y escribe ingestion_report.json
