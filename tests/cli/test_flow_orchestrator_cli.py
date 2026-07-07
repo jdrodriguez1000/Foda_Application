@@ -307,6 +307,52 @@ def test_run_sin_contract_data_devuelve_1_stderr_refleja_flow_contract_error(
     assert not map_client_data.exists()
 
 
+def _marcador_de_linea(stdout: str, artefacto: str) -> str:
+    """Devuelve '[presente]' o '[ausente]' segun la linea de `stdout` que
+    contiene `artefacto` (busqueda robusta a espaciado exacto: localiza la
+    linea por el nombre del artefacto y luego el marcador dentro de ella)."""
+    lineas = [linea for linea in stdout.splitlines() if artefacto in linea]
+    assert lineas, f"ninguna linea de stdout menciona {artefacto!r}: {stdout!r}"
+    linea = lineas[0]
+    if "[presente]" in linea:
+        return "[presente]"
+    if "[ausente]" in linea:
+        return "[ausente]"
+    raise AssertionError(f"linea de {artefacto!r} sin marcador reconocible: {linea!r}")
+
+
+def test_status_refleja_disco_antes_y_despues_de_run_exitoso(
+    tmp_path, monkeypatch, capsys
+):
+    """Caso 11 (CA-08, TSK-15): con contract_data.json presente y
+    map_client_data.json ausente, main(["status","ABC"]) marca contract_data
+    como [presente] y map_client_data como [ausente]; tras un
+    main(["run","ABC","--flow","onboarding"]) exitoso (que escribe
+    map_client_data.json), un nuevo main(["status","ABC"]) marca AMBOS
+    artefactos como [presente]. Verifica que _dispatch_status lee el estado
+    real del disco (artifact.exists(ctx)) en cada invocacion, no un snapshot
+    cacheado."""
+    (tmp_path / "pyproject.toml").write_text("", encoding="utf-8")
+    _seed_cliente_abc(tmp_path, con_contrato=True)
+    monkeypatch.chdir(tmp_path)
+
+    result_status_inicial = main(["status", "ABC"])
+    assert result_status_inicial == 0
+    stdout_inicial = capsys.readouterr().out
+    assert _marcador_de_linea(stdout_inicial, "contract_data") == "[presente]"
+    assert _marcador_de_linea(stdout_inicial, "map_client_data") == "[ausente]"
+
+    result_run = main(["run", "ABC", "--flow", "onboarding"])
+    assert result_run == 0
+    capsys.readouterr()  # limpia el buffer de stdout/stderr de `run` antes del segundo `status`
+
+    result_status_final = main(["status", "ABC"])
+    assert result_status_final == 0
+    stdout_final = capsys.readouterr().out
+    assert _marcador_de_linea(stdout_final, "contract_data") == "[presente]"
+    assert _marcador_de_linea(stdout_final, "map_client_data") == "[presente]"
+
+
 def test_status_onboarding_lista_contract_data_y_map_client_data_con_marcadores(
     tmp_path, monkeypatch, capsys
 ):
