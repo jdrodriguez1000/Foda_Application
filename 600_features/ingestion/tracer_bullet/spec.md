@@ -5,7 +5,7 @@
 > Banda: `tracer_bullet`. Fuentes canónicas: `600_features/ingestion/tracer_bullet/definition.md`, `600_features/ingestion/feature_contract.md`, `700_architecture/system_design.md` (§5, §6, §7, §8, §9, §10, §15), `800_persistence/decisions.md` (D-047..D-067, esp. D-058/D-059 del contrato). Código reutilizado (CONFORME): `src/foda/core/flow.py` (`Flow`, `Artifact`, `FlowResult`, `FlowContractError`) y `src/foda/core/context.py` (`ClientContext`, incluye `bronze_dir`).
 
 ## Resumen
-Un `Flow` concreto **`Ingestion`** (flujo 030, determinista, hereda de `flow_base`) que, dado `contract_data.json` y `map_client_data.json` (esquema esperado por dataset) y los archivos de datos crudos del cliente depositados en un *landing* conocido, lee cada archivo (csv/txt delimitados por `,`/`;`/`|`, o `.xlsx`) detectando el separador, valida de forma determinista que el conjunto de archivos y las columnas (por **nombre/presencia**) coinciden con lo declarado, copia **byte a byte** a `data/bronze/` los archivos válidos (sin transformarlos) y produce un **reporte de carga JSON** (`020_outputs/030_ingestion/ingestion_report.json`) con, por archivo, filas/columnas y las inconsistencias detectadas — sin usar LLM y sin tocar `silver/`/`gold/`.
+Un `Flow` concreto **`Ingestion`** (flujo 030, determinista, hereda de `flow_base`) que, dado `contract_data.json` (**fuente de verdad del conjunto de archivos esperados**), `map_client_data.json` (**fuente de las columnas esperadas por dataset**) y los archivos de datos crudos del cliente depositados en un *landing* conocido, lee cada archivo (csv/txt delimitados por `,`/`;`/`|`, o `.xlsx`) detectando el separador, valida de forma determinista que el conjunto de archivos (contra el contrato) y las columnas (contra el mapa, por **nombre/presencia**) coinciden con lo declarado, copia **byte a byte** a `data/bronze/` los archivos válidos (sin transformarlos) y produce un **reporte de carga JSON** (`020_outputs/030_ingestion/ingestion_report.json`) con, por archivo, filas/columnas y las inconsistencias detectadas — sin usar LLM y sin tocar `silver/`/`gold/`.
 
 ---
 
@@ -60,6 +60,15 @@ La `definition.md` delegó a esta etapa ocho puntos abiertos. Se resuelven aquí
 - **Combinaciones omitidas (documentadas, NC-6):** `database` y `api` (fuera de alcance de la banda); combinaciones exhaustivas separador×extensión más allá de las cuatro rutas de lectura (coma, punto y coma, barra vertical, xlsx) son redundantes y no se fabrican (NC-2).
 - **Dependencia nueva:** leer `.xlsx` requiere una librería (p. ej. `openpyxl`). Se marca para el GATE por introducir una dependencia de terceros al proyecto.
 
+### DS-ING-8 — Reparto de responsabilidad entre `contract_data.json` y `map_client_data.json` (aprobado tras el GATE del plan)
+- **Decisión:** las **expectativas de validación** se derivan de **ambos** artefactos con este reparto exacto:
+  - **`contract_data.json` = fuente de verdad del CONJUNTO de archivos esperados** (nombres y número). La lista de archivos esperados y los conteos `summary.files_declared`/`summary.datasets_declared` se derivan de `contract_data.json` (`historical_data.datasets[]` y `historical_data.datasets[].files[].name`). Esto implica que `contract_data.json` **se parsea** en `load_inputs` (ya no basta con comprobar su existencia).
+  - **`map_client_data.json` = fuente de las COLUMNAS esperadas por dataset** (las `fields[]` con `name`/`required`): las columnas esperadas y las requeridas de cada dataset salen del mapa.
+  - **NO hay chequeo de coherencia mapa↔contrato:** no se verifica que ambos coincidan entre sí ni se añade un tipo de inconsistencia nuevo por divergencia. El vocabulario cerrado de inconsistencias se mantiene: `missing_file`, `unexpected_file`, `missing_column`, `unexpected_column`.
+- **Razón:** el humano aprobó este reparto tras el GATE del plan. Alinea la spec con la HU-02 de `definition.md`, que ancla el "número de archivos" al contrato (`historical_data.datasets[].files[]`) y las columnas al mapa (`fields`). El contrato es el compromiso del cliente sobre *qué archivos* envía; el mapa (derivado por `onboarding`) es el esquema canónico de *qué columnas* tiene cada dataset.
+- **Sustitución de decisión previa (constancia, NC-6):** este reparto **reemplaza** la decisión anterior por la cual *todas* las expectativas (archivos y columnas) se derivaban **solo** de `map_client_data.json` y `contract_data.json` se comprobaba únicamente su existencia. Ninguna otra decisión (DS-ING-1..7) se reabre: DS-ING-1 (soft-report y `FlowContractError` solo por ausencia física de `contract_data.json`/`map_client_data.json`), DS-ING-2..7 permanecen vigentes tal cual. El fixture (DS-ING-7) mantiene `contract_data.json` y `map_client_data.json` **coherentes entre sí** (misma lista de archivos y columnas), por lo que el reparto no altera el resultado esperado del caso feliz.
+- **Emparejamiento dataset contrato↔mapa:** dado que ambos se mantienen coherentes (mismo orden y mismos `kind`), un archivo esperado (del contrato) se valida contra las columnas del dataset homólogo del mapa. El emparejamiento por `kind`/orden declarado es detalle de `plan_builder`; lo observable es que los archivos esperados provienen del contrato y sus columnas esperadas del mapa.
+
 ---
 
 ## Contratos de Datos / Artefactos
@@ -73,8 +82,11 @@ La `definition.md` delegó a esta etapa ocho puntos abiertos. Se resuelven aquí
 | produce (dinámico) | copias inmutables | `ctx.bronze_dir / <nombre>` (una por archivo válido; rutas en `FlowResult.outputs`) | csv/txt/xlsx (byte a byte) |
 | produce (módulo) | `src/foda/flows/f030_ingestion/` | módulo Python (clase `Ingestion(Flow)`) | — |
 
-### Entrada — `map_client_data.json` (esquema consumido)
-Producido por `onboarding` (CONFORME). Ingestion consume, por dataset: `kind`, `source_medium`, `file_count`, `files[].name`, y `fields[]` con `name`/`type`/`required`/`maps_to`. La lista de **columnas esperadas** de un archivo = los `field.name` de su dataset; las **requeridas** = aquellos con `required == true`. La lista de **archivos esperados** = la unión de `datasets[].files[].name`.
+### Entrada — `contract_data.json` (esquema consumido; **fuente de los archivos esperados**, DS-ING-8)
+Fixture que simula la salida de Discovery (010). Ingestion consume, por dataset bajo `historical_data.datasets[]`: `kind`, `source_medium`, `periodicity` y `files[].name`. La lista de **archivos esperados** = la unión de `historical_data.datasets[].files[].name`; el conteo `summary.files_declared` = nº total de esos archivos y `summary.datasets_declared` = `len(historical_data.datasets)`. El **medio** de lectura de un archivo (`source_medium`) proviene del dataset del contrato al que pertenece. (El separador concreto de los delimitados y la extensión se detectan al leer, no se declaran; DS-ING-7.)
+
+### Entrada — `map_client_data.json` (esquema consumido; **fuente de las columnas esperadas**, DS-ING-8)
+Producido por `onboarding` (CONFORME). Ingestion consume, por dataset: `kind` (para emparejar con el dataset homólogo del contrato) y `fields[]` con `name`/`required`. La lista de **columnas esperadas** de un archivo = los `field.name` del dataset homólogo en el mapa; las **requeridas** = aquellos con `required == true`. Ingestion **no** deriva de aquí la lista de archivos esperados (esa sale del contrato).
 
 ### Salida — `ingestion_report.json` (esquema propuesto, DS-ING-2)
 ```json
@@ -135,12 +147,13 @@ Producido por `onboarding` (CONFORME). Ingestion consume, por dataset: `kind`, `
 
 Ejecución de `Ingestion().run(ctx)`:
 
-1. **`load_inputs(ctx)`** — lee `contract_data.json` y `map_client_data.json` (rutas de `requires`) **si existen**. No escribe en disco.
+1. **`load_inputs(ctx)`** — lee y **parsea** `contract_data.json` (de donde saldrán los archivos esperados) y `map_client_data.json` (de donde saldrán las columnas esperadas) —rutas de `requires`— **si existen**. No escribe en disco (DS-ING-8).
 2. **`validate(ctx)`** — `super().validate(ctx)` comprueba la existencia física de **ambos** `requires`; si falta alguno → `FlowContractError` (antes de `execute`), sin salida (ni reporte ni bronze). No valida datos aquí.
 3. **`execute(ctx)`** — deriva, sin usar LLM:
-   - Conjunto de archivos **esperados** = `∪ datasets[].files[].name`; conjunto **presentes** = archivos en `ctx.inputs_dir / "030_ingestion"`.
+   - Conjunto de archivos **esperados** = `∪ historical_data.datasets[].files[].name` **del contrato** (`contract_data.json`, DS-ING-8); conjunto **presentes** = archivos en `ctx.inputs_dir / "030_ingestion"`.
    - **Chequeo de archivos (HU-02):** esperado-no-presente → `status="missing"` + inconsistencia `missing_file` (no se copia). Presente-no-esperado → entra en `unexpected_files` + inconsistencia `unexpected_file` (no se copia).
-   - Por cada archivo **esperado y presente**: lo lee (detecta separador entre `,`/`;`/`|` para delimitados; primera hoja para xlsx), cuenta `rows`/`columns`, y valida columnas (DS-ING-3): requerida ausente → `missing_column`; columna presente no declarada → `unexpected_column`. Si hay ≥ 1 inconsistencia de columna → `status="rejected"` (no se copia); si no → `status="ingested"` (se copia).
+   - Por cada archivo **esperado y presente**: lo lee (detecta separador entre `,`/`;`/`|` para delimitados; primera hoja para xlsx), cuenta `rows`/`columns`, y valida columnas contra las **columnas esperadas del mapa** (`map_client_data.json`, dataset homólogo por `kind`; DS-ING-3 / DS-ING-8): requerida (`required == true`) ausente → `missing_column`; columna presente no declarada en `fields` → `unexpected_column`. Si hay ≥ 1 inconsistencia de columna → `status="rejected"` (no se copia); si no → `status="ingested"` (se copia).
+   - **Sin chequeo de coherencia mapa↔contrato** (DS-ING-8): no se compara el contrato contra el mapa; cada fuente alimenta su propia dimensión de validación.
    - Arma el reporte en memoria (DS-ING-2, orden determinista DS-ING-6) y devuelve `FlowResult(success=(sin inconsistencias), outputs=[<ruta reporte>] + <rutas bronze de los ingested>)`.
 4. **`write_outputs(ctx, result)`** — crea carpetas destino; copia **byte a byte** a `ctx.bronze_dir` cada archivo `ingested`; escribe `ingestion_report.json` (serialización determinista). El reporte se escribe **siempre** que se llegó a `execute` (haya o no inconsistencias).
 5. **`run` devuelve** el `FlowResult` de `execute`.
@@ -215,19 +228,19 @@ class Ingestion(Flow):
 | CA-02 | El reporte registra `rows`/`columns` correctos y `separator == ";"` para el archivo `.txt` delimitado por **punto y coma** (`inventario_2024.txt`). | HU-01 |
 | CA-03 | El reporte registra `rows`/`columns` correctos y `separator == "|"` para el archivo delimitado por **barra vertical** (`inventario_2025.csv`). | HU-01 |
 | CA-04 | El reporte registra `rows`/`columns` correctos y `separator == null` para el archivo **`.xlsx`** (`precios.xlsx`), leído de su primera hoja. | HU-01 |
-| CA-05 | Dado un lote cuyos archivos presentes coinciden exactamente con los declarados, el reporte no registra inconsistencias `missing_file`/`unexpected_file`, `unexpected_files == []`, y `summary.files_ingested == summary.files_declared`. | HU-02 |
-| CA-06 | Si un archivo declarado no está en el landing, su entrada tiene `status == "missing"` con inconsistencia `missing_file`; no existe copia suya en `ctx.bronze_dir`; `FlowResult.success == False`. | HU-02 |
-| CA-07 | Si hay un archivo presente no declarado por ningún dataset, aparece en `unexpected_files` con inconsistencia `unexpected_file`, no se copia a `ctx.bronze_dir`, y `success == False`. | HU-02 |
-| CA-08 | Si un archivo presente carece de una columna con `required == true`, su entrada tiene `status == "rejected"` con inconsistencia `missing_column`; no se copia a `ctx.bronze_dir`; `success == False`. | HU-03 |
-| CA-09 | Si un archivo presente tiene una columna no declarada en `fields` (p. ej. columna renombrada), su entrada tiene `status == "rejected"` con inconsistencia `unexpected_column`; no se copia a `ctx.bronze_dir`; `success == False`. | HU-03 |
-| CA-10 | Si a un archivo válido le falta una columna con `required == false` (p. ej. `precio_unitario`), **no** se registra inconsistencia por ello y el archivo se marca `ingested`. | HU-03 |
+| CA-05 | Dado un lote cuyos archivos presentes coinciden exactamente con los **declarados en `contract_data.json`** (`historical_data.datasets[].files[].name`), el reporte no registra inconsistencias `missing_file`/`unexpected_file`, `unexpected_files == []`, y `summary.files_ingested == summary.files_declared`. | HU-02 |
+| CA-06 | Si un archivo **declarado en `contract_data.json`** (`historical_data.datasets[].files[].name`) no está en el landing, su entrada tiene `status == "missing"` con inconsistencia `missing_file`; no existe copia suya en `ctx.bronze_dir`; `FlowResult.success == False`. | HU-02 |
+| CA-07 | Si hay un archivo presente en el landing **no declarado en `contract_data.json`** (no figura en ningún `historical_data.datasets[].files[].name`), aparece en `unexpected_files` con inconsistencia `unexpected_file`, no se copia a `ctx.bronze_dir`, y `success == False`. | HU-02 |
+| CA-08 | Si un archivo presente carece de una columna con `required == true` **según `map_client_data.json`** (dataset homólogo por `kind`), su entrada tiene `status == "rejected"` con inconsistencia `missing_column`; no se copia a `ctx.bronze_dir`; `success == False`. | HU-03 |
+| CA-09 | Si un archivo presente tiene una columna **no declarada en los `fields` del dataset homólogo de `map_client_data.json`** (p. ej. columna renombrada), su entrada tiene `status == "rejected"` con inconsistencia `unexpected_column`; no se copia a `ctx.bronze_dir`; `success == False`. | HU-03 |
+| CA-10 | Si a un archivo válido le falta una columna con `required == false` **según `map_client_data.json`** (p. ej. `precio_unitario`), **no** se registra inconsistencia por ello y el archivo se marca `ingested`. | HU-03 |
 | CA-11 | Para cada archivo válido (declarado, presente, columnas correctas), existe en `ctx.bronze_dir / <nombre>` una copia **byte a byte idéntica** al archivo de origen del landing. | HU-04 |
 | CA-12 | La copia en bronze conserva formato/separador/extensión sin transformación: el archivo `|` sigue delimitado por `|` y el `.xlsx` se copia como `.xlsx` idéntico. | HU-04 |
 | CA-13 | Dos ejecuciones de `run(ctx)` con las mismas entradas producen copias en bronze byte-idénticas y un `ingestion_report.json` byte-idéntico (determinismo). | HU-04, HU-01 |
 | CA-14 | `run(ctx)` escribe `ingestion_report.json` en `ctx.outputs_dir / "030_ingestion/ingestion_report.json"` y lo incluye en `FlowResult.outputs`. | HU-05 |
 | CA-15 | El reporte expone, por archivo, `name`, `rows` y `columns`. | HU-05 |
 | CA-16 | Las inconsistencias del reporte tienen un `type` del vocabulario cerrado (`missing_file`, `unexpected_file`, `missing_column`, `unexpected_column`) y un `detail` legible. | HU-05 |
-| CA-17 | `summary` reporta `datasets_declared`, `files_declared`, `files_ingested` y `files_with_inconsistencies` con conteos coherentes con el detalle por archivo. | HU-05 |
+| CA-17 | `summary` reporta `datasets_declared` (= `len(historical_data.datasets)` del contrato), `files_declared` (= nº de `historical_data.datasets[].files[].name` del contrato, DS-ING-8), `files_ingested` y `files_with_inconsistencies`, con conteos coherentes con el detalle por archivo. | HU-05 |
 | CA-18 | Ante inconsistencia parcial (unos archivos válidos, otros no), los válidos se copian a `ctx.bronze_dir` y los inválidos no; el reporte refleja ambos estados; `success == False`. | HU-02, HU-03, HU-04 |
 | CA-19 | `FlowResult.success == True` si y solo si el reporte no registra ninguna inconsistencia; en caso contrario es `False`, y el reporte se escribe igualmente. | HU-05 |
 | CA-20 | `Ingestion` hereda de `Flow`, declara `requires=[contract_data, map_client_data]` y `produces=[ingestion_report]` como `Artifact(base="outputs", ...)`, y completa las 4 fases del template method sin sobreescribir `run`. | HU-06 |
@@ -272,3 +285,4 @@ Decisiones tomadas por `spec_writer` (delegadas por `definition.md`) que el huma
 7. **DS-ING-7 (fixture):** ¿se acepta la composición propuesta (ventas/coma, inventario/`;`+`|`, precios/xlsx; `.txt` incluido; ≥2 kind ≠ ventas) y las combinaciones omitidas (`database`/`api`, separador×extensión redundantes)?
 8. **DS-ING-7 (dependencia):** ¿se autoriza introducir una librería de lectura `.xlsx` (p. ej. `openpyxl`) como dependencia del proyecto?
 9. **client_register DIFERIDO** (constancia, no requiere decisión): la comparación contra `client_register` queda fuera de esta banda.
+10. **DS-ING-8 — reparto de responsabilidad `contract_data.json`↔`map_client_data.json` (YA APROBADO por el humano tras el GATE del plan):** los archivos esperados y `summary.files_declared`/`datasets_declared` se derivan de `contract_data.json` (`historical_data.datasets[].files[].name`, `datasets[]`), y las columnas esperadas/requeridas de `map_client_data.json` (`fields[]`); **sin** chequeo de coherencia mapa↔contrato. Este reparto **reemplaza** la decisión previa "solo mapa". Al integrarse este cambio, la spec debe re-planificarse (`plan_builder` vuelve a ejecutarse).
