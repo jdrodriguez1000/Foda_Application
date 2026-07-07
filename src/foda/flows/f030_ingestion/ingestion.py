@@ -20,6 +20,11 @@ esto completa las 4 fases del template method definidas en la propia clase
 (load_inputs, validate, execute, write_outputs) sin sobreescribir run().
 El comportamiento observable de run() no cambia (NC-2): validate() del base
 ya se invocaba dentro del template method antes de este caso.
+
+Caso 4 (CA-02) en VERDE (tdd_coder): _read_comma_delimited se reemplaza por
+_detect_separator/_read_delimited (plan.md Sec.1, TSK-04), que detectan el
+separador (','/';'/'|') a partir de la cabecera en vez de asumir coma
+siempre; separator ya no esta hardcodeado en execute().
 """
 
 import json
@@ -49,17 +54,30 @@ _PRODUCES = [
 ]
 
 
-def _read_comma_delimited(path) -> tuple[int, int]:
-    """Lee un archivo delimitado por coma (unico separador del caso 1) y
-    devuelve (columns, rows): columns = nro de columnas de la cabecera,
-    rows = nro de filas de datos no vacias (sin la cabecera)."""
+_SEPARATORS = [",", ";", "|"]
+
+
+def _detect_separator(header_line: str) -> str:
+    """Plan.md Sec.1: entre ','/';'/'|' elige el que aparece con mayor
+    numero de ocurrencias en la linea de cabecera (sin empates en el
+    fixture, DS-ING-7)."""
+    return max(_SEPARATORS, key=header_line.count)
+
+
+def _read_delimited(path) -> tuple[str, int, int]:
+    """Plan.md Sec.1: detecta el separador (','/';'/'|') a partir de la
+    cabecera y cuenta columnas/filas. Devuelve (separator, columns, rows):
+    columns = nro de columnas de la cabecera, rows = nro de filas de datos
+    no vacias (sin la cabecera). Cubre .csv y .txt indistintamente (la
+    extension no determina el separador; DS-ING-7)."""
     lines = [
         line
         for line in path.read_text(encoding="utf-8").splitlines()
         if line.strip() != ""
     ]
-    header = lines[0].split(",")
-    return len(header), len(lines) - 1
+    separator = _detect_separator(lines[0])
+    header = lines[0].split(separator)
+    return separator, len(header), len(lines) - 1
 
 
 class Ingestion(Flow):
@@ -114,14 +132,14 @@ class Ingestion(Flow):
             for file_ in dataset.get("files", []):
                 files_declared += 1
                 name = file_.get("name")
-                columns, rows = _read_comma_delimited(landing_dir / name)
+                separator, columns, rows = _read_delimited(landing_dir / name)
                 files_out.append(
                     {
                         "name": name,
                         "status": "ingested",
                         "rows": rows,
                         "columns": columns,
-                        "separator": ",",
+                        "separator": separator,
                         "bronze_path": None,
                         "inconsistencies": [],
                     }
