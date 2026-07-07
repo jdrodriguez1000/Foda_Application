@@ -274,6 +274,39 @@ def test_run_cliente_inexistente_devuelve_1_stderr_nombra_cliente_sin_traceback_
     assert not ghost_dir.exists()
 
 
+def test_run_sin_contract_data_devuelve_1_stderr_refleja_flow_contract_error(
+    tmp_path, monkeypatch, capsys
+):
+    """Caso 9 (CA-06, TSK-13): main(["run","ABC","--flow","onboarding"]) con
+    ABC existente pero SIN 020_outputs/010_discovery/contract_data.json
+    devuelve 1, stderr refleja el FlowContractError de Flow.validate (nombra
+    el artefacto requerido ausente "contract_data"), la salida no contiene
+    "Traceback" y no se escribe map_client_data.json. _dispatch_run construye
+    ClientContext (que solo exige client.yaml) y delega en flow.run(ctx);
+    Onboarding hereda Flow.validate, que compara self.requires contra disco
+    antes de execute/write_outputs."""
+    (tmp_path / "pyproject.toml").write_text("", encoding="utf-8")
+    _seed_cliente_abc(tmp_path, con_contrato=False)
+    monkeypatch.chdir(tmp_path)
+
+    result = main(["run", "ABC", "--flow", "onboarding"])
+
+    assert result == 1
+    captured = capsys.readouterr()
+    assert "contract_data" in captured.err
+    assert "Traceback" not in captured.out
+    assert "Traceback" not in captured.err
+    map_client_data = (
+        tmp_path
+        / "clients"
+        / "ABC"
+        / "020_outputs"
+        / "020_onboarding"
+        / "map_client_data.json"
+    )
+    assert not map_client_data.exists()
+
+
 def test_run_flujo_inexistente_devuelve_1_stderr_nombra_flujo_sin_traceback_ni_artefacto(
     tmp_path, monkeypatch, capsys
 ):
