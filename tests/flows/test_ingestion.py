@@ -731,3 +731,35 @@ def test_copia_en_bronze_conserva_formato_separador_y_extension(
     ]
     assert list(filas[0]) == _PRECIOS_HEADER
     assert [list(row) for row in filas[1:]] == _PRECIOS_ROWS
+
+
+def test_presentes_igual_declarados_sin_missing_ni_unexpected_files_ingested_igual_declared(
+    tmp_path: Path,
+) -> None:
+    """Caso 10 (CA-05): sobre el fixture completo (DS-ING-7), donde los
+    archivos presentes en el landing coinciden EXACTAMENTE con los
+    declarados en contract_data.json (historical_data.datasets[].files[].
+    name, DS-ING-8), el reporte no registra ninguna inconsistencia
+    missing_file ni unexpected_file (en ningun archivo de ningun dataset),
+    unexpected_files == [], y summary.files_ingested ==
+    summary.files_declared."""
+    ctx = _build_ctx_fixture_completo(tmp_path)
+
+    flow = Ingestion()
+    flow.run(ctx)
+
+    ruta_reporte = ctx.outputs_dir / "030_ingestion/ingestion_report.json"
+    reporte = json.loads(ruta_reporte.read_text(encoding="utf-8"))
+
+    tipos_inconsistencias = [
+        inconsistencia["type"]
+        for dataset in reporte["datasets"]
+        for archivo in dataset["files"]
+        for inconsistencia in archivo["inconsistencies"]
+    ]
+    assert "missing_file" not in tipos_inconsistencias
+    assert "unexpected_file" not in tipos_inconsistencias
+    assert reporte["unexpected_files"] == []
+    assert (
+        reporte["summary"]["files_ingested"] == reporte["summary"]["files_declared"]
+    )
