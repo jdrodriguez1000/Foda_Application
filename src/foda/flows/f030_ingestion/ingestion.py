@@ -12,6 +12,14 @@ ingestion_report.json de forma determinista (DS-ING-6). Los detalles finos
 -deteccion de separador ;/|, lectura de xlsx, validacion de columnas contra
 el mapa, copia a bronze, missing_file/unexpected_file- llegan en casos
 posteriores del bucle TDD (no se adelantan, NC-2).
+
+Caso 2 (CA-20) en VERDE (tdd_coder): Ingestion sobreescribe explicitamente
+validate(), delegando en super().validate(ctx) (misma comprobacion base de
+existencia de requires que ya se ejecutaba de forma heredada e implicita);
+esto completa las 4 fases del template method definidas en la propia clase
+(load_inputs, validate, execute, write_outputs) sin sobreescribir run().
+El comportamiento observable de run() no cambia (NC-2): validate() del base
+ya se invocaba dentro del template method antes de este caso.
 """
 
 import json
@@ -85,6 +93,12 @@ class Ingestion(Flow):
         map_path = self.requires[1].path(ctx)
         if map_path.exists():
             self._map = json.loads(map_path.read_text(encoding="utf-8"))
+
+    def validate(self, ctx: ClientContext) -> None:
+        """DS-ING-8 (CA-20): delega en la comprobacion base (existencia de
+        requires); la validacion de contenido (columnas, contrato) llega en
+        casos posteriores del bucle TDD (no se adelanta, NC-2)."""
+        super().validate(ctx)
 
     def execute(self, ctx: ClientContext) -> FlowResult:
         """Deriva en memoria el reporte de carga (esquema DS-ING-2) para el

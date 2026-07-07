@@ -2,16 +2,16 @@
   "feature": "ingestion",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "tdd_tester",
+  "current_stage": "tdd_coder",
   "stages": {
     "feature_definer":   { "status": "done",    "artifact": "definition.md" },
     "spec_writer":       { "status": "done",    "artifact": "spec.md",  "gate": "human", "awaiting_approval": false, "note": "Spec enmendada (DS-ING-8) APROBADA por el humano: reparto contract_data.json (archivos esperados) / map_client_data.json (columnas). Habilita el re-plan." },
     "plan_builder":      { "status": "done",    "artifact": "plan.md",  "gate": "human", "awaiting_approval": false, "note": "plan.md REGENERADO contra la spec enmendada (DS-ING-8): archivos esperados desde el contrato, columnas desde el mapa. Plan y 22 casos TDD APROBADOS por el humano tras el GATE (aprobó los 22 casos en el GATE previo; el re-plan solo materializa DS-ING-8). Habilita el bucle TDD." },
     "tdd": {
-      "status": "pending",
+      "status": "in_progress",
       "cases": [
         { "id": 1,  "desc": "run(ctx) sobre el fixture minimo (dataset ventas/ventas.csv coma) escribe ingestion_report.json en ctx.outputs_dir/030_ingestion/ingestion_report.json y lo incluye en FlowResult.outputs (CA-14).", "status": "done", "test": "tests/flows/test_ingestion.py::test_run_sobre_fixture_minimo_escribe_ingestion_report_y_lo_incluye_en_outputs", "green_files": ["src/foda/flows/f030_ingestion/ingestion.py"], "refactor_note": "tdd_refactor: sin cambios de codigo (NC-2/NC-3). Codigo ya minimo y alineado con el estilo de f020_onboarding/onboarding.py (helper privado, docstrings, requires/produces como constantes). Renombrar _read_comma_delimited es prematuro: el caso 3/4 lo reemplaza por _read_delimited/_detect_separator segun plan.md. Suite completa verde (146 tests) antes y despues." },
-        { "id": 2,  "desc": "Ingestion hereda Flow, declara requires=[contract_data, map_client_data]/produces=[ingestion_report] y completa las 4 fases sin sobreescribir run (CA-20).", "status": "red", "test": "tests/flows/test_ingestion.py::test_ingestion_hereda_flow_requires_produces_y_4_fases_sin_sobreescribir_run", "red_reason": "AssertionError: Ingestion debe sobreescribir explicitamente el hook 'validate' (spec Interfaces / Firmas Publicas, CA-20). El caso 1 ya dejo requires/produces y run() heredado correctos; el aspecto de CA-20 aun no cubierto es que Ingestion complete explicitamente las 4 fases del template method (incluida validate, delegando en super().validate), no solo 3 de 4." },
+        { "id": 2,  "desc": "Ingestion hereda Flow, declara requires=[contract_data, map_client_data]/produces=[ingestion_report] y completa las 4 fases sin sobreescribir run (CA-20).", "status": "green", "test": "tests/flows/test_ingestion.py::test_ingestion_hereda_flow_requires_produces_y_4_fases_sin_sobreescribir_run", "green_files": ["src/foda/flows/f030_ingestion/ingestion.py"] },
         { "id": 3,  "desc": "Para ventas.csv (coma) el reporte registra rows/columns correctos y separator == ',' (CA-01).", "status": "pending" },
         { "id": 4,  "desc": "Para inventario_2024.txt (;) el reporte registra rows/columns correctos y separator == ';' (CA-02).", "status": "pending" },
         { "id": 5,  "desc": "Para inventario_2025.csv (|) el reporte registra rows/columns correctos y separator == '|' (CA-03).", "status": "pending" },
