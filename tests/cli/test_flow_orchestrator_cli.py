@@ -379,6 +379,27 @@ def test_status_onboarding_lista_contract_data_y_map_client_data_con_marcadores(
     assert "[ausente]" in captured.out
 
 
+def test_status_cliente_inexistente_devuelve_1_stderr_nombra_cliente_sin_traceback(
+    tmp_path, monkeypatch, capsys
+):
+    """Caso 12 (CA-09, TSK-16): main(["status","GHOST"]) con GHOST inexistente
+    (no sembrado bajo clients/) devuelve 1, stderr menciona el cliente GHOST
+    (mismo estilo que run, caso 8) y la salida no contiene "Traceback".
+    _dispatch_status construye ClientContext(args.name, clients_root) via
+    _build_client_context y traduce el FileNotFoundError resultante a stderr +
+    return 1 antes de introspeccionar artefacto alguno."""
+    (tmp_path / "pyproject.toml").write_text("", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    result = main(["status", "GHOST"])
+
+    assert result == 1
+    captured = capsys.readouterr()
+    assert "GHOST" in captured.err
+    assert "Traceback" not in captured.out
+    assert "Traceback" not in captured.err
+
+
 def test_run_flujo_inexistente_devuelve_1_stderr_nombra_flujo_sin_traceback_ni_artefacto(
     tmp_path, monkeypatch, capsys
 ):
