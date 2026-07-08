@@ -71,6 +71,21 @@ patron de funcion pura de modulo ya usado por _detect_separator/
 _missing_file_entry/_ingested_file_entry); execute() ya no mezcla la logica
 de deteccion de sobrantes con el resto del armado del reporte, sin cambiar
 el comportamiento (NC-2/NC-3).
+
+Caso 13 (CA-08) cerrado (tdd_refactor, TSK-09 -sub-caso missing_column-):
+execute() valida, para cada archivo presente y leible, sus columnas contra
+fields[] del dataset homologo (por kind) de map_client_data.json via
+_validate_columns; si falta una columna required==true, marca
+status="rejected", agrega la inconsistencia missing_column y excluye el
+archivo de self._bronze_copies (no se copia a bronze). Se agrego
+_rejected_file_entry (misma familia de _missing_file_entry/
+_ingested_file_entry, esquema DS-ING-2). Refactor: se elimino la lectura
+duplicada del mismo archivo (antes _read_file y _read_header lo leian por
+separado); _read_delimited/_read_xlsx ahora devuelven tambien la cabecera
+(header) junto con separator/columns/rows en una unica pasada, y _read_file
+la propaga; se retiraron _read_header_delimited/_read_header_xlsx/
+_read_header (ya redundantes). execute() llama _read_file una sola vez por
+archivo. Sin cambio de comportamiento observable (NC-2/NC-3).
 """
 
 import json
@@ -113,12 +128,14 @@ def _detect_separator(header_line: str) -> str:
     return max(_SEPARATORS, key=header_line.count)
 
 
-def _read_delimited(path) -> tuple[str, int, int]:
+def _read_delimited(path) -> tuple[list[str], str, int, int]:
     """Plan.md Sec.1: detecta el separador (','/';'/'|') a partir de la
-    cabecera y cuenta columnas/filas. Devuelve (separator, columns, rows):
-    columns = nro de columnas de la cabecera, rows = nro de filas de datos
-    no vacias (sin la cabecera). Cubre .csv y .txt indistintamente (la
-    extension no determina el separador; DS-ING-7)."""
+    cabecera, la parte en nombres de columna y cuenta columnas/filas.
+    Devuelve (header, separator, columns, rows): header = nombres de
+    columna de la cabecera (TSK-09), columns = nro de columnas de la
+    cabecera, rows = nro de filas de datos no vacias (sin la cabecera).
+    Cubre .csv y .txt indistintamente (la extension no determina el
+    separador; DS-ING-7)."""
     lines = [
         line
         for line in path.read_text(encoding="utf-8").splitlines()
@@ -126,16 +143,18 @@ def _read_delimited(path) -> tuple[str, int, int]:
     ]
     separator = _detect_separator(lines[0])
     header = lines[0].split(separator)
-    return separator, len(header), len(lines) - 1
+    return header, separator, len(header), len(lines) - 1
 
 
-def _read_xlsx(path) -> tuple[None, int, int]:
+def _read_xlsx(path) -> tuple[list[str], None, int, int]:
     """Plan.md Sec.1 (TSK-06): lee la primera hoja de un .xlsx con
-    openpyxl y cuenta columnas/filas. Devuelve (separator, columns, rows):
+    openpyxl, obtiene los nombres de columna de la cabecera (TSK-09) y
+    cuenta columnas/filas. Devuelve (header, separator, columns, rows):
+    header = nombres de columna no vacios de la primera fila (cabecera);
     separator es siempre None (Excel no tiene separador delimitado,
     CA-04); columns = nro de celdas de la primera fila con contenido
-    (cabecera); rows = nro de filas de datos posteriores con al menos una
-    celda no vacia."""
+    (cabecera, incluyendo vacias); rows = nro de filas de datos
+    posteriores con al menos una celda no vacia."""
     workbook = openpyxl.load_workbook(path, read_only=True, data_only=True)
     sheet = workbook.worksheets[0]
     all_rows = [
@@ -143,47 +162,21 @@ def _read_xlsx(path) -> tuple[None, int, int]:
         for row in sheet.iter_rows(values_only=True)
         if any(cell is not None for cell in row)
     ]
-    header = all_rows[0]
-    return None, len(header), len(all_rows) - 1
+    raw_header = all_rows[0]
+    header = [str(cell) for cell in raw_header if cell is not None]
+    return header, None, len(raw_header), len(all_rows) - 1
 
 
-def _read_file(path) -> tuple[str | None, int, int]:
+def _read_file(path) -> tuple[list[str], str | None, int, int]:
     """Enruta por extension (DS-ING-7): .xlsx via _read_xlsx (formato
     Excel, sin separador); el resto (.csv/.txt) via _read_delimited (la
-    extension no determina el separador delimitado)."""
+    extension no determina el separador delimitado). Una unica lectura de
+    path por llamada; devuelve tanto la cabecera (TSK-09) como
+    separator/columns/rows (TSK-03..TSK-07), evitando releer el archivo
+    para obtener la cabecera por separado."""
     if path.suffix == ".xlsx":
         return _read_xlsx(path)
     return _read_delimited(path)
-
-
-def _read_header_delimited(path) -> list[str]:
-    """Lee la cabecera (nombres de columna) de un archivo delimitado
-    (.csv/.txt), detectando el separador igual que _read_delimited."""
-    lines = [
-        line
-        for line in path.read_text(encoding="utf-8").splitlines()
-        if line.strip() != ""
-    ]
-    separator = _detect_separator(lines[0])
-    return lines[0].split(separator)
-
-
-def _read_header_xlsx(path) -> list[str]:
-    """Lee la cabecera (nombres de columna) de la primera hoja de un
-    .xlsx, igual que _read_xlsx."""
-    workbook = openpyxl.load_workbook(path, read_only=True, data_only=True)
-    sheet = workbook.worksheets[0]
-    header_row = next(sheet.iter_rows(values_only=True))
-    return [str(cell) for cell in header_row if cell is not None]
-
-
-def _read_header(path) -> list[str]:
-    """TSK-09 (CA-08): nombres de columna de la cabecera de path, enrutando
-    por extension igual que _read_file (.xlsx via _read_header_xlsx; el
-    resto via _read_header_delimited)."""
-    if path.suffix == ".xlsx":
-        return _read_header_xlsx(path)
-    return _read_header_delimited(path)
 
 
 def _validate_columns(header: list[str], fields: list[dict]) -> list[dict]:
@@ -367,8 +360,7 @@ class Ingestion(Flow):
                     files_with_inconsistencies += 1
                     files_out.append(_missing_file_entry(name))
                     continue
-                separator, columns, rows = _read_file(source_path)
-                header = _read_header(source_path)
+                header, separator, columns, rows = _read_file(source_path)
                 column_inconsistencies = _validate_columns(header, fields)
                 if column_inconsistencies:
                     # TSK-09 (CA-08): presente y legible, pero le falta una
