@@ -1412,3 +1412,29 @@ def test_contract_data_ausente_lanza_flow_contract_error_en_validate_sin_reporte
     ruta_reporte = ctx.outputs_dir / "030_ingestion/ingestion_report.json"
     assert not ruta_reporte.exists()
     assert list(ctx.bronze_dir.iterdir()) == []
+
+
+def test_map_client_data_ausente_lanza_flow_contract_error_en_validate_sin_reporte_ni_copia(
+    tmp_path: Path,
+) -> None:
+    """Caso 22 (CA-21, TSK-36/TSK-03, DS-ING-1): analogo al caso 21, pero con
+    map_client_data.json (el OTRO requires del flujo) AUSENTE del disco en
+    vez de contract_data.json. Ingestion().run(ctx) lanza FlowContractError
+    en la fase validate (heredada de Flow base, sin sobreescritura de
+    contenido: Ingestion.validate() solo delega en super().validate(ctx),
+    caso 2/CA-20), ANTES de tocar bronze. Se verifica con
+    pytest.raises(FlowContractError) y se confirma que NO hay ninguna salida
+    parcial: ni ingestion_report.json (produces[0].path(ctx)) ni copia
+    alguna en ctx.bronze_dir (que ya existe vacio por el scaffold de
+    create_client, DS-ING-1: contrato de errores, solo requires ausente
+    aborta; las inconsistencias de datos nunca abortan)."""
+    ctx = _build_ctx_fixture_completo(tmp_path)
+    mapa_path = ctx.outputs_dir / "020_onboarding/map_client_data.json"
+    mapa_path.unlink()
+
+    with pytest.raises(FlowContractError):
+        Ingestion().run(ctx)
+
+    ruta_reporte = ctx.outputs_dir / "030_ingestion/ingestion_report.json"
+    assert not ruta_reporte.exists()
+    assert list(ctx.bronze_dir.iterdir()) == []
