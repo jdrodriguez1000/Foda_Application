@@ -55,7 +55,9 @@
 ## 4. Tareas Pendientes
 | ID | Tarea | Prioridad | Notas |
 |---|---|---|---|
-| _Ninguna._ | | | |
+| T-032 | Cablear el CLI para `ingestion`: registrar `Ingestion` en `FLOWS` de `src/foda/orchestrator.py` para habilitar `foda run <cliente> --flow ingestion`, y actualizar `README.md` | 🔴 Alta | `ingestion` (T-031) quedó CONFORME a nivel unitario+integración pero `FLOWS = {"onboarding": Onboarding}` no la registra: hoy `foda run <cliente> --flow ingestion` falla con "Flujo desconocido". Bajo flujo SDD/TDD; candidata a ser la primera feature en estrenar el flujo de ramas de T-034 (o según se decida si T-034 aún no está implementada). Ver L-051, D-079. |
+| T-033 | Prueba humana de `ingestion` vía CLI de punta a punta | 🔴 Alta | Ejecutar una vez cableado el CLI (T-032): `foda client new`, depositar `contract_data.json` fabricado en `020_outputs/010_discovery/`, producir `map_client_data.json` con `foda run --flow onboarding`, depositar archivos crudos en `010_inputs/030_ingestion/`, ejecutar `foda run --flow ingestion` e inspeccionar `ingestion_report.json` + `data/bronze/`. |
+| T-034 | Implementar el flujo de ramas por feature + merge por PR (política definida en D-079) | 🟡 Media | 7 ajustes: `CLAUDE.md` nueva sección de ramas; `feature_definer.md` paso 0 crear rama `feature/<nombre>` + stages nuevos; `session_closer.md` push a rama actual (`git push -u origin HEAD`) en vez de `origin main`; `session_starter.md` avisar si está en `main` con feature en progreso; `methodology.md` operacionalizar; `decisions.md` ADR (ya D-079); plantilla `state.json` con stages `human_test`/`merge_to_main`. Punto de alcance ABIERTO sin resolver: si este propio cambio de gobernanza se aplica directo a `main` o va en su propia rama. |
 
 ## 5. Backlog
 | ID | Tarea | Notas |
