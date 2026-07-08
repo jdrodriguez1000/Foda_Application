@@ -1285,3 +1285,61 @@ def test_success_es_true_sii_reporte_sin_inconsistencias_y_reporte_se_escribe_en
     assert reporte_inconsistente["inconsistencies"] != []
     assert reporte_inconsistente["success"] is False
     assert resultado_con_inconsistencias.success is False
+
+
+def test_inconsistencia_parcial_copia_los_validos_y_excluye_el_invalido_con_bronze_path_coherente(
+    tmp_path: Path,
+) -> None:
+    """Caso 19 (CA-18, TSK-33/TSK-08/TSK-09, DS-ING-5): sobre un escenario
+    con varios archivos donde unos son validos y uno es invalido, se
+    reutiliza _build_ctx_fixture_columna_requerida_ausente (mismo fixture
+    del caso 13): "ventas.csv" queda "rejected" (falta la columna
+    requerida "clase" segun el mapa) y los otros 3 archivos del fixture
+    completo ("inventario_2024.txt", "inventario_2025.csv", "precios.xlsx")
+    quedan validos sin cambios. DS-ING-5 exige que la unidad de copia sea
+    el ARCHIVO: una inconsistencia en "ventas.csv" no debe impedir que los
+    3 archivos validos se copien a ctx.bronze_dir. Se verifica:
+    - los 3 validos: status=="ingested", bronze_path no nulo en el
+      reporte, Y existen fisicamente en ctx.bronze_dir con contenido byte
+      a byte identico al original del landing.
+    - el invalido ("ventas.csv"): status=="rejected", bronze_path es
+      null en el reporte, Y NO existe en ctx.bronze_dir.
+    - FlowResult.success is False (hay al menos una inconsistencia)."""
+    ctx = _build_ctx_fixture_columna_requerida_ausente(tmp_path)
+    landing_dir = ctx.inputs_dir / "030_ingestion"
+
+    flow = Ingestion()
+    result = flow.run(ctx)
+
+    ruta_reporte = ctx.outputs_dir / "030_ingestion/ingestion_report.json"
+    reporte = json.loads(ruta_reporte.read_text(encoding="utf-8"))
+
+    archivos_por_nombre = {
+        archivo["name"]: archivo
+        for dataset in reporte["datasets"]
+        for archivo in dataset["files"]
+    }
+
+    nombres_validos = (
+        "inventario_2024.txt",
+        "inventario_2025.csv",
+        "precios.xlsx",
+    )
+    for name in nombres_validos:
+        archivo = archivos_por_nombre[name]
+        assert archivo["status"] == "ingested"
+        assert archivo["bronze_path"] is not None, (
+            f"{name!r} es valido: su entrada en el reporte debe traer "
+            "bronze_path no nulo (DS-ING-2/CA-18)"
+        )
+        destino = ctx.bronze_dir / name
+        origen = landing_dir / name
+        assert destino.exists(), f"falta la copia en bronze de {name!r}"
+        assert destino.read_bytes() == origen.read_bytes()
+
+    archivo_ventas = archivos_por_nombre["ventas.csv"]
+    assert archivo_ventas["status"] == "rejected"
+    assert archivo_ventas["bronze_path"] is None
+    assert not (ctx.bronze_dir / "ventas.csv").exists()
+
+    assert result.success is False
