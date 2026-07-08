@@ -58,14 +58,19 @@ separator, columns, rows), que construyen la entrada de reporte
 diccionario entre ambas ramas y reduce el anidamiento de execute(), sin
 cambiar el comportamiento (NC-2/NC-3).
 
-Caso 12 (CA-07) en VERDE (tdd_coder, TSK-08 -sub-caso unexpected_file-):
+Caso 12 (CA-07) cerrado (tdd_refactor, TSK-08 -sub-caso unexpected_file-):
 execute() acumula los nombres declarados por el contrato (declared_names) y,
 tras recorrer los datasets, calcula unexpected_files como los nombres
 presentes en el landing que no estan en declared_names, ordenados
 alfabeticamente (DS-ING-6); success ahora tambien exige unexpected_files
 vacio. Los archivos sobrantes ya quedaban fuera de self._bronze_copies (solo
 se llena para archivos declarados), por lo que no se copian a bronze sin
-cambios adicionales.
+cambios adicionales. Refactor: se extrajo el helper de modulo
+_unexpected_files(landing_dir, declared_names), que aisla el calculo (mismo
+patron de funcion pura de modulo ya usado por _detect_separator/
+_missing_file_entry/_ingested_file_entry); execute() ya no mezcla la logica
+de deteccion de sobrantes con el resto del armado del reporte, sin cambiar
+el comportamiento (NC-2/NC-3).
 """
 
 import json
@@ -181,6 +186,19 @@ def _missing_file_entry(name: str) -> dict:
     }
 
 
+def _unexpected_files(landing_dir: Path, declared_names: set[str]) -> list[str]:
+    """TSK-08 (CA-07): nombres presentes en landing_dir que no estan en
+    declared_names (archivos declarados por contract_data.json), en orden
+    alfabetico ascendente (DS-ING-6). [] si landing_dir no existe."""
+    if not landing_dir.exists():
+        return []
+    return sorted(
+        path.name
+        for path in landing_dir.iterdir()
+        if path.is_file() and path.name not in declared_names
+    )
+
+
 def _ingested_file_entry(
     name: str, separator: str | None, columns: int, rows: int
 ) -> dict:
@@ -281,17 +299,10 @@ class Ingestion(Flow):
                 }
             )
         # TSK-08 (CA-07): archivos presentes en el landing no declarados en
-        # ningun dataset del contrato -> unexpected_files (orden alfabetico,
-        # DS-ING-6); nunca se registran en self._bronze_copies (solo se
-        # copian los archivos declarados leidos arriba), por lo que no se
-        # copian a bronze.
-        unexpected_files: list[str] = []
-        if landing_dir.exists():
-            unexpected_files = sorted(
-                path.name
-                for path in landing_dir.iterdir()
-                if path.is_file() and path.name not in declared_names
-            )
+        # ningun dataset del contrato -> unexpected_files; nunca se
+        # registran en self._bronze_copies (solo se copian los archivos
+        # declarados leidos arriba), por lo que no se copian a bronze.
+        unexpected_files = _unexpected_files(landing_dir, declared_names)
         files_ingested = files_declared - files_with_inconsistencies
         success = files_with_inconsistencies == 0 and not unexpected_files
         self._report = {
