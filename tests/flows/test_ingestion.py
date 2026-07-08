@@ -952,3 +952,71 @@ def test_archivo_sin_columna_requerida_segun_mapa_marca_rejected_missing_column_
     assert not (ctx.bronze_dir / "ventas.csv").exists()
 
     assert result.success is False
+
+
+def _build_ctx_fixture_columna_no_declarada(tmp_path: Path) -> ClientContext:
+    """DS-ING-7/DS-ING-8 (variante "columna no declarada", caso 14): mismo
+    contrato + mapa completos que _build_ctx_fixture_completo (3 datasets,
+    4 archivos), pero "ventas.csv" se deposita en el landing con la
+    columna "clase" renombrada a "categoria" (fuera de los fields[] del
+    dataset homologo "ventas" de map_client_data.json, DS-ING-8). Los
+    otros 3 archivos se depositan sin cambios, para aislar el efecto de la
+    columna renombrada en ventas.csv (plan.md, variante "Columna no
+    declarada", caso 14)."""
+    ventas_header_categoria = "fecha,sede,categoria,cantidad,precio_unitario"
+    return _build_ctx(
+        tmp_path,
+        _contract_data_completo(),
+        _map_client_data_completo(),
+        {
+            "ventas.csv": "\n".join([ventas_header_categoria, *_VENTAS_ROWS]) + "\n",
+            "inventario_2024.txt": "\n".join(
+                [_INVENTARIO_HEADER, *_INVENTARIO_ROWS]
+            )
+            + "\n",
+            "inventario_2025.csv": "\n".join(
+                [_INVENTARIO_2025_HEADER, *_INVENTARIO_2025_ROWS]
+            )
+            + "\n",
+            "precios.xlsx": _precios_xlsx_bytes(),
+        },
+    )
+
+
+def test_archivo_con_columna_no_declarada_segun_mapa_marca_rejected_unexpected_column_sin_copiar_y_success_false(
+    tmp_path: Path,
+) -> None:
+    """Caso 14 (CA-09): "ventas.csv" esta presente en el landing pero su
+    columna "clase" fue renombrada a "categoria", que no figura en los
+    fields[] del dataset homologo "ventas" de map_client_data.json
+    (emparejado por kind, DS-ING-8). El reporte debe marcar ese archivo
+    con status=="rejected" y registrar una inconsistencia de type
+    "unexpected_column"; no debe existir copia en
+    ctx.bronze_dir/"ventas.csv"; y FlowResult.success debe ser False (hay
+    al menos una inconsistencia)."""
+    ctx = _build_ctx_fixture_columna_no_declarada(tmp_path)
+
+    flow = Ingestion()
+    result = flow.run(ctx)
+
+    ruta_reporte = ctx.outputs_dir / "030_ingestion/ingestion_report.json"
+    reporte = json.loads(ruta_reporte.read_text(encoding="utf-8"))
+
+    archivo_ventas = None
+    for dataset in reporte["datasets"]:
+        for archivo in dataset["files"]:
+            if archivo["name"] == "ventas.csv":
+                archivo_ventas = archivo
+    assert archivo_ventas is not None, (
+        "ventas.csv debe seguir apareciendo en el reporte (presente en el "
+        "landing) aunque tenga una columna no declarada en el mapa"
+    )
+    assert archivo_ventas["status"] == "rejected"
+    tipos_inconsistencias = [
+        inconsistencia["type"] for inconsistencia in archivo_ventas["inconsistencies"]
+    ]
+    assert "unexpected_column" in tipos_inconsistencias
+
+    assert not (ctx.bronze_dir / "ventas.csv").exists()
+
+    assert result.success is False
