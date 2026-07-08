@@ -57,6 +57,15 @@ separator, columns, rows), que construyen la entrada de reporte
 (esquema DS-ING-2) por archivo; elimina la duplicacion de la forma del
 diccionario entre ambas ramas y reduce el anidamiento de execute(), sin
 cambiar el comportamiento (NC-2/NC-3).
+
+Caso 12 (CA-07) en VERDE (tdd_coder, TSK-08 -sub-caso unexpected_file-):
+execute() acumula los nombres declarados por el contrato (declared_names) y,
+tras recorrer los datasets, calcula unexpected_files como los nombres
+presentes en el landing que no estan en declared_names, ordenados
+alfabeticamente (DS-ING-6); success ahora tambien exige unexpected_files
+vacio. Los archivos sobrantes ya quedaban fuera de self._bronze_copies (solo
+se llena para archivos declarados), por lo que no se copian a bronze sin
+cambios adicionales.
 """
 
 import json
@@ -243,12 +252,14 @@ class Ingestion(Flow):
         datasets_out = []
         files_declared = 0
         files_with_inconsistencies = 0
+        declared_names: set[str] = set()
         self._bronze_copies = []
         for dataset in contract.get("historical_data", {}).get("datasets", []):
             files_out = []
             for file_ in dataset.get("files", []):
                 files_declared += 1
                 name = file_.get("name")
+                declared_names.add(name)
                 source_path = landing_dir / name
                 if not source_path.exists():
                     # TSK-08 (CA-06): declarado en el contrato pero ausente
@@ -269,8 +280,20 @@ class Ingestion(Flow):
                     "files": files_out,
                 }
             )
+        # TSK-08 (CA-07): archivos presentes en el landing no declarados en
+        # ningun dataset del contrato -> unexpected_files (orden alfabetico,
+        # DS-ING-6); nunca se registran en self._bronze_copies (solo se
+        # copian los archivos declarados leidos arriba), por lo que no se
+        # copian a bronze.
+        unexpected_files: list[str] = []
+        if landing_dir.exists():
+            unexpected_files = sorted(
+                path.name
+                for path in landing_dir.iterdir()
+                if path.is_file() and path.name not in declared_names
+            )
         files_ingested = files_declared - files_with_inconsistencies
-        success = files_with_inconsistencies == 0
+        success = files_with_inconsistencies == 0 and not unexpected_files
         self._report = {
             "schema_version": "0.1",
             "client": contract.get("client"),
@@ -283,7 +306,7 @@ class Ingestion(Flow):
                 "files_with_inconsistencies": files_with_inconsistencies,
             },
             "datasets": datasets_out,
-            "unexpected_files": [],
+            "unexpected_files": unexpected_files,
         }
         report_path = self.produces[0].path(ctx)
         return FlowResult(success=success, outputs=[report_path])
