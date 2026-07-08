@@ -1175,3 +1175,65 @@ def test_lista_top_level_inconsistencies_agrega_tipos_del_vocabulario_cerrado_co
 
     tipos = [inconsistencia["type"] for inconsistencia in inconsistencias]
     assert "unexpected_file" in tipos
+
+
+def test_summary_reporta_los_4_conteos_derivados_del_contrato_y_coherentes_con_el_detalle(
+    tmp_path: Path,
+) -> None:
+    """Caso 17 (CA-17, TSK-31/TSK-10): sobre un escenario con al menos una
+    inconsistencia (_build_ctx_fixture_multiples_inconsistencias, reutilizado
+    del caso 16: 3 datasets/4 archivos declarados en contract_data.json,
+    DS-ING-8, con "inventario_2025.csv" missing, "ventas.csv" y
+    "inventario_2024.txt" rejected -missing_column/unexpected_column- y
+    "precios.xlsx" ingested; ademas "zzz_sobrante.csv" es unexpected_file,
+    NO declarado en el contrato), report["summary"] expone los 4 conteos
+    EXACTOS y coherentes con el propio detalle datasets[].files[]:
+    - datasets_declared == len(historical_data.datasets) del contrato
+      (contract_data.json, DS-ING-8), 3 en este fixture;
+    - files_declared == numero total de historical_data.datasets[].files[]
+      del contrato (DS-ING-8), 4 en este fixture (no cuenta
+      "zzz_sobrante.csv", que no esta declarado);
+    - files_ingested == numero de archivos con status=="ingested" en el
+      detalle (1: solo "precios.xlsx" en este fixture);
+    - files_with_inconsistencies == numero de archivos con status!=
+      "ingested" (missing/rejected) en el detalle (3 en este fixture:
+      "inventario_2025.csv" missing, "ventas.csv" e "inventario_2024.txt"
+      rejected)."""
+    ctx = _build_ctx_fixture_multiples_inconsistencias(tmp_path)
+    contract = _contract_data_completo()
+
+    flow = Ingestion()
+    flow.run(ctx)
+
+    ruta_reporte = ctx.outputs_dir / "030_ingestion/ingestion_report.json"
+    reporte = json.loads(ruta_reporte.read_text(encoding="utf-8"))
+    summary = reporte["summary"]
+
+    datasets_contrato = contract["historical_data"]["datasets"]
+    datasets_declared_esperado = len(datasets_contrato)
+    files_declared_esperado = sum(
+        len(dataset["files"]) for dataset in datasets_contrato
+    )
+    assert datasets_declared_esperado == 3
+    assert files_declared_esperado == 4
+
+    todos_los_archivos = [
+        file_
+        for dataset in reporte["datasets"]
+        for file_ in dataset["files"]
+    ]
+    files_ingested_esperado = sum(
+        1 for file_ in todos_los_archivos if file_["status"] == "ingested"
+    )
+    files_with_inconsistencies_esperado = sum(
+        1 for file_ in todos_los_archivos if file_["status"] != "ingested"
+    )
+    assert files_ingested_esperado == 1
+    assert files_with_inconsistencies_esperado == 3
+    assert files_ingested_esperado != files_declared_esperado
+    assert files_with_inconsistencies_esperado > 0
+
+    assert summary["datasets_declared"] == datasets_declared_esperado
+    assert summary["files_declared"] == files_declared_esperado
+    assert summary["files_ingested"] == files_ingested_esperado
+    assert summary["files_with_inconsistencies"] == files_with_inconsistencies_esperado
