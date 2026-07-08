@@ -1090,3 +1090,88 @@ def test_archivo_sin_columna_opcional_segun_mapa_no_es_inconsistencia_y_queda_in
     ).read_bytes()
 
     assert result.success is True
+
+
+def _build_ctx_fixture_multiples_inconsistencias(tmp_path: Path) -> ClientContext:
+    """DS-ING-7/DS-ING-9 (variante "multiples inconsistencias", caso 16):
+    mismo contrato + mapa completos que _build_ctx_fixture_completo (3
+    datasets, 4 archivos declarados), combinando cuatro mutaciones
+    simultaneas para provocar los 4 tipos del vocabulario cerrado
+    (DS-ING-9) en un unico run:
+    - "inventario_2025.csv" (declarado en el contrato) NO se deposita en
+      el landing -> missing_file.
+    - "zzz_sobrante.csv" se deposita sin estar declarado en el contrato
+      -> unexpected_file.
+    - "ventas.csv" se deposita sin la columna "clase" (required=True
+      segun el dataset homologo "ventas" del mapa, ver caso 13) ->
+      missing_column.
+    - "inventario_2024.txt" se deposita con la columna "clase" renombrada
+      a "categoria" (fuera de los fields[] del dataset homologo
+      "inventario" del mapa, ver caso 14) -> unexpected_column (ademas
+      dispara missing_column por la ausencia de "clase" en ese mismo
+      archivo, lo cual es admisible: el caso solo exige que EXISTAN las
+      4 variantes en algun punto del run, no que cada archivo aporte una
+      unica variante)."""
+    ventas_header_sin_clase = "fecha,sede,cantidad,precio_unitario"
+    ventas_rows_sin_clase = [
+        "2024-01-01,Sede Centro,10,1200",
+        "2024-01-02,Sede Norte,5,2500",
+        "2024-01-03,Sede Centro,20,900",
+    ]
+    inventario_2024_header_categoria = "fecha;sede;categoria;stock"
+    return _build_ctx(
+        tmp_path,
+        _contract_data_completo(),
+        _map_client_data_completo(),
+        {
+            "ventas.csv": "\n".join(
+                [ventas_header_sin_clase, *ventas_rows_sin_clase]
+            )
+            + "\n",
+            "inventario_2024.txt": "\n".join(
+                [inventario_2024_header_categoria, *_INVENTARIO_ROWS]
+            )
+            + "\n",
+            "precios.xlsx": _precios_xlsx_bytes(),
+            "zzz_sobrante.csv": "col_a,col_b\n1,2\n",
+        },
+    )
+
+
+def test_lista_top_level_inconsistencies_agrega_tipos_del_vocabulario_cerrado_con_detail_no_vacio(
+    tmp_path: Path,
+) -> None:
+    """Caso 16 (CA-16, DS-ING-9): sobre un escenario con inconsistencias
+    de los 4 tipos distintos del vocabulario cerrado (missing_file,
+    unexpected_file, missing_column, unexpected_column;
+    _build_ctx_fixture_multiples_inconsistencias), la lista top-level
+    reporte["inconsistencies"] (enmienda DS-ING-9, ADR D-078):
+    - no esta vacia;
+    - cada entrada tiene un "type" dentro del vocabulario cerrado de 4;
+    - cada entrada tiene un "detail" string no vacio;
+    - incluye efectivamente una entrada de type "unexpected_file" (el
+      hogar estructural que saldaba la deuda documentada en el caso 12)."""
+    ctx = _build_ctx_fixture_multiples_inconsistencias(tmp_path)
+
+    flow = Ingestion()
+    flow.run(ctx)
+
+    ruta_reporte = ctx.outputs_dir / "030_ingestion/ingestion_report.json"
+    reporte = json.loads(ruta_reporte.read_text(encoding="utf-8"))
+
+    inconsistencias = reporte["inconsistencies"]
+    assert inconsistencias != []
+
+    vocabulario_cerrado = {
+        "missing_file",
+        "unexpected_file",
+        "missing_column",
+        "unexpected_column",
+    }
+    for inconsistencia in inconsistencias:
+        assert inconsistencia["type"] in vocabulario_cerrado
+        assert isinstance(inconsistencia["detail"], str)
+        assert inconsistencia["detail"] != ""
+
+    tipos = [inconsistencia["type"] for inconsistencia in inconsistencias]
+    assert "unexpected_file" in tipos
