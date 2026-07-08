@@ -1020,3 +1020,73 @@ def test_archivo_con_columna_no_declarada_segun_mapa_marca_rejected_unexpected_c
     assert not (ctx.bronze_dir / "ventas.csv").exists()
 
     assert result.success is False
+
+
+def _build_ctx_fixture_columna_opcional_ausente(tmp_path: Path) -> ClientContext:
+    """DS-ING-7/DS-ING-8 (variante "columna opcional ausente", caso 15):
+    mismo contrato + mapa minimos que _build_ctx_fixture_minimo (un unico
+    dataset "ventas" con un unico archivo "ventas.csv"), pero "ventas.csv"
+    se deposita en el landing SIN la columna "precio_unitario", declarada
+    con required=False en el dataset homologo "ventas" de
+    map_client_data.json (emparejado por kind, DS-ING-8; plan.md, variante
+    "Columna opcional ausente", caso 15)."""
+    ventas_header_sin_precio_unitario = "fecha,sede,clase,cantidad"
+    ventas_rows_sin_precio_unitario = [
+        "2024-01-01,Sede Centro,Agua 600ml,10",
+        "2024-01-02,Sede Norte,Cola 1.5L,5",
+        "2024-01-03,Sede Centro,Papas 45g,20",
+    ]
+    return _build_ctx(
+        tmp_path,
+        _contract_data_minimo(),
+        _map_client_data_minimo(),
+        {
+            "ventas.csv": "\n".join(
+                [ventas_header_sin_precio_unitario, *ventas_rows_sin_precio_unitario]
+            )
+            + "\n",
+        },
+    )
+
+
+def test_archivo_sin_columna_opcional_segun_mapa_no_es_inconsistencia_y_queda_ingested(
+    tmp_path: Path,
+) -> None:
+    """Caso 15 (CA-10): "ventas.csv" esta presente en el landing pero le
+    falta la columna "precio_unitario", declarada con required=False en el
+    dataset homologo "ventas" de map_client_data.json (emparejado por kind,
+    DS-ING-8). Al ser una columna opcional (no requerida) su ausencia NO es
+    una inconsistencia (_validate_columns, regla (c), plan.md linea 113):
+    el archivo debe quedar con status=="ingested", sin ninguna
+    inconsistencia de type "missing_column"/"unexpected_column", debe
+    existir su copia byte a byte en ctx.bronze_dir/"ventas.csv", y
+    FlowResult.success debe ser True (unico archivo del fixture, sin
+    ninguna otra novedad)."""
+    ctx = _build_ctx_fixture_columna_opcional_ausente(tmp_path)
+
+    flow = Ingestion()
+    result = flow.run(ctx)
+
+    ruta_reporte = ctx.outputs_dir / "030_ingestion/ingestion_report.json"
+    reporte = json.loads(ruta_reporte.read_text(encoding="utf-8"))
+
+    archivo_ventas = None
+    for dataset in reporte["datasets"]:
+        for archivo in dataset["files"]:
+            if archivo["name"] == "ventas.csv":
+                archivo_ventas = archivo
+    assert archivo_ventas is not None, (
+        "ventas.csv debe seguir apareciendo en el reporte (presente en el "
+        "landing) aunque le falte una columna opcional segun el mapa"
+    )
+    assert archivo_ventas["status"] == "ingested"
+    assert archivo_ventas["inconsistencies"] == []
+    assert archivo_ventas["columns"] == 4
+
+    ruta_bronze = ctx.bronze_dir / "ventas.csv"
+    assert ruta_bronze.exists()
+    assert ruta_bronze.read_bytes() == (
+        ctx.inputs_dir / "030_ingestion/ventas.csv"
+    ).read_bytes()
+
+    assert result.success is True
