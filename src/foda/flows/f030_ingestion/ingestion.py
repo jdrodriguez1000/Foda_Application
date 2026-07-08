@@ -102,6 +102,21 @@ dict mezclada dentro de _validate_columns; este ahora solo compone el
 resultado de ambas (misma simetria de nombres missing/unexpected ya usada
 por _missing_file_entry/_unexpected_files, casos 11-12). Sin cambio de
 comportamiento observable (NC-2/NC-3).
+
+Caso 16 (CA-16) en VERDE (tdd_coder, DS-ING-9/ADR D-078): el reporte gana
+la lista top-level report["inconsistencies"], que AGREGA todas las
+inconsistencias del run (missing_file, unexpected_file, missing_column,
+unexpected_column), cada una {type, detail} con detail no vacio. Las
+entradas missing_column/unexpected_column se agregan ADEMAS de quedar
+anidadas por archivo (aditivo, no se mueven). Se agrego
+_unexpected_file_entry(name), que construye la entrada de inconsistencia
+(type="unexpected_file") para cada nombre de unexpected_files (antes ese
+sobrante solo vivia en la lista de nombres, deuda documentada en el caso
+12). execute() acumula top_level_inconsistencies conforme recorre
+missing_file/column_inconsistencies y, al final, agrega una entrada por
+cada unexpected_file (orden estable: se recorren los datasets/archivos en
+el orden del contrato, y los sobrantes en orden alfabetico via
+_unexpected_files, DS-ING-6).
 """
 
 import json
@@ -273,6 +288,20 @@ def _missing_file_entry(name: str) -> dict:
     }
 
 
+def _unexpected_file_entry(name: str) -> dict:
+    """TSK-08/DS-ING-9 (CA-07/CA-16): entrada de inconsistencia
+    (type="unexpected_file") para un archivo presente en el landing pero no
+    declarado en contract_data.json, con destino a la lista top-level
+    reporte["inconsistencies"] (ADR D-078)."""
+    return {
+        "type": "unexpected_file",
+        "detail": (
+            f"'{name}' esta presente en el landing pero no fue declarado en "
+            "contract_data.json."
+        ),
+    }
+
+
 def _unexpected_files(landing_dir: Path, declared_names: set[str]) -> list[str]:
     """TSK-08 (CA-07): nombres presentes en landing_dir que no estan en
     declared_names (archivos declarados por contract_data.json), en orden
@@ -386,6 +415,7 @@ class Ingestion(Flow):
         files_with_inconsistencies = 0
         declared_names: set[str] = set()
         self._bronze_copies = []
+        top_level_inconsistencies: list[dict] = []
         for dataset in contract.get("historical_data", {}).get("datasets", []):
             fields = map_by_kind.get(dataset.get("kind"), {}).get("fields", [])
             files_out = []
@@ -399,7 +429,11 @@ class Ingestion(Flow):
                     # del landing -> status="missing", inconsistencia
                     # missing_file, sin lectura ni copia a bronze.
                     files_with_inconsistencies += 1
-                    files_out.append(_missing_file_entry(name))
+                    entry = _missing_file_entry(name)
+                    files_out.append(entry)
+                    # DS-ING-9 (CA-16): tambien se agrega a la lista
+                    # top-level reporte["inconsistencies"].
+                    top_level_inconsistencies.extend(entry["inconsistencies"])
                     continue
                 header, separator, columns, rows = _read_file(source_path)
                 column_inconsistencies = _validate_columns(header, fields)
@@ -413,6 +447,10 @@ class Ingestion(Flow):
                             name, separator, columns, rows, column_inconsistencies
                         )
                     )
+                    # DS-ING-9 (CA-16): las inconsistencias de columna
+                    # siguen ADEMAS anidadas por archivo (arriba); tambien
+                    # se agregan a la lista top-level.
+                    top_level_inconsistencies.extend(column_inconsistencies)
                     continue
                 self._bronze_copies.append((source_path, ctx.bronze_dir / name))
                 files_out.append(
@@ -430,6 +468,12 @@ class Ingestion(Flow):
         # registran en self._bronze_copies (solo se copian los archivos
         # declarados leidos arriba), por lo que no se copian a bronze.
         unexpected_files = _unexpected_files(landing_dir, declared_names)
+        # DS-ING-9 (CA-16): cada archivo sobrante agrega una inconsistencia
+        # unexpected_file a la lista top-level (su hogar estructural, pues
+        # no pertenece a ningun dataset del contrato).
+        top_level_inconsistencies.extend(
+            _unexpected_file_entry(name) for name in unexpected_files
+        )
         files_ingested = files_declared - files_with_inconsistencies
         success = files_with_inconsistencies == 0 and not unexpected_files
         self._report = {
@@ -445,6 +489,7 @@ class Ingestion(Flow):
             },
             "datasets": datasets_out,
             "unexpected_files": unexpected_files,
+            "inconsistencies": top_level_inconsistencies,
         }
         report_path = self.produces[0].path(ctx)
         return FlowResult(success=success, outputs=[report_path])
