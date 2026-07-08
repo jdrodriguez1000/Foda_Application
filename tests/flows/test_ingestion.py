@@ -1343,3 +1343,46 @@ def test_inconsistencia_parcial_copia_los_validos_y_excluye_el_invalido_con_bron
     assert not (ctx.bronze_dir / "ventas.csv").exists()
 
     assert result.success is False
+
+
+def test_dos_ejecuciones_con_las_mismas_entradas_producen_reporte_y_copias_bronze_byte_identicos(
+    tmp_path: Path,
+) -> None:
+    """Caso 20 (CA-13, TSK-34/TSK-11, DS-ING-6): dos invocaciones de
+    Ingestion().run(ctx) con las MISMAS entradas producen un
+    ingestion_report.json byte-identico y copias en bronze byte-identicas
+    entre ambas corridas.
+
+    Eleccion de diseno (NC-1/NC-6, documentada en vez de asumida en
+    silencio): se usan DOS ClientContext EQUIVALENTES (mismo fixture
+    DS-ING-7 completo -3 datasets, 4 archivos, todos "ingested"-,
+    construido dos veces bajo dos subcarpetas independientes de tmp_path)
+    en vez de reutilizar el mismo ctx para ambas corridas. Reutilizar el
+    mismo ctx mezclaria el determinismo (CA-13, foco de este caso) con la
+    idempotencia de sobrescritura (escribir encima de un reporte/copias ya
+    existentes de una corrida previa), que es un comportamiento distinto no
+    pedido por este caso. Con dos ctx equivalentes, cada corrida escribe
+    sobre un arbol de archivos limpio, y la comparacion byte a byte aisla
+    exclusivamente si el proceso de serializacion/copia es determinista
+    (mismo input -> mismo output), tal como exige DS-ING-6 (sort_keys=True
+    + indent=2 + newline final + orden estable) para el reporte y la copia
+    fiel sin re-serializar para bronze."""
+    ctx_1 = _build_ctx_fixture_completo(tmp_path / "corrida_1")
+    ctx_2 = _build_ctx_fixture_completo(tmp_path / "corrida_2")
+
+    Ingestion().run(ctx_1)
+    Ingestion().run(ctx_2)
+
+    ruta_reporte_1 = ctx_1.outputs_dir / "030_ingestion/ingestion_report.json"
+    ruta_reporte_2 = ctx_2.outputs_dir / "030_ingestion/ingestion_report.json"
+    assert ruta_reporte_1.read_bytes() == ruta_reporte_2.read_bytes()
+
+    for name in (
+        "ventas.csv",
+        "inventario_2024.txt",
+        "inventario_2025.csv",
+        "precios.xlsx",
+    ):
+        copia_1 = (ctx_1.bronze_dir / name).read_bytes()
+        copia_2 = (ctx_2.bronze_dir / name).read_bytes()
+        assert copia_1 == copia_2, f"copia en bronze de {name!r} no es byte-identica entre corridas"
