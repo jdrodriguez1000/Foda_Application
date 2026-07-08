@@ -1237,3 +1237,51 @@ def test_summary_reporta_los_4_conteos_derivados_del_contrato_y_coherentes_con_e
     assert summary["files_declared"] == files_declared_esperado
     assert summary["files_ingested"] == files_ingested_esperado
     assert summary["files_with_inconsistencies"] == files_with_inconsistencies_esperado
+
+
+def test_success_es_true_sii_reporte_sin_inconsistencias_y_reporte_se_escribe_en_ambos_casos(
+    tmp_path: Path,
+) -> None:
+    """Caso 18 (CA-19, TSK-32/TSK-10): FlowResult.success == True SI Y SOLO
+    SI el reporte no registra NINGUNA inconsistencia; en caso contrario
+    False, y el reporte (ingestion_report.json) se escribe IGUALMENTE en
+    ctx.outputs_dir/"030_ingestion/ingestion_report.json" (DS-ING-1,
+    DS-ING-6: el reporte se escribe siempre que se llega a execute, haya o
+    no inconsistencias). Cubre las DOS direcciones del "sii":
+    - escenario limpio (_build_ctx_fixture_completo, DS-ING-7: 3 datasets/4
+      archivos, todos presentes/declarados/con columnas correctas) ->
+      reporte["inconsistencies"] == [] y result.success is True; el reporte
+      existe en disco.
+    - escenario con inconsistencias (_build_ctx_fixture_multiples_
+      inconsistencias, DS-ING-9, reutilizado de los casos 16-17: missing_file
+      + unexpected_file + missing_column + unexpected_column simultaneos) ->
+      reporte["inconsistencies"] != [] y result.success is False; el reporte
+      se escribio IGUALMENTE (existe en disco pese al fallo)."""
+    ruta_relativa_reporte = Path("030_ingestion/ingestion_report.json")
+
+    # Direccion 1: sin inconsistencias -> success True, reporte escrito.
+    ctx_limpio = _build_ctx_fixture_completo(tmp_path / "limpio")
+    resultado_limpio = Ingestion().run(ctx_limpio)
+    ruta_reporte_limpio = ctx_limpio.outputs_dir / ruta_relativa_reporte
+    assert ruta_reporte_limpio.exists()
+    reporte_limpio = json.loads(ruta_reporte_limpio.read_text(encoding="utf-8"))
+    assert reporte_limpio["inconsistencies"] == []
+    assert reporte_limpio["success"] is True
+    assert resultado_limpio.success is True
+
+    # Direccion 2: con >= 1 inconsistencia -> success False, reporte
+    # escrito IGUALMENTE (no se omite pese al fallo).
+    ctx_con_inconsistencias = _build_ctx_fixture_multiples_inconsistencias(
+        tmp_path / "con_inconsistencias"
+    )
+    resultado_con_inconsistencias = Ingestion().run(ctx_con_inconsistencias)
+    ruta_reporte_inconsistente = (
+        ctx_con_inconsistencias.outputs_dir / ruta_relativa_reporte
+    )
+    assert ruta_reporte_inconsistente.exists()
+    reporte_inconsistente = json.loads(
+        ruta_reporte_inconsistente.read_text(encoding="utf-8")
+    )
+    assert reporte_inconsistente["inconsistencies"] != []
+    assert reporte_inconsistente["success"] is False
+    assert resultado_con_inconsistencias.success is False
