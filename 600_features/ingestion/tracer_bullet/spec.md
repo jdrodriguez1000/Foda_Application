@@ -19,8 +19,12 @@ La `definition.md` delegó a esta etapa ocho puntos abiertos. Se resuelven aquí
 - **Alternativa descartada:** reutilizar `FlowContractError` (o una excepción propia) para inconsistencias de datos. Descartada porque abortaría antes de escribir el reporte (rompe HU-05) y no permitiría copia parcial (rompe HU-02/HU-03/HU-04).
 
 ### DS-ING-2 — Esquema del reporte de carga (`ingestion_report.json`)
-- **Decisión:** `system_design.md` no fija el esquema; se propone la forma mínima (NC-2) que cubre HU-05. Ver **Contratos de Datos** abajo (esquema + ejemplo). Contiene: identidad del cliente; `summary` con conteos; `datasets` (en el orden del mapa) y por dataset sus `files` con `name`/`status`/`rows`/`columns`/`separator`/`bronze_path`/`inconsistencies`; y `unexpected_files` (archivos presentes no declarados). `success` refleja DS-ING-1.
+- **Decisión:** `system_design.md` no fija el esquema; se propone la forma mínima (NC-2) que cubre HU-05. Ver **Contratos de Datos** abajo (esquema + ejemplo). Contiene: identidad del cliente; `summary` con conteos; `datasets` (en el orden del mapa) y por dataset sus `files` con `name`/`status`/`rows`/`columns`/`separator`/`bronze_path`/`inconsistencies`; `unexpected_files` (nombres de archivos presentes no declarados); y una lista **top-level `inconsistencies[]`** que **agrega todas** las inconsistencias del run con `type`+`detail` (**enmienda DS-ING-9**, ver abajo). `success` refleja DS-ING-1.
 - **Razón:** superficie mínima verificable que responde "qué se cargó, con cuántas filas/columnas, y qué falló" de un vistazo (HU-05), sin duplicar información ni añadir campos no pedidos.
+
+### DS-ING-9 — Enmienda de DS-ING-2: lista top-level `inconsistencies[]` (decisión del humano, ADR D-078)
+- **Decisión:** el reporte gana una lista **top-level `inconsistencies[]`** que **agrega todas** las inconsistencias del run (de archivo —`missing_file`, `unexpected_file`— y de columna —`missing_column`, `unexpected_column`—), cada una con `type` (vocabulario cerrado de 4) y `detail` legible no vacío. Esto da un **hogar estructural** a `unexpected_file`, que corresponde a un archivo **sobrante** sin dataset propio y por tanto no cabía en `datasets[].files[].inconsistencies`. La lista `unexpected_files` (nombres, orden alfabético) se conserva; las inconsistencias de columna siguen **además** anidadas en `datasets[].files[].inconsistencies`. Es **aditivo**: no elimina ni renombra campos previos. **CA-16 se verifica sobre esta lista top-level.**
+- **Razón:** salda la contradicción entre el vocabulario cerrado de 4 tipos (incl. `unexpected_file`) + el comportamiento de `execute` ("+ inconsistencia `unexpected_file`") + CA-16, y el esquema previo que solo anidaba inconsistencias por archivo. Toca un esquema ya aprobado en GATE, por eso se formaliza como decisión explícita (ADR D-078, NC-6), no como cambio silencioso.
 
 ### DS-ING-3 — Alcance de validación de columnas: presencia/nombre, no tipos
 - **Decisión:** en esta banda la validación de columnas es **solo por nombre/presencia**: (a) toda columna cuyo `field.required == true` en el esquema del dataset debe estar presente en la cabecera del archivo; (b) toda columna presente en el archivo debe estar declarada como algún `field.name` del dataset (no se admiten columnas desconocidas); (c) los `field.required == false` (p. ej. `precio_unitario`) **pueden** estar ausentes sin ser inconsistencia. **No** se validan tipos de dato ni contenido de celdas.
@@ -134,12 +138,14 @@ Producido por `onboarding` (CONFORME). Ingestion consume, por dataset: `kind` (p
       ]
     }
   ],
-  "unexpected_files": []
+  "unexpected_files": [],
+  "inconsistencies": []
 }
 ```
 - `status` ∈ {`ingested`, `rejected`, `missing`}. `rows` = filas de datos (sin cabecera); `columns` = nº de columnas de la cabecera. `separator` ∈ {`,`,`;`,`|`, `null` para xlsx}. `bronze_path` = ruta relativa al cliente si se copió, `null` si no.
 - `inconsistencies[].type` ∈ vocabulario cerrado: `missing_file`, `unexpected_file`, `missing_column`, `unexpected_column`. `detail` = texto legible.
 - `unexpected_files` = lista (orden alfabético) de nombres de archivos presentes en el landing no declarados por ningún dataset.
+- **`inconsistencies` (top-level, DS-ING-9)** = lista que **agrega todas** las inconsistencias del run (de archivo y de columna), cada una `{type, detail}` con `type` del vocabulario cerrado de 4 y `detail` no vacío. Da hogar estructural a `unexpected_file` (archivo sobrante sin dataset propio). Las de columna quedan **además** anidadas en `datasets[].files[].inconsistencies`. Es la lista sobre la que se verifica CA-16.
 
 ---
 
@@ -239,7 +245,7 @@ class Ingestion(Flow):
 | CA-13 | Dos ejecuciones de `run(ctx)` con las mismas entradas producen copias en bronze byte-idénticas y un `ingestion_report.json` byte-idéntico (determinismo). | HU-04, HU-01 |
 | CA-14 | `run(ctx)` escribe `ingestion_report.json` en `ctx.outputs_dir / "030_ingestion/ingestion_report.json"` y lo incluye en `FlowResult.outputs`. | HU-05 |
 | CA-15 | El reporte expone, por archivo, `name`, `rows` y `columns`. | HU-05 |
-| CA-16 | Las inconsistencias del reporte tienen un `type` del vocabulario cerrado (`missing_file`, `unexpected_file`, `missing_column`, `unexpected_column`) y un `detail` legible. | HU-05 |
+| CA-16 | Las inconsistencias de la lista top-level `inconsistencies[]` del reporte (DS-ING-9) tienen cada una un `type` del vocabulario cerrado (`missing_file`, `unexpected_file`, `missing_column`, `unexpected_column`) y un `detail` legible no vacío. | HU-05 |
 | CA-17 | `summary` reporta `datasets_declared` (= `len(historical_data.datasets)` del contrato), `files_declared` (= nº de `historical_data.datasets[].files[].name` del contrato, DS-ING-8), `files_ingested` y `files_with_inconsistencies`, con conteos coherentes con el detalle por archivo. | HU-05 |
 | CA-18 | Ante inconsistencia parcial (unos archivos válidos, otros no), los válidos se copian a `ctx.bronze_dir` y los inválidos no; el reporte refleja ambos estados; `success == False`. | HU-02, HU-03, HU-04 |
 | CA-19 | `FlowResult.success == True` si y solo si el reporte no registra ninguna inconsistencia; en caso contrario es `False`, y el reporte se escribe igualmente. | HU-05 |
