@@ -156,6 +156,59 @@ def _read_file(path) -> tuple[str | None, int, int]:
     return _read_delimited(path)
 
 
+def _read_header_delimited(path) -> list[str]:
+    """Lee la cabecera (nombres de columna) de un archivo delimitado
+    (.csv/.txt), detectando el separador igual que _read_delimited."""
+    lines = [
+        line
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip() != ""
+    ]
+    separator = _detect_separator(lines[0])
+    return lines[0].split(separator)
+
+
+def _read_header_xlsx(path) -> list[str]:
+    """Lee la cabecera (nombres de columna) de la primera hoja de un
+    .xlsx, igual que _read_xlsx."""
+    workbook = openpyxl.load_workbook(path, read_only=True, data_only=True)
+    sheet = workbook.worksheets[0]
+    header_row = next(sheet.iter_rows(values_only=True))
+    return [str(cell) for cell in header_row if cell is not None]
+
+
+def _read_header(path) -> list[str]:
+    """TSK-09 (CA-08): nombres de columna de la cabecera de path, enrutando
+    por extension igual que _read_file (.xlsx via _read_header_xlsx; el
+    resto via _read_header_delimited)."""
+    if path.suffix == ".xlsx":
+        return _read_header_xlsx(path)
+    return _read_header_delimited(path)
+
+
+def _validate_columns(header: list[str], fields: list[dict]) -> list[dict]:
+    """TSK-09 (CA-08): compara header (columnas leidas del archivo) contra
+    fields[] del dataset homologo de map_client_data.json (emparejado por
+    kind, DS-ING-8). Devuelve la lista de inconsistencias de columnas
+    (esquema DS-ING-2). Caso 13 (missing_column): un field con
+    required==true cuyo name no esta en header. unexpected_column
+    (caso 14) y el caso del opcional ausente (caso 15, no es
+    inconsistencia) quedan para casos posteriores del bucle TDD (NC-2)."""
+    inconsistencies = []
+    for field in fields:
+        if field.get("required") and field.get("name") not in header:
+            inconsistencies.append(
+                {
+                    "type": "missing_column",
+                    "detail": (
+                        f"Falta la columna requerida '{field.get('name')}' "
+                        "segun map_client_data.json."
+                    ),
+                }
+            )
+    return inconsistencies
+
+
 def _copy_bytes(src: Path, dst: Path) -> None:
     """Plan.md Sec.1 (TSK-07): copia binaria fiel byte a byte, sin
     re-serializar ni normalizar el contenido (DS-ING-6, HU-04)."""
@@ -217,6 +270,29 @@ def _ingested_file_entry(
     }
 
 
+def _rejected_file_entry(
+    name: str,
+    separator: str | None,
+    columns: int,
+    rows: int,
+    inconsistencies: list[dict],
+) -> dict:
+    """TSK-09 (CA-08): entrada de reporte (esquema DS-ING-2) para un archivo
+    presente y leido del landing, pero cuyas columnas no cumplen el mapa
+    (map_client_data.json): status "rejected", conserva rows/columns/
+    separator (el archivo si se pudo leer) y las inconsistencias de
+    columnas detectadas por _validate_columns."""
+    return {
+        "name": name,
+        "status": "rejected",
+        "rows": rows,
+        "columns": columns,
+        "separator": separator,
+        "bronze_path": None,
+        "inconsistencies": inconsistencies,
+    }
+
+
 class Ingestion(Flow):
     """Flujo 030: carga y valida datos crudos, copia inmutable a bronze y
     emite reporte de carga (ingestion_report.json).
@@ -266,6 +342,10 @@ class Ingestion(Flow):
         posteriores, TSK-08 en adelante). Devuelve FlowResult(success=True,
         outputs=[ruta del reporte])."""
         contract = self._contract or {}
+        map_by_kind = {
+            dataset.get("kind"): dataset
+            for dataset in (self._map or {}).get("datasets", [])
+        }
         landing_dir = ctx.inputs_dir / "030_ingestion"
         datasets_out = []
         files_declared = 0
@@ -273,6 +353,7 @@ class Ingestion(Flow):
         declared_names: set[str] = set()
         self._bronze_copies = []
         for dataset in contract.get("historical_data", {}).get("datasets", []):
+            fields = map_by_kind.get(dataset.get("kind"), {}).get("fields", [])
             files_out = []
             for file_ in dataset.get("files", []):
                 files_declared += 1
@@ -287,6 +368,19 @@ class Ingestion(Flow):
                     files_out.append(_missing_file_entry(name))
                     continue
                 separator, columns, rows = _read_file(source_path)
+                header = _read_header(source_path)
+                column_inconsistencies = _validate_columns(header, fields)
+                if column_inconsistencies:
+                    # TSK-09 (CA-08): presente y legible, pero le falta una
+                    # columna required==true segun el mapa -> status
+                    # "rejected", sin copia a bronze.
+                    files_with_inconsistencies += 1
+                    files_out.append(
+                        _rejected_file_entry(
+                            name, separator, columns, rows, column_inconsistencies
+                        )
+                    )
+                    continue
                 self._bronze_copies.append((source_path, ctx.bronze_dir / name))
                 files_out.append(
                     _ingested_file_entry(name, separator, columns, rows)
