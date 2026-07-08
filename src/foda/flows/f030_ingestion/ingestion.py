@@ -86,6 +86,14 @@ separado); _read_delimited/_read_xlsx ahora devuelven tambien la cabecera
 la propaga; se retiraron _read_header_delimited/_read_header_xlsx/
 _read_header (ya redundantes). execute() llama _read_file una sola vez por
 archivo. Sin cambio de comportamiento observable (NC-2/NC-3).
+
+Caso 14 (CA-09) en VERDE (tdd_coder, TSK-09 -sub-caso unexpected_column-):
+_validate_columns agrega, para cada nombre de columna del header que no
+corresponde a ningun field.name de fields[] del dataset homologo, una
+inconsistencia {type: "unexpected_column", detail}. Reutiliza la misma
+rama de execute() que missing_column (status="rejected" via
+_rejected_file_entry, sin copia a bronze); no se implementa aun el caso 15
+(columna required==false ausente no es inconsistencia, NC-2).
 """
 
 import json
@@ -184,9 +192,11 @@ def _validate_columns(header: list[str], fields: list[dict]) -> list[dict]:
     fields[] del dataset homologo de map_client_data.json (emparejado por
     kind, DS-ING-8). Devuelve la lista de inconsistencias de columnas
     (esquema DS-ING-2). Caso 13 (missing_column): un field con
-    required==true cuyo name no esta en header. unexpected_column
-    (caso 14) y el caso del opcional ausente (caso 15, no es
-    inconsistencia) quedan para casos posteriores del bucle TDD (NC-2)."""
+    required==true cuyo name no esta en header. Caso 14
+    (unexpected_column): una columna del header que no corresponde a
+    ningun field.name del mapa. El caso del opcional ausente (caso 15,
+    required==false, no es inconsistencia) queda para un caso posterior
+    del bucle TDD (NC-2)."""
     inconsistencies = []
     for field in fields:
         if field.get("required") and field.get("name") not in header:
@@ -196,6 +206,18 @@ def _validate_columns(header: list[str], fields: list[dict]) -> list[dict]:
                     "detail": (
                         f"Falta la columna requerida '{field.get('name')}' "
                         "segun map_client_data.json."
+                    ),
+                }
+            )
+    field_names = {field.get("name") for field in fields}
+    for column_name in header:
+        if column_name not in field_names:
+            inconsistencies.append(
+                {
+                    "type": "unexpected_column",
+                    "detail": (
+                        f"La columna '{column_name}' no esta declarada en "
+                        "los fields de map_client_data.json."
                     ),
                 }
             )
