@@ -878,3 +878,77 @@ def test_archivo_presente_no_declarado_en_contrato_va_a_unexpected_files_sin_cop
     assert not (ctx.bronze_dir / "aaa_sobrante.txt").exists()
 
     assert result.success is False
+
+
+def _build_ctx_fixture_columna_requerida_ausente(tmp_path: Path) -> ClientContext:
+    """DS-ING-7/DS-ING-8 (variante "columna requerida ausente", caso 13):
+    mismo contrato + mapa completos que _build_ctx_fixture_completo (3
+    datasets, 4 archivos), pero "ventas.csv" se deposita en el landing SIN
+    la columna "clase" (required=True segun el dataset homologo "ventas"
+    de map_client_data.json, DS-ING-8). Los otros 3 archivos se depositan
+    sin cambios, para aislar el efecto de la columna faltante en
+    ventas.csv."""
+    ventas_header_sin_clase = "fecha,sede,cantidad,precio_unitario"
+    ventas_rows_sin_clase = [
+        "2024-01-01,Sede Centro,10,1200",
+        "2024-01-02,Sede Norte,5,2500",
+        "2024-01-03,Sede Centro,20,900",
+    ]
+    return _build_ctx(
+        tmp_path,
+        _contract_data_completo(),
+        _map_client_data_completo(),
+        {
+            "ventas.csv": "\n".join(
+                [ventas_header_sin_clase, *ventas_rows_sin_clase]
+            )
+            + "\n",
+            "inventario_2024.txt": "\n".join(
+                [_INVENTARIO_HEADER, *_INVENTARIO_ROWS]
+            )
+            + "\n",
+            "inventario_2025.csv": "\n".join(
+                [_INVENTARIO_2025_HEADER, *_INVENTARIO_2025_ROWS]
+            )
+            + "\n",
+            "precios.xlsx": _precios_xlsx_bytes(),
+        },
+    )
+
+
+def test_archivo_sin_columna_requerida_segun_mapa_marca_rejected_missing_column_sin_copiar_y_success_false(
+    tmp_path: Path,
+) -> None:
+    """Caso 13 (CA-08): "ventas.csv" esta presente en el landing pero le
+    falta la columna "clase", declarada con required=True en el dataset
+    homologo "ventas" de map_client_data.json (emparejado por kind,
+    DS-ING-8). El reporte debe marcar ese archivo con status=="rejected" y
+    registrar una inconsistencia de type "missing_column"; no debe existir
+    copia en ctx.bronze_dir/"ventas.csv"; y FlowResult.success debe ser
+    False (hay al menos una inconsistencia)."""
+    ctx = _build_ctx_fixture_columna_requerida_ausente(tmp_path)
+
+    flow = Ingestion()
+    result = flow.run(ctx)
+
+    ruta_reporte = ctx.outputs_dir / "030_ingestion/ingestion_report.json"
+    reporte = json.loads(ruta_reporte.read_text(encoding="utf-8"))
+
+    archivo_ventas = None
+    for dataset in reporte["datasets"]:
+        for archivo in dataset["files"]:
+            if archivo["name"] == "ventas.csv":
+                archivo_ventas = archivo
+    assert archivo_ventas is not None, (
+        "ventas.csv debe seguir apareciendo en el reporte (presente en el "
+        "landing) aunque le falte una columna requerida segun el mapa"
+    )
+    assert archivo_ventas["status"] == "rejected"
+    tipos_inconsistencias = [
+        inconsistencia["type"] for inconsistencia in archivo_ventas["inconsistencies"]
+    ]
+    assert "missing_column" in tipos_inconsistencias
+
+    assert not (ctx.bronze_dir / "ventas.csv").exists()
+
+    assert result.success is False
