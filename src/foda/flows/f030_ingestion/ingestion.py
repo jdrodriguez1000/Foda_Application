@@ -128,15 +128,20 @@ sobrantes en orden alfabetico, DS-ING-6), pues datasets_out ya preserva ese
 mismo orden de recorrido. Sin cambio de comportamiento observable
 (NC-2/NC-3).
 
-Caso 19 (CA-18) en VERDE (tdd_coder, TSK-33/TSK-08/TSK-09): se agrego
-_bronze_relative_path(ctx, name), que deriva la ruta de bronze relativa a
-ctx.root (DS-ING-2, p. ej. "data/bronze/ventas.csv") a partir de
-ctx.bronze_dir/<name>.relative_to(ctx.root), normalizada con .as_posix()
-para que el reporte sea determinista y multiplataforma (DS-ING-6, sin '\\'
-de Windows). _ingested_file_entry ahora recibe y expone ese bronze_path
+Caso 19 (CA-18) cerrado (tdd_refactor, TSK-33/TSK-08/TSK-09): se agrego
+_bronze_relative_path(ctx, bronze_path), que deriva la ruta de bronze
+relativa a ctx.root (DS-ING-2, p. ej. "data/bronze/ventas.csv") a partir
+del Path de destino ya calculado, normalizada con .as_posix() para que el
+reporte sea determinista y multiplataforma (DS-ING-6, sin '\\' de
+Windows). _ingested_file_entry ahora recibe y expone ese bronze_path
 (antes hardcodeado a None para todo archivo); _missing_file_entry y
 _rejected_file_entry siguen exponiendo bronze_path=None (solo los archivos
-"ingested" -copiados a bronze- lo llevan, CA-18).
+"ingested" -copiados a bronze- lo llevan, CA-18). Refactor: execute()
+calcula dst_path = ctx.bronze_dir / name una unica vez y lo reutiliza tanto
+para self._bronze_copies como para _bronze_relative_path(ctx, dst_path),
+eliminando la duplicacion de "ctx.bronze_dir / name" que antes se
+recalculaba dentro del helper; sin cambio de comportamiento observable
+(NC-2/NC-3).
 """
 
 import json
@@ -358,13 +363,16 @@ def _top_level_inconsistencies(
     return inconsistencies
 
 
-def _bronze_relative_path(ctx: ClientContext, name: str) -> str:
+def _bronze_relative_path(ctx: ClientContext, bronze_path: Path) -> str:
     """DS-ING-2/CA-18: ruta de bronze relativa al directorio del cliente
-    (ctx.root) para el archivo <name> ya copiado a ctx.bronze_dir (p. ej.
-    "data/bronze/ventas.csv"). Se deriva de ctx.bronze_dir (DS-ING-6, no se
-    concatena con strings fragiles) y se normaliza a '/' para que el
-    reporte sea determinista y multiplataforma (DS-ING-6)."""
-    return (ctx.bronze_dir / name).relative_to(ctx.root).as_posix()
+    (ctx.root) para un archivo ya destinado a copiarse en bronze_path
+    (p. ej. "data/bronze/ventas.csv"). Recibe el Path de destino ya
+    calculado por el llamador (execute(), mismo que alimenta
+    self._bronze_copies) en vez de recalcularlo a partir del nombre, para
+    no derivar ctx.bronze_dir / name en dos puntos distintos del modulo; se
+    normaliza a '/' para que el reporte sea determinista y multiplataforma
+    (DS-ING-6)."""
+    return bronze_path.relative_to(ctx.root).as_posix()
 
 
 def _ingested_file_entry(
@@ -496,14 +504,15 @@ class Ingestion(Flow):
                         )
                     )
                     continue
-                self._bronze_copies.append((source_path, ctx.bronze_dir / name))
+                dst_path = ctx.bronze_dir / name
+                self._bronze_copies.append((source_path, dst_path))
                 files_out.append(
                     _ingested_file_entry(
                         name,
                         separator,
                         columns,
                         rows,
-                        _bronze_relative_path(ctx, name),
+                        _bronze_relative_path(ctx, dst_path),
                     )
                 )
             datasets_out.append(
