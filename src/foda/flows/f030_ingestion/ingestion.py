@@ -127,6 +127,16 @@ es identico al previo (datasets/archivos en el orden del contrato, luego
 sobrantes en orden alfabetico, DS-ING-6), pues datasets_out ya preserva ese
 mismo orden de recorrido. Sin cambio de comportamiento observable
 (NC-2/NC-3).
+
+Caso 19 (CA-18) en VERDE (tdd_coder, TSK-33/TSK-08/TSK-09): se agrego
+_bronze_relative_path(ctx, name), que deriva la ruta de bronze relativa a
+ctx.root (DS-ING-2, p. ej. "data/bronze/ventas.csv") a partir de
+ctx.bronze_dir/<name>.relative_to(ctx.root), normalizada con .as_posix()
+para que el reporte sea determinista y multiplataforma (DS-ING-6, sin '\\'
+de Windows). _ingested_file_entry ahora recibe y expone ese bronze_path
+(antes hardcodeado a None para todo archivo); _missing_file_entry y
+_rejected_file_entry siguen exponiendo bronze_path=None (solo los archivos
+"ingested" -copiados a bronze- lo llevan, CA-18).
 """
 
 import json
@@ -348,12 +358,22 @@ def _top_level_inconsistencies(
     return inconsistencies
 
 
+def _bronze_relative_path(ctx: ClientContext, name: str) -> str:
+    """DS-ING-2/CA-18: ruta de bronze relativa al directorio del cliente
+    (ctx.root) para el archivo <name> ya copiado a ctx.bronze_dir (p. ej.
+    "data/bronze/ventas.csv"). Se deriva de ctx.bronze_dir (DS-ING-6, no se
+    concatena con strings fragiles) y se normaliza a '/' para que el
+    reporte sea determinista y multiplataforma (DS-ING-6)."""
+    return (ctx.bronze_dir / name).relative_to(ctx.root).as_posix()
+
+
 def _ingested_file_entry(
-    name: str, separator: str | None, columns: int, rows: int
+    name: str, separator: str | None, columns: int, rows: int, bronze_path: str
 ) -> dict:
     """Entrada de reporte (esquema DS-ING-2) para un archivo presente y
     leido correctamente del landing: status "ingested", con
-    rows/columns/separator provistos por _read_file y sin
+    rows/columns/separator provistos por _read_file, bronze_path (CA-18,
+    ruta relativa al cliente del archivo ya copiado a bronze) y sin
     inconsistencias."""
     return {
         "name": name,
@@ -361,7 +381,7 @@ def _ingested_file_entry(
         "rows": rows,
         "columns": columns,
         "separator": separator,
-        "bronze_path": None,
+        "bronze_path": bronze_path,
         "inconsistencies": [],
     }
 
@@ -478,7 +498,13 @@ class Ingestion(Flow):
                     continue
                 self._bronze_copies.append((source_path, ctx.bronze_dir / name))
                 files_out.append(
-                    _ingested_file_entry(name, separator, columns, rows)
+                    _ingested_file_entry(
+                        name,
+                        separator,
+                        columns,
+                        rows,
+                        _bronze_relative_path(ctx, name),
+                    )
                 )
             datasets_out.append(
                 {
