@@ -823,3 +823,58 @@ def test_archivo_declarado_en_contrato_no_presente_marca_missing_sin_copiar_y_su
     assert not (ctx.bronze_dir / "inventario_2025.csv").exists()
 
     assert result.success is False
+
+
+def _build_ctx_fixture_archivos_sobrantes(tmp_path: Path) -> ClientContext:
+    """DS-ING-7/DS-ING-8 (variante "Sobrante", caso 12): mismo contrato +
+    mapa completos que _build_ctx_fixture_completo (3 datasets, 4 archivos
+    declarados en contract_data.json), mas dos archivos adicionales en el
+    landing que NO figuran en ningun historical_data.datasets[].files[].name
+    del contrato ("zzz_sobrante.csv" y "aaa_sobrante.txt", en orden no
+    alfabetico al depositarlos para ejercitar el orden alfabetico ascendente
+    exigido por DS-ING-6 al reportarlos en unexpected_files)."""
+    return _build_ctx(
+        tmp_path,
+        _contract_data_completo(),
+        _map_client_data_completo(),
+        {
+            "ventas.csv": "\n".join([_VENTAS_HEADER, *_VENTAS_ROWS]) + "\n",
+            "inventario_2024.txt": "\n".join(
+                [_INVENTARIO_HEADER, *_INVENTARIO_ROWS]
+            )
+            + "\n",
+            "inventario_2025.csv": "\n".join(
+                [_INVENTARIO_2025_HEADER, *_INVENTARIO_2025_ROWS]
+            )
+            + "\n",
+            "precios.xlsx": _precios_xlsx_bytes(),
+            "zzz_sobrante.csv": "col_a,col_b\n1,2\n",
+            "aaa_sobrante.txt": "algo\n",
+        },
+    )
+
+
+def test_archivo_presente_no_declarado_en_contrato_va_a_unexpected_files_sin_copiar_y_success_false(
+    tmp_path: Path,
+) -> None:
+    """Caso 12 (CA-07): "zzz_sobrante.csv" y "aaa_sobrante.txt" estan
+    presentes en el landing pero no figuran declarados en ningun
+    historical_data.datasets[].files[].name de contract_data.json
+    (DS-ING-8). Ambos deben aparecer en reporte["unexpected_files"] en
+    orden alfabetico ascendente (DS-ING-6); ninguno debe copiarse a
+    ctx.bronze_dir; y FlowResult.success debe ser False (hay al menos una
+    inconsistencia unexpected_file, CA-07)."""
+    ctx = _build_ctx_fixture_archivos_sobrantes(tmp_path)
+
+    flow = Ingestion()
+    result = flow.run(ctx)
+
+    ruta_reporte = ctx.outputs_dir / "030_ingestion/ingestion_report.json"
+    reporte = json.loads(ruta_reporte.read_text(encoding="utf-8"))
+
+    assert reporte["unexpected_files"] == ["aaa_sobrante.txt", "zzz_sobrante.csv"]
+
+    assert not (ctx.bronze_dir / "zzz_sobrante.csv").exists()
+    assert not (ctx.bronze_dir / "aaa_sobrante.txt").exists()
+
+    assert result.success is False
