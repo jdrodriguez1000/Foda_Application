@@ -2,17 +2,17 @@
   "feature": "profiling",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "tdd_coder",
+  "current_stage": "tdd_tester",
   "stages": {
     "feature_definer":    { "status": "done",    "artifact": "definition.md" },
     "spec_writer":        { "status": "done",    "artifact": "spec.md",  "gate": "human", "awaiting_approval": false },
     "plan_builder":       { "status": "done", "artifact": "plan.md",  "gate": "human", "awaiting_approval": false },
     "tdd": {
       "status": "in_progress",
-      "next_case": 2,
+      "next_case": 3,
       "cases": [
         { "id": 1,  "desc": "Profiling es subclase de Flow con name=='profiling', requires=[ingestion_report @ 030_ingestion/ingestion_report.json] y produces=[profiling_report @ 040_profiling/profiling_report.json]", "ca": "CA-01", "status": "done", "test": "tests/flows/test_profiling.py::test_profiling_es_subclase_de_flow_con_contrato_correcto", "green_files": ["src/foda/flows/f040_profiling/__init__.py", "src/foda/flows/f040_profiling/profiling.py"], "refactor": "sin cambios: implementacion minima (solo contrato de clase, calcado del patron de Ingestion) sin duplicacion ni deuda que refactorizar (NC-2/NC-3)" },
-        { "id": 2,  "desc": "Profiling.run is Flow.run (no sobreescribe el template method) y una ejecucion invoca load_inputs -> validate -> execute -> write_outputs en ese orden", "ca": "CA-02", "status": "green", "test": "tests/flows/test_profiling.py::test_profiling_hereda_run_de_flow_e_invoca_las_4_fases_en_orden", "green_files": ["src/foda/flows/f040_profiling/profiling.py"], "green_evidence": "python -m pytest tests/flows/test_profiling.py::test_profiling_hereda_run_de_flow_e_invoca_las_4_fases_en_orden -q -> 1 passed; python -m pytest -q (suite completa) -> 177 passed, sin regresiones." },
+        { "id": 2,  "desc": "Profiling.run is Flow.run (no sobreescribe el template method) y una ejecucion invoca load_inputs -> validate -> execute -> write_outputs en ese orden", "ca": "CA-02", "status": "done", "test": "tests/flows/test_profiling.py::test_profiling_hereda_run_de_flow_e_invoca_las_4_fases_en_orden", "green_files": ["src/foda/flows/f040_profiling/profiling.py"], "green_evidence": "python -m pytest tests/flows/test_profiling.py::test_profiling_hereda_run_de_flow_e_invoca_las_4_fases_en_orden -q -> 1 passed; python -m pytest -q (suite completa) -> 177 passed, sin regresiones.", "refactor": "sin cambios: execute()/write_outputs() son implementacion minima, calcada del patron ya establecido por Ingestion.execute/write_outputs (mismo esquema de reporte determinista sort_keys+indent=2+newline), sin duplicacion interna, nombres claros y tipado presente (_report: dict | None); no hay deuda que refactorizar (NC-2/NC-3). python -m pytest -q -> 177 passed, sin regresiones tras revalidar." },
         { "id": 3,  "desc": "Con ingestion_report.json (success:true) presente, Profiling().run(ctx) devuelve FlowResult(success=True, outputs=[.../040_profiling/profiling_report.json])", "ca": "CA-03", "status": "pending" },
         { "id": 4,  "desc": "Tras esa ejecucion existe profiling_report.json parseable, con success==true, schema_version=='0.1', client==ctx.name, flow=='profiling' y serializacion determinista (sort_keys, indent=2, newline)", "ca": "CA-04", "status": "pending" },
         { "id": 5,  "desc": "Sin ingestion_report.json, Profiling().validate(ctx) lanza FlowContractError nombrando el artefacto ausente y no se escribe profiling_report.json", "ca": "CA-05", "status": "pending" },
