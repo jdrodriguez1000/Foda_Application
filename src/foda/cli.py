@@ -181,9 +181,14 @@ def _dispatch_run(args: argparse.Namespace, clients_root: Path) -> int:
     # caso siguiente del bucle TDD (CA-09/CA-10) debe advertir a stderr
     # cuando --force sobrepasa un gate que hubiera bloqueado.
     gate_message = evaluate_predecessor_gate(args.flow, ctx)
-    if gate_message is not None and not args.force:
-        print(f"foda: {gate_message}", file=sys.stderr)
-        return 1
+    if gate_message is not None:
+        if not args.force:
+            print(f"foda: {gate_message}", file=sys.stderr)
+            return 1
+        print(
+            f"foda: --force sobrepaso el gate del predecesor: {gate_message}",
+            file=sys.stderr,
+        )
 
     try:
         result = flow.run(ctx)

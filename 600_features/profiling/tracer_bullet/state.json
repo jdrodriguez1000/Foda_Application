@@ -2,7 +2,7 @@
   "feature": "profiling",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "tdd_tester",
+  "current_stage": "tdd_coder",
   "stages": {
     "feature_definer": {
       "status": "done",
@@ -187,7 +187,13 @@
           "ca": "CA-09,CA-10",
           "status": "red",
           "test": "tests/cli/test_profiling_gate_cli.py::test_run_profiling_con_ingestion_report_success_false_con_force_devuelve_0_escribe_reporte_y_advierte",
-          "red_evidence": "python -m pytest tests/cli/test_profiling_gate_cli.py::test_run_profiling_con_ingestion_report_success_false_con_force_devuelve_0_escribe_reporte_y_advierte -q -> 1 failed. AssertionError: assert 0 == 1 (len(stderr_lines) == 1), con where 0 = len([]) (stderr vacio). Rojo genuino: _dispatch_run (src/foda/cli.py) ya evalua el gate SIEMPRE (DS-PROF-1, wiring del caso 12) y con --force el 'if gate_message is not None and not args.force' es False, asi que el despacho SI continua a flow.run(ctx) -- exit 0 y profiling_report.json presente ya pasan hoy (las 2 primeras aserciones no fallan). Pero la rama --force de TSK-25 (advertencia a stderr) todavia no esta implementada: --force hoy solo evita el bloqueo, sin emitir advertencia, por lo que stderr queda vacio y la asercion de la advertencia (una linea, nombrando 'ingestion' y 'force') falla. No es ImportError/typo: evaluate_predecessor_gate ya esta completo y en verde desde el caso 9 (orchestrator.py); falta unicamente la rama de advertencia en la CLI. python -m pytest -q (suite completa) -> 187 passed, 1 failed (el nuevo rojo), sin regresiones."
+          "red_evidence": "python -m pytest tests/cli/test_profiling_gate_cli.py::test_run_profiling_con_ingestion_report_success_false_con_force_devuelve_0_escribe_reporte_y_advierte -q -> 1 failed. AssertionError: assert 0 == 1 (len(stderr_lines) == 1), con where 0 = len([]) (stderr vacio). Rojo genuino: _dispatch_run (src/foda/cli.py) ya evalua el gate SIEMPRE (DS-PROF-1, wiring del caso 12) y con --force el 'if gate_message is not None and not args.force' es False, asi que el despacho SI continua a flow.run(ctx) -- exit 0 y profiling_report.json presente ya pasan hoy (las 2 primeras aserciones no fallan). Pero la rama --force de TSK-25 (advertencia a stderr) todavia no esta implementada: --force hoy solo evita el bloqueo, sin emitir advertencia, por lo que stderr queda vacio y la asercion de la advertencia (una linea, nombrando 'ingestion' y 'force') falla. No es ImportError/typo: evaluate_predecessor_gate ya esta completo y en verde desde el caso 9 (orchestrator.py); falta unicamente la rama de advertencia en la CLI. python -m pytest -q (suite completa) -> 187 passed, 1 failed (el nuevo rojo), sin regresiones.",
+          "status": "green",
+          "green_files": [
+            "src/foda/cli.py"
+          ],
+          "green_evidence": "python -m pytest tests/cli/test_profiling_gate_cli.py::test_run_profiling_con_ingestion_report_success_false_con_force_devuelve_0_escribe_reporte_y_advierte -q -> 1 passed (primer intento, sin reintentos); python -m pytest -q (suite completa) -> 188 passed, sin regresiones.",
+          "coder_note": "TSK-25 (minimo suficiente, NC-2/NC-3): dentro del bloque del gate en _dispatch_run, se reestructuro 'if gate_message is not None and not args.force: ...; return 1' en 'if gate_message is not None: if not args.force: print+return 1; else: print advertencia (sin return, continua a flow.run)'. La advertencia reutiliza gate_message (que ya nombra al predecesor 'ingestion', evaluate_predecessor_gate, caso 9) prefijandolo con 'foda: --force sobrepaso el gate del predecesor: ' -- una sola linea a stderr que menciona tanto 'ingestion' (via gate_message) como 'force' (via el prefijo), sin nuevo return (deja que el flujo caiga a flow.run(ctx) como antes). No se toco ninguna otra rama de _dispatch_run (bloqueo sin --force del caso 12, manejo de FlowContractError, exit code segun result.success) ni el docstring del modulo/funcion (queda como deuda para tdd_refactor, ya que documentaban la rama --force como 'aun no implementada')."
         },
         {
           "id": 14,
