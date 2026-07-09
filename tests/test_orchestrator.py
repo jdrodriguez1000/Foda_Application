@@ -144,6 +144,36 @@ def test_evaluate_predecessor_gate_profiling_devuelve_none_con_ingestion_report_
     assert llamadas == ["ingestion"]
 
 
+def test_evaluate_predecessor_gate_profiling_devuelve_mensaje_con_ingestion_report_ausente(
+    tmp_path,
+) -> None:
+    """Caso 10 (feature profiling/tracer_bullet, CA-13, TSK-17): sin
+    ingestion_report.json en disco, evaluate_predecessor_gate("profiling", ctx)
+    devuelve un MENSAJE (str no vacio) que nombra a "ingestion" (DS-PROF-4:
+    el gate debe identificar cual predecesor bloquea, tambien cuando su
+    reporte simplemente no existe).
+
+    A diferencia de los casos 8/9 (TSK-14/TSK-16), aqui NO se fabrica
+    ingestion_report.json (el punto del caso es su ausencia). Hoy
+    evaluate_predecessor_gate resuelve report_path via
+    resolve_flow("ingestion").produces[0].path(ctx) y llama de inmediato
+    report_path.read_text(encoding="utf-8") sin comprobar antes si el archivo
+    existe ni capturar FileNotFoundError: read_text() lanza FileNotFoundError
+    directamente (excepcion no controlada), en vez de devolver el str
+    legible que este test exige. Rojo genuino (no accidental): no es un
+    ImportError/TypeError por typo, sino la ausencia de manejo del caso
+    "reporte ausente" que TSK-17/18 debe agregar."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    resultado = orchestrator_module.evaluate_predecessor_gate("profiling", ctx)
+
+    assert isinstance(resultado, str)
+    assert resultado != ""
+    assert "ingestion" in resultado
+
+
 def test_evaluate_predecessor_gate_profiling_devuelve_mensaje_con_ingestion_report_success_false(
     tmp_path,
 ) -> None:

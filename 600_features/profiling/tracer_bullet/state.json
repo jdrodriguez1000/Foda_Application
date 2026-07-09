@@ -144,7 +144,9 @@
           "id": 10,
           "desc": "evaluate_predecessor_gate('profiling', ctx) devuelve un mensaje cuando ingestion_report.json esta ausente",
           "ca": "CA-13",
-          "status": "pending"
+          "status": "red",
+          "test": "tests/test_orchestrator.py::test_evaluate_predecessor_gate_profiling_devuelve_mensaje_con_ingestion_report_ausente",
+          "red_evidence": "python -m pytest tests/test_orchestrator.py::test_evaluate_predecessor_gate_profiling_devuelve_mensaje_con_ingestion_report_ausente -q -> 1 failed. FileNotFoundError: [Errno 2] No such file or directory: '.../clients/ABC/020_outputs/030_ingestion/ingestion_report.json', lanzado dentro de evaluate_predecessor_gate en report_path.read_text(encoding='utf-8') (src/foda/orchestrator.py linea 54). Rojo genuino: la funcion hoy no comprueba si el reporte del predecesor existe antes de leerlo ni captura FileNotFoundError, asi que propaga la excepcion en vez de devolver el str legible que el test exige (isinstance(resultado, str), resultado != '', 'ingestion' in resultado); no es ImportError/TypeError por typo. python -m pytest -q (suite completa) -> 184 passed, 1 failed (el nuevo rojo), sin regresiones."
         },
         {
           "id": 11,
