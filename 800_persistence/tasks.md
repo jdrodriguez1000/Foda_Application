@@ -55,13 +55,12 @@
 ## 3. Tareas En Progreso
 | ID | Tarea | Prioridad | Notas |
 |---|---|---|---|
-| — | _Ninguna en progreso._ | — | — |
+| T-039 | Construir `profiling` banda `stab_1`: salud ESTRUCTURAL del ingreso a partir de `ingestion_report.json` (`global_score`, conteos de archivos declarados/sanos/con problemas, `problems_by_type`, `pareto`), enriqueciendo `profiling_report.json` con bloque `health` y subiendo `schema_version` a "0.2" | 🔴 Alta | Rama `feature/profiling-stab1`. Cadena SDD completa: `feature_definer` (HU-01…HU-05) → `spec_writer` (23 CA-01…CA-23, GATE APROBADO, DS-PRF-1…DS-PRF-7/D-090 a D-095) → `plan_builder` (22 casos TDD, GATE APROBADO). Bucle TDD: 4/22 casos cerrados (schema_version+identidad; bloque health 6 claves; files_declared real; files_healthy real vía `_contar_archivos_sanos`), 8 passed. Incidente y corrección en caso 2 (sobre-implementación revertida, TDD estricto restaurado, ver L-067). Próximo paso: invocar `tdd_tester` con el caso 5 (CA-08, `files_with_problems`). Pendiente conocido no bloqueante: test de integración con `schema_version=="0.1"` hardcodeado, a corregir por `integration_tester` (TSK-36). Ver D-088 a D-095, L-067, A-019. |
+| T-037 | Comando encadenado tipo `foda run <cliente> --flow onboarding→ingestion` | 🟢 Baja | Feature nueva vía SDD/TDD; depende de T-036 (gate de progresión, ahora en implementación dentro de T-038/`profiling`) para tener sentido (encadenar solo si el predecesor puede fallar el gate). |
 
 ## 4. Tareas Pendientes
 | ID | Tarea | Prioridad | Notas |
 |---|---|---|---|
-| T-039 | Construir `profiling` banda `stab_1`: salud ESTRUCTURAL del ingreso a partir de `ingestion_report.json` (`global_score`, conteos de archivos declarados/sanos/con problemas, `problems_by_type`, `pareto`), enriqueciendo `profiling_report.json` con bloque `health` y subiendo `schema_version` a "0.2" | 🔴 Alta | Decisión estratégica + acta de alcance base (Opción A) acordadas con el humano (2026-07-09, sin código todavía). Próximo paso: invocar `feature_definer` para crear `feature/profiling-stab1` y escribir `feature_contract.md`+`definition.md` bajo `600_features/profiling/stab_1/`. Fuera de alcance: análisis a nivel de datos/celda (bronze, nulos, duplicados — diferido a `stab_2`), comparación contra `client_register.yaml`, exportables csv/xlsx, LLM. El GATE de spec debe fijar la fórmula exacta de `global_score` y el comportamiento cuando `ingestion_report.success==false`. Ver D-088, D-089. |
-| T-037 | Comando encadenado tipo `foda run <cliente> --flow onboarding→ingestion` | 🟢 Baja | Feature nueva vía SDD/TDD; depende de T-036 (gate de progresión, ahora en implementación dentro de T-038/`profiling`) para tener sentido (encadenar solo si el predecesor puede fallar el gate). |
 
 ## 5. Backlog
 | ID | Tarea | Notas |
