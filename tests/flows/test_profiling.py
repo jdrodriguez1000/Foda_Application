@@ -149,19 +149,29 @@ def test_profiling_run_devuelve_flowresult_success_con_output_profiling_report(
 def test_profiling_report_json_en_disco_es_parseable_con_campos_y_serializacion_deterministas(
     tmp_path: Path,
 ) -> None:
-    """Caso 4 (CA-04, TSK-06/TSK-07): tras Profiling().run(ctx) (con
+    """Caso 4 (CA-04, TSK-06/TSK-07) de tracer_bullet, AJUSTADO por
+    stab_1/caso 1 (CA-18, CA-19, TSK-01): tras Profiling().run(ctx) (con
     ingestion_report.json success:true presente, caso 1) el archivo
     ctx.outputs_dir/040_profiling/profiling_report.json existe en disco, es
-    JSON parseable con success==True (boolean), schema_version=="0.1",
+    JSON parseable con success==True (boolean), schema_version=="0.2"
+    (bump aditivo de stab_1, DS-PRF-7 -antes "0.1" en tracer_bullet-),
     client==ctx.name (=="ABC") y flow=="profiling"; y su contenido en disco
     es EXACTAMENTE la serializacion deterministica exigida por la spec
-    (DS-PROF-3): json.dumps(<reporte>, ensure_ascii=False, indent=2,
+    (DS-PROF-3/DS-PRF-7): json.dumps(<reporte>, ensure_ascii=False, indent=2,
     sort_keys=True) + "\n" byte a byte (claves ordenadas alfabeticamente,
     indentacion de 2 espacios y una unica newline final, sin espacio en
     blanco extra). No basta con que el JSON sea "equivalente" en contenido
     (ya cubierto en espiritu por json.loads()): esta asercion es especifica
     del FORMATO exacto del archivo en disco, distinta de result.success/
-    result.outputs ya verificados en el caso 3."""
+    result.outputs ya verificados en el caso 3.
+
+    Este es el UNICO ajuste a un test existente que exige stab_1 (ver
+    plan.md, Estrategia de Test): la banda stab_1 cambia el contrato de
+    schema_version de forma aditiva pero incompatible con la aserción
+    literal "0.1" ya presente. Hoy (antes de tdd_coder) Profiling.execute()
+    aun escribe "0.1" (implementacion vigente de tracer_bullet, ver
+    profiling.py), por lo que esta aserción falla en rojo limpio hasta que
+    TSK-02 suba el schema_version a "0.2"."""
     ctx = _build_ctx_con_ingestion_report_success_true(tmp_path)
 
     Profiling().run(ctx)
@@ -173,7 +183,7 @@ def test_profiling_report_json_en_disco_es_parseable_con_campos_y_serializacion_
     reporte = json.loads(contenido_bruto)
 
     assert reporte["success"] is True
-    assert reporte["schema_version"] == "0.1"
+    assert reporte["schema_version"] == "0.2"
     assert reporte["client"] == ctx.name
     assert reporte["flow"] == "profiling"
 

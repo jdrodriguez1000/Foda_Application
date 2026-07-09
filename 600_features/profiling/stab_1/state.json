@@ -2,15 +2,15 @@
   "feature": "profiling",
   "band": "stab_1",
   "status": "in_progress",
-  "current_stage": "plan_builder",
+  "current_stage": "tdd_tester",
   "stages": {
     "feature_definer":   { "status": "done",    "artifact": "definition.md" },
     "spec_writer":       { "status": "done",  "artifact": "spec.md",      "gate": "human", "awaiting_approval": false },
-    "plan_builder":      { "status": "done",  "artifact": "plan.md",      "gate": "human", "awaiting_approval": true },
+    "plan_builder":      { "status": "done",  "artifact": "plan.md",      "gate": "human", "awaiting_approval": false },
     "tdd":               {
-      "status": "pending",
+      "status": "in_progress",
       "cases": [
-        { "id": 1,  "desc": "profiling_report.json declara schema_version=='0.2' y conserva identidad client==ctx.name, flow=='profiling', success (bool) [CA-18, CA-19]", "status": "pending" },
+        { "id": 1,  "desc": "profiling_report.json declara schema_version=='0.2' y conserva identidad client==ctx.name, flow=='profiling', success (bool) [CA-18, CA-19]", "status": "red", "test": "tests/flows/test_profiling.py::test_profiling_report_json_en_disco_es_parseable_con_campos_y_serializacion_deterministas", "red_evidence": "AssertionError: assert '0.1' == '0.2' (reporte['schema_version']); resto de la suite de tests/flows/test_profiling.py en verde (4 passed, 1 failed)" },
         { "id": 2,  "desc": "El reporte contiene un objeto health con exactamente las 6 claves global_score, files_declared, files_healthy, files_with_problems, problems_by_type, pareto (fixture todos sanos: global_score=1.0, pareto=[]) [CA-20, CA-17]", "status": "pending" },
         { "id": 3,  "desc": "health.files_declared == ingestion_report.summary.files_declared [CA-06]", "status": "pending" },
         { "id": 4,  "desc": "health.files_healthy == nº de datasets[].files[] con status=='ingested' y inconsistencies==[] [CA-07]", "status": "pending" },
