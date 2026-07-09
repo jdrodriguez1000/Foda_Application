@@ -11,8 +11,13 @@ FLOWS es un registro literal explicito (NC-2: sin descubrimiento dinamico).
 from foda.core.flow import Flow
 from foda.flows.f020_onboarding.onboarding import Onboarding
 from foda.flows.f030_ingestion.ingestion import Ingestion
+from foda.flows.f040_profiling.profiling import Profiling
 
-FLOWS: dict[str, type[Flow]] = {"onboarding": Onboarding, "ingestion": Ingestion}
+FLOWS: dict[str, type[Flow]] = {
+    "onboarding": Onboarding,
+    "ingestion": Ingestion,
+    "profiling": Profiling,
+}
 
 
 def resolve_flow(name: str) -> Flow:
