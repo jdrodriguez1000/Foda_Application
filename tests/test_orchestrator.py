@@ -3,14 +3,20 @@ banda tracer_bullet). Independiente de la CLI, sin disco.
 
 Fuente: 600_features/flow_orchestrator/tracer_bullet/spec.md (DS-ORQ-1/2, CA-10) y
 plan.md (TSK-05..TSK-07). Bucle TDD en curso: caso 3 (CA-10/CA-04, TSK-07).
+
+Tambien cubre el gate de progresion entre flujos de la feature profiling/
+tracer_bullet (600_features/profiling/tracer_bullet/spec.md DS-PROF-2/DS-PROF-4,
+plan.md TSK-11..TSK-18): PREDECESSORS y evaluate_predecessor_gate.
 """
 
 import pytest
 
+from foda.core.context import ClientContext
 from foda.core.flow import Flow
+from foda.core.scaffold import create_client
 from foda.flows.f020_onboarding.onboarding import Onboarding
 from foda.flows.f040_profiling.profiling import Profiling
-from foda.orchestrator import FLOWS, resolve_flow
+from foda.orchestrator import FLOWS, PREDECESSORS, evaluate_predecessor_gate, resolve_flow
 
 
 def test_resolve_flow_onboarding_devuelve_instancia_de_onboarding() -> None:
@@ -52,3 +58,28 @@ def test_resolve_flow_profiling_devuelve_instancia_de_profiling() -> None:
 
     assert isinstance(flow, Profiling)
     assert isinstance(flow, Flow)
+
+
+def test_predecessors_mapea_profiling_a_ingestion_y_gate_es_noop_sin_predecesor(
+    tmp_path,
+) -> None:
+    """Caso 7 (feature profiling/tracer_bullet, CA-12, TSK-11): PREDECESSORS
+    es el mapa literal explicito {"profiling": "ingestion"} (DS-PROF-2), y
+    evaluate_predecessor_gate(flow_name, ctx) devuelve None para un flujo SIN
+    entrada registrada en PREDECESSORS (p. ej. "ingestion", que no tiene
+    predecesor en esta banda: el par ingestion->onboarding queda excluido a
+    proposito, ver spec DS-PROF-2) -- el gate es no-op, sin exigir ningun
+    reporte en disco.
+
+    Hoy ni PREDECESSORS ni evaluate_predecessor_gate existen en
+    foda.orchestrator (solo TSK-10 -- registro de "profiling" en FLOWS -- esta
+    en verde); el import de ambos en el modulo falla con ImportError. Rojo
+    genuino: no hay typo ni error de sintaxis, falta el mapa y la funcion que
+    TSK-12 debe introducir como esqueleto minimo."""
+    assert PREDECESSORS == {"profiling": "ingestion"}
+
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    assert evaluate_predecessor_gate("ingestion", ctx) is None

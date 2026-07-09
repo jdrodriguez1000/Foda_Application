@@ -102,7 +102,9 @@
           "id": 7,
           "desc": "PREDECESSORS == {'profiling': 'ingestion'}; evaluate_predecessor_gate devuelve None para un flujo sin predecesor registrado",
           "ca": "CA-12",
-          "status": "pending"
+          "status": "red",
+          "test": "tests/test_orchestrator.py::test_predecessors_mapea_profiling_a_ingestion_y_gate_es_noop_sin_predecesor",
+          "red_evidence": "python -m pytest tests/test_orchestrator.py::test_predecessors_mapea_profiling_a_ingestion_y_gate_es_noop_sin_predecesor -q -> ERROR collecting tests/test_orchestrator.py: ImportError: cannot import name 'PREDECESSORS' from 'foda.orchestrator'. Rojo genuino (no typo/sintaxis accidental): PREDECESSORS y evaluate_predecessor_gate aun no existen en src/foda/orchestrator.py (TSK-10 -- registro de 'profiling' en FLOWS, caso 6 -- ya esta en verde; TSK-12 debe introducir el mapa y el esqueleto de la funcion)."
         },
         {
           "id": 8,
