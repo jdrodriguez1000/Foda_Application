@@ -54,7 +54,4 @@ def evaluate_predecessor_gate(flow_name: str, ctx: ClientContext) -> str | None:
     report = json.loads(report_path.read_text(encoding="utf-8"))
     if report["success"] is True:
         return None
-    return (
-        f"El predecesor {predecessor_name!r} no tiene un reporte con "
-        "success == true."
-    )
+    return f"El reporte de {predecessor_name!r} no tiene success == true."

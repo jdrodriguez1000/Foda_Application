@@ -2,7 +2,7 @@
   "feature": "profiling",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "tdd_coder",
+  "current_stage": "tdd_tester",
   "stages": {
     "feature_definer": {
       "status": "done",
@@ -22,7 +22,7 @@
     },
     "tdd": {
       "status": "in_progress",
-      "next_case": 9,
+      "next_case": 10,
       "cases": [
         {
           "id": 1,
@@ -130,14 +130,15 @@
           "id": 9,
           "desc": "evaluate_predecessor_gate('profiling', ctx) devuelve un mensaje que nombra a ingestion cuando ingestion_report.json tiene success:false",
           "ca": "CA-07",
-          "status": "green",
+          "status": "done",
           "test": "tests/test_orchestrator.py::test_evaluate_predecessor_gate_profiling_devuelve_mensaje_con_ingestion_report_success_false",
           "red_evidence": "python -m pytest tests/test_orchestrator.py::test_evaluate_predecessor_gate_profiling_devuelve_mensaje_con_ingestion_report_success_false -q -> 1 failed. AssertionError: assert False (isinstance(None, str)). Rojo genuino: evaluate_predecessor_gate solo tiene la rama 'if report[\"success\"] is True: return None' (TSK-14, caso 8); para success:false el cuerpo cae al final sin sentencia adicional y Python devuelve None implicito, que falla contra la asercion isinstance(resultado, str) exigida por este test -- no es un error de import/sintaxis accidental. El test fabrica ingestion_report.json (success:false) via el helper local _fabricar_ingestion_report en 020_outputs/030_ingestion/ del cliente temporal (sin correr Ingestion real). python -m pytest -q (suite completa) -> 183 passed, 1 failed (el nuevo rojo), sin regresiones.",
           "green_files": [
             "src/foda/orchestrator.py"
           ],
           "green_evidence": "python -m pytest tests/test_orchestrator.py::test_evaluate_predecessor_gate_profiling_devuelve_mensaje_con_ingestion_report_success_false -q -> 1 passed (primer intento, sin reintentos); python -m pytest -q (suite completa) -> 184 passed, sin regresiones.",
-          "coder_note": "TSK-16 (minimo suficiente, NC-2/NC-3): se agrego la rama final de evaluate_predecessor_gate para success != true: 'return f\"El predecesor {predecessor_name!r} no tiene un reporte con success == true.\"'. Solo se implemento esta rama (success:false -> mensaje); la rama 'reporte ausente -> mensaje' (caso 10, TSK-17/18) NO se implemento (queda cubierta por FileNotFoundError sin capturar, a resolver en su propio turno). Se actualizo el docstring de la funcion para documentar la nueva rama."
+          "coder_note": "TSK-16 (minimo suficiente, NC-2/NC-3): se agrego la rama final de evaluate_predecessor_gate para success != true: 'return f\"El predecesor {predecessor_name!r} no tiene un reporte con success == true.\"'. Solo se implemento esta rama (success:false -> mensaje); la rama 'reporte ausente -> mensaje' (caso 10, TSK-17/18) NO se implemento (queda cubierta por FileNotFoundError sin capturar, a resolver en su propio turno). Se actualizo el docstring de la funcion para documentar la nueva rama.",
+          "refactor": "se reviso src/foda/orchestrator.py completo (import json, FLOWS, PREDECESSORS, resolve_flow, evaluate_predecessor_gate) buscando deuda de diseno atribuible a este caso (legibilidad del mensaje, nombres, tipado, duplicacion). Unico cambio: el mensaje de la rama success!=true se reescribio de 'El predecesor {predecessor_name!r} no tiene un reporte con success == true.' (dos lineas, concatenacion implicita, doble negacion confusa -- lee como si el reporte no existiera, cuando en realidad SI existe pero su campo success no es true) a 'El reporte de {predecessor_name!r} no tiene success == true.' (una linea, sujeto correcto -- el reporte, no el predecesor -- mas preciso y legible); sigue nombrando a 'ingestion' (test lo exige, DS-PROF-4) y mantiene el f-string simple sin nueva abstraccion (NC-2). El resto de la funcion (deteccion de flow_name sin predecesor, resolucion dinamica de report_path via resolve_flow(...).produces[0].path(ctx) DS-PROF-4, tipado str | None / ClientContext, nombres claros predecessor_name/report_path/report) no presenta duplicacion ni deuda nueva atribuible al caso 9; no se toco (NC-3, la rama success:true del caso 8 y el esqueleto del caso 7 ya fueron revisados en sus propios turnos). No se anticipo la rama 'reporte ausente' del caso 10 (NC-2: sin adelantar comportamiento no cubierto por un test). python -m pytest -q -> 184 passed, sin regresiones tras revalidar la suite completa."
         },
         {
           "id": 10,
