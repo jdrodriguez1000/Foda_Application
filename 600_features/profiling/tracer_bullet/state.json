@@ -2,7 +2,7 @@
   "feature": "profiling",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "tdd_coder",
+  "current_stage": "tdd_tester",
   "stages": {
     "feature_definer": {
       "status": "done",
@@ -22,7 +22,7 @@
     },
     "tdd": {
       "status": "in_progress",
-      "next_case": 7,
+      "next_case": 8,
       "cases": [
         {
           "id": 1,
@@ -102,14 +102,15 @@
           "id": 7,
           "desc": "PREDECESSORS == {'profiling': 'ingestion'}; evaluate_predecessor_gate devuelve None para un flujo sin predecesor registrado",
           "ca": "CA-12",
-          "status": "green",
+          "status": "done",
           "test": "tests/test_orchestrator.py::test_predecessors_mapea_profiling_a_ingestion_y_gate_es_noop_sin_predecesor",
           "red_evidence": "python -m pytest tests/test_orchestrator.py::test_predecessors_mapea_profiling_a_ingestion_y_gate_es_noop_sin_predecesor -q -> ERROR collecting tests/test_orchestrator.py: ImportError: cannot import name 'PREDECESSORS' from 'foda.orchestrator'. Rojo genuino (no typo/sintaxis accidental): PREDECESSORS y evaluate_predecessor_gate aun no existen en src/foda/orchestrator.py (TSK-10 -- registro de 'profiling' en FLOWS, caso 6 -- ya esta en verde; TSK-12 debe introducir el mapa y el esqueleto de la funcion).",
           "green_files": [
             "src/foda/orchestrator.py"
           ],
           "green_evidence": "python -m pytest tests/test_orchestrator.py::test_predecessors_mapea_profiling_a_ingestion_y_gate_es_noop_sin_predecesor -q -> 1 passed; python -m pytest -q (suite completa) -> 182 passed, sin regresiones.",
-          "coder_note": "TSK-12: se agrego PREDECESSORS: dict[str, str] = {'profiling': 'ingestion'} (mapa literal explicito, DS-PROF-2, mismo patron NC-2 ya usado en FLOWS) y el esqueleto minimo de evaluate_predecessor_gate(flow_name, ctx) -> str | None en src/foda/orchestrator.py: unica rama implementada es 'if flow_name not in PREDECESSORS: return None' (gate no-op sin predecesor registrado), que es todo lo que el caso 7 exige. Se importo ClientContext desde foda.core.context para el tipado del parametro ctx. Las ramas de reporte en disco (success:true -> None; success:false -> mensaje; ausente -> mensaje) NO se implementaron: corresponden a los casos 8, 9 y 10 (NC-2/NC-3, minimo suficiente)."
+          "coder_note": "TSK-12: se agrego PREDECESSORS: dict[str, str] = {'profiling': 'ingestion'} (mapa literal explicito, DS-PROF-2, mismo patron NC-2 ya usado en FLOWS) y el esqueleto minimo de evaluate_predecessor_gate(flow_name, ctx) -> str | None en src/foda/orchestrator.py: unica rama implementada es 'if flow_name not in PREDECESSORS: return None' (gate no-op sin predecesor registrado), que es todo lo que el caso 7 exige. Se importo ClientContext desde foda.core.context para el tipado del parametro ctx. Las ramas de reporte en disco (success:true -> None; success:false -> mensaje; ausente -> mensaje) NO se implementaron: corresponden a los casos 8, 9 y 10 (NC-2/NC-3, minimo suficiente).",
+          "refactor": "sin cambios: se releyo src/foda/orchestrator.py completo (import de ClientContext, PREDECESSORS, evaluate_predecessor_gate) buscando deuda de diseno atribuible a este caso (duplicacion, nombres, alineacion con Flow/ClientContext de system_design.md SS9, tipado). PREDECESSORS: dict[str, str] es una linea de registro calcada del mismo patron literal explicito ya usado para FLOWS (NC-2, mismo estilo import->constante); evaluate_predecessor_gate(flow_name, ctx) -> str | None tiene tipado completo (str, ClientContext, str | None), nombre claro y verbo de accion (evaluate_), y su unica rama presente ('if flow_name not in PREDECESSORS: return None') es minima y no anticipa las ramas de los casos 8-10 (NC-2, sin sobre-ingenieria). El docstring de la funcion documenta el comportamiento actual y referencia DS-PROF-2. No se toco el docstring de modulo (linea 1-9, describe solo caso 1/resolve_flow): esta desactualizado desde el registro de 'profiling' en FLOWS (caso 6) y no es deuda introducida por este caso, por lo que actualizarlo excede el alcance quirurgico de este refactor (NC-3); se deja constancia para que un refactor futuro que si toque el modulo lo actualice. No hay codigo muerto ni duplicacion. python -m pytest -q -> 182 passed, sin regresiones tras revalidar la suite completa."
         },
         {
           "id": 8,
