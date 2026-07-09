@@ -195,6 +195,141 @@ def test_run_profiling_con_ingestion_report_success_false_con_force_devuelve_0_e
     assert "force" in stderr_lines[0].lower()
 
 
+_VENTAS_HEADER = "fecha,sede,clase,cantidad,precio_unitario"
+_VENTAS_ROWS = [
+    "2024-01-01,Sede Centro,Agua 600ml,10,1200",
+    "2024-01-02,Sede Norte,Cola 1.5L,5,2500",
+]
+
+
+def _seed_cliente_abc_listo_para_ingestion(tmp_path: Path) -> Path:
+    """Crea clients/ABC/ completo con lo que Ingestion.requires exige
+    (DS-ING-7/DS-ING-8, mismo fixture minimo que
+    tests/flows/test_ingestion.py::_build_ctx_fixture_minimo, adaptado al
+    layout de disco de esta suite -- client.yaml via _seed_cliente_abc, mas
+    contract_data.json/map_client_data.json bajo 020_outputs/ y el archivo
+    crudo ventas.csv bajo 010_inputs/030_ingestion/): un unico dataset
+    "ventas"/"ventas.csv" (separador coma), contrato y mapa coherentes entre
+    si. 'ingestion' NO tiene predecesor en PREDECESSORS (caso 7,
+    orchestrator.py), asi que este fixture NO fabrica ningun
+    ingestion_report.json (no hay gate que satisfacer). Devuelve la raiz del
+    proyecto (tmp_path)."""
+    _seed_cliente_abc(tmp_path)
+    client_dir = tmp_path / "clients" / "ABC"
+
+    contract_data = {
+        "schema_version": "0.1",
+        "client": {"code": "ABC", "name": "Cliente ABC S.A.", "sector": "retail"},
+        "historical_data": {
+            "datasets": [
+                {
+                    "kind": "ventas",
+                    "source_medium": "csv",
+                    "periodicity": "mensual",
+                    "files": [
+                        {
+                            "name": "ventas.csv",
+                            "period_start": "2023-01-01",
+                            "period_end": "2025-12-31",
+                        }
+                    ],
+                }
+            ]
+        },
+    }
+    contrato_path = client_dir / "020_outputs" / "010_discovery" / "contract_data.json"
+    contrato_path.parent.mkdir(parents=True)
+    contrato_path.write_text(json.dumps(contract_data, ensure_ascii=False), encoding="utf-8")
+
+    map_client_data = {
+        "schema_version": "0.1",
+        "client": {"code": "ABC", "name": "Cliente ABC S.A.", "sector": "retail"},
+        "datasets": [
+            {
+                "kind": "ventas",
+                "fields": [
+                    {"name": "fecha", "required": True},
+                    {"name": "sede", "required": True},
+                    {"name": "clase", "required": True},
+                    {"name": "cantidad", "required": True},
+                    {"name": "precio_unitario", "required": False},
+                ],
+            }
+        ],
+    }
+    mapa_path = client_dir / "020_outputs" / "020_onboarding" / "map_client_data.json"
+    mapa_path.parent.mkdir(parents=True)
+    mapa_path.write_text(json.dumps(map_client_data, ensure_ascii=False), encoding="utf-8")
+
+    landing_dir = client_dir / "010_inputs" / "030_ingestion"
+    landing_dir.mkdir(parents=True)
+    (landing_dir / "ventas.csv").write_text(
+        "\n".join([_VENTAS_HEADER, *_VENTAS_ROWS]) + "\n", encoding="utf-8"
+    )
+
+    return tmp_path
+
+
+def test_run_ingestion_flujo_sin_predecesor_gate_es_noop_y_corre_como_antes_de_la_feature(
+    tmp_path: Path, proyecto: Path, capsys
+):
+    """Caso 15 (CA-12, TSK-27): 'ingestion' NO tiene predecesor registrado en
+    PREDECESSORS (caso 7, orchestrator.py: PREDECESSORS == {"profiling":
+    "ingestion"}), por lo que evaluate_predecessor_gate("ingestion", ctx)
+    devuelve None (rama "sin predecesor", TSK-12, ya en verde) para
+    CUALQUIER estado del disco -- ni siquiera se llega a resolver un
+    predecesor ni a leer un reporte. El gate wireado en _dispatch_run
+    (DS-PROF-1, casos 12/13, cli.py) es entonces un no-op puro para este
+    flujo: main(["run","ABC","--flow","ingestion"]) debe comportarse
+    EXACTAMENTE igual que antes de esta feature (no bloquea, no advierte).
+
+    Este test corre ingestion de verdad (fixture minimo DS-ING-7/DS-ING-8:
+    contract_data.json + map_client_data.json + ventas.csv, ver
+    _seed_cliente_abc_listo_para_ingestion) SIN fabricar ningun
+    ingestion_report.json de un predecesor (no aplica: ingestion no tiene
+    predecesor) y SIN --force, para distinguir el no-op del gate (este caso)
+    de los caminos "bloquea"/"advierte" que si dependen de PREDECESSORS
+    (casos 12/13, exclusivos de 'profiling').
+
+    Aserciones especificas (no triviales): (1) exit 0 y stdout de
+    completado, igual que cualquier run exitoso previo a la feature de
+    profiling (patron ya usado en test_run_onboarding_*,
+    test_flow_orchestrator_cli.py); (2) ingestion_report.json queda escrito
+    en disco; (3) sobre todo, stderr queda COMPLETAMENTE VACIO -- ninguna
+    advertencia de gate ni mencion a '--force', que es precisamente lo que
+    _dispatch_run SI emite cuando el flujo tiene predecesor y --force
+    sobrepasa un gate_message (caso 13); un flujo sin predecesor jamas debe
+    alcanzar esa rama.
+
+    Rojo esperado (previsto por plan.md linea 87: no hay tarea-codigo propia
+    para este caso, comportamiento ya cubierto por TSK-12/20/22/23/25): si
+    este test pasa de inmediato sin codigo de produccion nuevo, no es un
+    verde invalido -- documentar como already_green con la evidencia de
+    pytest, igual que los casos 3/4/5/11/14."""
+    from foda.cli import main
+
+    _seed_cliente_abc_listo_para_ingestion(proyecto)
+
+    result = main(["run", "ABC", "--flow", "ingestion"])
+
+    assert result == 0
+    captured = capsys.readouterr()
+    assert "ingestion" in captured.out
+    assert "ABC" in captured.out
+    assert "completado" in captured.out
+    assert captured.err == ""
+
+    ingestion_report = (
+        tmp_path
+        / "clients"
+        / "ABC"
+        / "020_outputs"
+        / "030_ingestion"
+        / "ingestion_report.json"
+    )
+    assert ingestion_report.exists()
+
+
 def test_run_profiling_con_ingestion_report_success_true_con_force_devuelve_0_escribe_reporte_y_sin_advertencia(
     tmp_path: Path, proyecto: Path, capsys
 ):

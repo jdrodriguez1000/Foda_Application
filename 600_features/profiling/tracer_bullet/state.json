@@ -211,7 +211,10 @@
           "id": 15,
           "desc": "CLI: foda run <c> --flow ingestion (flujo sin predecesor) -> gate no-op, comportamiento igual al previo a la feature",
           "ca": "CA-12",
-          "status": "pending"
+          "status": "red",
+          "test": "tests/cli/test_profiling_gate_cli.py::test_run_ingestion_flujo_sin_predecesor_gate_es_noop_y_corre_como_antes_de_la_feature",
+          "note": "already_green (mismo patron que casos 3/4/5/11/14), previsto por plan.md linea 87: no hay tarea-codigo propia para este caso (CA-12 CLI queda cubierto por TSK-12/TSK-20/TSK-22/TSK-23/TSK-25, ya en verde). python -m pytest tests/cli/test_profiling_gate_cli.py::test_run_ingestion_flujo_sin_predecesor_gate_es_noop_y_corre_como_antes_de_la_feature -q -> 1 passed de inmediato, sin escribir codigo de produccion nuevo ni esqueleto NotImplementedError. No es un verde invalido por trivialidad: el test corre Ingestion de verdad (fixture minimo DS-ING-7/DS-ING-8: contract_data.json + map_client_data.json + ventas.csv bajo 010_inputs/030_ingestion/, sin ingestion_report.json de ningun predecesor porque ingestion no tiene uno) y asertion no triviales (exit 0, stdout con 'ingestion'/'ABC'/'completado', ingestion_report.json presente en disco, y sobre todo stderr == '' exacto -- descarta expresamente la rama de advertencia --force que SI dispara _dispatch_run para flujos con predecesor, caso 13). Motivo: 'ingestion' no esta en PREDECESSORS == {'profiling': 'ingestion'} (caso 7, orchestrator.py), asi que evaluate_predecessor_gate('ingestion', ctx) devuelve None por la rama 'sin predecesor' (TSK-12, ya en verde) sin siquiera resolver un predecesor; el bloque del gate en _dispatch_run (casos 12/13, cli.py) es entonces un no-op puro para este flujo, identico al comportamiento previo a la feature profiling.",
+          "red_evidence": "python -m pytest tests/cli/test_profiling_gate_cli.py::test_run_ingestion_flujo_sin_predecesor_gate_es_noop_y_corre_como_antes_de_la_feature -q -> 1 passed (no hay rojo: ver nota 'already_green'). python -m pytest -q (suite completa) -> 190 passed, sin regresiones tras agregar el test."
         },
         {
           "id": 16,
