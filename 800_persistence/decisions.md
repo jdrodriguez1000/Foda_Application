@@ -103,6 +103,7 @@ Cada decisión sigue el formato: **ID**, **título**, **estado** (Propuesta / Ac
 | D-084 | `profiling` — DS-PROF-2: `PREDECESSORS = {"profiling": "ingestion"}` en `orchestrator.py`; ruta del reporte del predecesor vía `resolve_flow("ingestion").produces[0].path(ctx)` | Aceptada | 2026-07-09 |
 | D-085 | `profiling` — DS-PROF-3: `profiling_report.json` mínimo (`schema_version`, `client`, `flow`, `success`), único campo vinculante `success`; advertencia de `--force` a stderr | Aceptada | 2026-07-09 |
 | D-086 | `profiling` — DS-PROF-4: `--force` como `store_true` en `run_parser`, evaluador puro `evaluate_predecessor_gate(flow_name, ctx) -> str \| None` en `orchestrator.py`, sin tocar `ClientContext` ni `Flow.run` | Aceptada | 2026-07-09 |
+| D-087 | Cierre CONFORME de `profiling` (banda `tracer_bullet`) vía el flujo terminal D-079/D-081 completo: PR #1 → `human_test` (6/6) → `merge_to_main` (humano) | Aceptada | 2026-07-09 |
 
 ## 3. Detalle de Decisiones
 
@@ -676,7 +677,7 @@ Cada decisión sigue el formato: **ID**, **título**, **estado** (Propuesta / Ac
 - **Nota de implementación (2026-07-09, T-034):** T-034 quedó implementada conforme a esta enmienda: se aplicó directo sobre `main` (sin rama `feature/`), y el contrato "automatización hasta el PR, merge humano" quedó codificado en `CLAUDE.md` §3 y en los agentes (`feature_definer.md` crea la rama, `spec_verifier.md` dirige a `human_test` en vez de mergear, la sesión principal abre el PR). A partir de la siguiente feature nueva, el push de cierre de sesión ya no será siempre a `main` (ver nota en A-018).
 
 ### D-082 — Próxima feature = `profiling` (flujo 040), esqueleto mínimo/tracer bullet, anfitrión concreto de T-036
-- **Estado:** Aceptada — EN PROGRESO
+- **Estado:** Aceptada — **CERRADA/CONFORME, mergeada a `main`** (ver D-087, 2026-07-09)
 - **Fecha:** 2026-07-09
 - **Contexto:** T-036 (gate de progresión entre flujos por `success` del predecesor, D-080 puntos 1-3) estaba diferida por NC-2/NC-4: no había un flujo consumidor real de un reporte de `ingestion` que la ejerciera. Se buscó ese consumidor releyendo `990_documents/expected_workflow.md`: el flujo que sigue a `ingestion` (030) en el pipeline de negocio es **Profiling (040)**, no `discovery` (010, que precede a `onboarding`, no lo sucede) — ver L-059.
 - **Decisión:** La próxima feature es `profiling`, construida como **esqueleto mínimo (tracer bullet)** que sirve de anfitrión concreto de T-036, en vez del flujo profiling completo. Se ejecuta en la rama `feature/profiling` (primera vez que se ejerce D-079/D-081 en la práctica).
@@ -709,3 +710,10 @@ Cada decisión sigue el formato: **ID**, **título**, **estado** (Propuesta / Ac
 - **Contexto:** Había que fijar la firma exacta del mecanismo de override y dónde vive la función que evalúa el gate.
 - **Decisión:** `--force` se declara como `store_true` en `run_parser` (`argparse`), se propaga `args.force`→`_dispatch_run`; la evaluación del gate se aísla en una función pura `evaluate_predecessor_gate(flow_name, ctx) -> str | None` en `orchestrator.py` (devuelve `None` si el gate pasa, o un mensaje de error si no). No se toca `ClientContext` ni `Flow.run`.
 - **Consecuencias:** Función testeable de forma aislada (unit puro, sin CLI ni filesystem real más allá de leer el reporte); separación clara entre evaluación del gate (orchestrator) y su aplicación (cli).
+
+### D-087 — Cierre CONFORME de `profiling` (banda `tracer_bullet`) vía el flujo terminal D-079/D-081 completo
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-09
+- **Contexto:** `profiling` completó el bucle TDD (17/17 casos) en la sesión anterior. Esta sesión ejecutó las etapas 7-8/8 (`integration_tester`, `spec_verifier`, veredicto CONFORME) y, por ser la primera feature construida en su propia rama (`feature/profiling`, D-079/D-081), fue también la primera en recorrer el flujo terminal completo: apertura de PR por la sesión principal, gate humano `human_test`, gate humano `merge_to_main`.
+- **Decisión:** `integration_tester` añadió 15 tests de integración (207 passed) sin tocar `src/foda/`. `spec_verifier` emitió veredicto **CONFORME** a los 13/13 CA (`verification.md`), con un hallazgo no bloqueante (desalineación de entorno Python 3.12.10 vs `requires-python>=3.13` declarado en `pyproject.toml`; la suite corre verde en 3.12, ningún CA depende de 3.13). La sesión principal instaló GitHub CLI (`gh`, no disponible antes en el equipo) y abrió el PR #1 (`gh pr create`, base `main` ← `feature/profiling`). El usuario ejecutó las 6 pruebas del gate `human_test` (todas PASARON: camino feliz, gate bloqueando sin `--force`, `--force` sobrepasando con y sin advertencia espuria, predecesor ausente, flujo sin entrada en `PREDECESSORS`) y mergeó el PR #1 desde la web (gate `merge_to_main`, merge commit `bb3d52d`). La sesión principal sincronizó `main` local y borró la rama `feature/profiling` local y remota.
+- **Consecuencias:** `profiling` queda CERRADA en `main`, octava feature completa de punta a punta. El flujo terminal de D-079/D-081 queda validado en la práctica de punta a punta por primera vez (spec_verifier CONFORME → PR → human_test → merge_to_main), validando A-018 (movido a §2 de `assumptions.md`). El hallazgo de `requires-python`/entorno queda a criterio del humano para una banda `stab_n` futura (no bloqueante, no genera tarea de alta prioridad). `gh` queda instalado y autenticado en el equipo para futuras aperturas de PR (L-063).
