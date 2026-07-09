@@ -26,6 +26,12 @@ Banda stab_1 (bucle TDD en curso, red/green/refactor caso a caso):
   sumando los archivos sanos (status=="ingested" e inconsistencies==[]).
   files_with_problems, problems_by_type, global_score y pareto siguen como
   placeholders minimos (0 / {} / 1.0 / []) hasta sus propios casos (5-22).
+- Caso 5 (CA-08, DS-PRF-3): health.files_with_problems ya no es un
+  placeholder fijo; se cuenta iterando datasets[].files[] de
+  self._ingestion_report y sumando los archivos con problemas
+  (status!="ingested" o inconsistencies!=[]). problems_by_type, global_score
+  y pareto siguen como placeholders minimos ({} / 1.0 / []) hasta sus propios
+  casos (7-22).
 
 Nota (NC-6): una version previa del caso 2 adelanto de una vez toda la logica
 de health (DS-PRF-2..5). Por decision del humano se restauro el TDD estricto:
@@ -89,6 +95,9 @@ class Profiling(Flow):
             "files_declared", 0
         )
         files_healthy = self._contar_archivos_sanos(self._ingestion_report)
+        files_with_problems = self._contar_archivos_con_problemas(
+            self._ingestion_report
+        )
         self._report = {
             "schema_version": "0.2",
             "client": ctx.name,
@@ -98,7 +107,7 @@ class Profiling(Flow):
                 "global_score": 1.0,
                 "files_declared": files_declared,
                 "files_healthy": files_healthy,
-                "files_with_problems": 0,
+                "files_with_problems": files_with_problems,
                 "problems_by_type": {},
                 "pareto": [],
             },
@@ -116,6 +125,18 @@ class Profiling(Flow):
             for archivo in dataset.get("files", [])
             if archivo.get("status") == "ingested"
             and not archivo.get("inconsistencies")
+        )
+
+    @staticmethod
+    def _contar_archivos_con_problemas(ingestion_report: dict) -> int:
+        """Caso 5 (CA-08, DS-PRF-3): cuenta, en datasets[].files[] del
+        ingestion_report, los archivos con problemas: status!="ingested" o
+        inconsistencies!=[]."""
+        return sum(
+            1
+            for dataset in ingestion_report.get("datasets", [])
+            for archivo in dataset.get("files", [])
+            if archivo.get("status") != "ingested" or archivo.get("inconsistencies")
         )
 
     def write_outputs(self, ctx: ClientContext, result: FlowResult) -> None:
