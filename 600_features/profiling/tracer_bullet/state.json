@@ -88,7 +88,9 @@
           "id": 6,
           "desc": "resolve_flow('profiling') devuelve una instancia de Profiling (registro en FLOWS)",
           "ca": "CA-06",
-          "status": "pending"
+          "status": "red",
+          "test": "tests/test_orchestrator.py::test_resolve_flow_profiling_devuelve_instancia_de_profiling",
+          "red_evidence": "python -m pytest tests/test_orchestrator.py::test_resolve_flow_profiling_devuelve_instancia_de_profiling -q -> 1 failed. ValueError: Flujo desconocido: 'profiling'. Debe ser uno de ['ingestion', 'onboarding']. (KeyError interno en FLOWS['profiling'], traducido por resolve_flow). Rojo genuino: Profiling existe e importa bien (caso 1), pero aun no esta registrado en FLOWS (TSK-10 pendiente); no es error de import/sintaxis accidental."
         },
         {
           "id": 7,

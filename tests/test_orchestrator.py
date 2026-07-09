@@ -9,6 +9,7 @@ import pytest
 
 from foda.core.flow import Flow
 from foda.flows.f020_onboarding.onboarding import Onboarding
+from foda.flows.f040_profiling.profiling import Profiling
 from foda.orchestrator import FLOWS, resolve_flow
 
 
@@ -39,3 +40,15 @@ def test_resolve_flow_nombre_no_registrado_lanza_value_error() -> None:
     lanza ValueError (no KeyError ni otra excepcion)."""
     with pytest.raises(ValueError):
         resolve_flow("inexistente")
+
+
+def test_resolve_flow_profiling_devuelve_instancia_de_profiling() -> None:
+    """Caso 6 (feature profiling/tracer_bullet, CA-06, TSK-09): resolve_flow(
+    "profiling") devuelve una INSTANCIA de Profiling (subclase de Flow), via
+    el registro FLOWS. Hoy "profiling" no esta registrado en FLOWS (solo
+    "onboarding"/"ingestion"), por lo que resolve_flow lanza ValueError en vez
+    de devolver la instancia esperada: rojo genuino, TSK-10 lo pone en verde."""
+    flow = resolve_flow("profiling")
+
+    assert isinstance(flow, Profiling)
+    assert isinstance(flow, Flow)
