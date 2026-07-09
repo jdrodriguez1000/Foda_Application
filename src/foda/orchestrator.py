@@ -43,7 +43,9 @@ def evaluate_predecessor_gate(flow_name: str, ctx: ClientContext) -> str | None:
 
     Si flow_name tiene predecesor registrado, resuelve la ruta de su reporte
     con resolve_flow(<predecesor>).produces[0].path(ctx) (DS-PROF-4) y, si el
-    reporte existe con success:true, el gate esta satisfecho y devuelve None."""
+    reporte existe con success:true, el gate esta satisfecho y devuelve None.
+    Si el reporte existe pero success no es true, devuelve un mensaje legible
+    que nombra al predecesor y el motivo (DS-PROF-4)."""
     if flow_name not in PREDECESSORS:
         return None
 
@@ -52,3 +54,7 @@ def evaluate_predecessor_gate(flow_name: str, ctx: ClientContext) -> str | None:
     report = json.loads(report_path.read_text(encoding="utf-8"))
     if report["success"] is True:
         return None
+    return (
+        f"El predecesor {predecessor_name!r} no tiene un reporte con "
+        "success == true."
+    )
