@@ -2,7 +2,7 @@
   "feature": "profiling",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "tdd_tester",
+  "current_stage": "tdd_coder",
   "stages": {
     "feature_definer": {
       "status": "done",
@@ -116,9 +116,14 @@
           "id": 8,
           "desc": "evaluate_predecessor_gate('profiling', ctx) devuelve None cuando ingestion_report.json existe con success:true",
           "ca": "CA-06",
-          "status": "red",
+          "status": "green",
           "test": "tests/test_orchestrator.py::test_evaluate_predecessor_gate_profiling_devuelve_none_con_ingestion_report_success_true",
-          "red_evidence": "python -m pytest tests/test_orchestrator.py::test_evaluate_predecessor_gate_profiling_devuelve_none_con_ingestion_report_success_true -q -> 1 failed. AssertionError: assert [] == ['ingestion'] (llamadas a resolve_flow espiado). Rojo genuino: 'profiling' SI esta en PREDECESSORS (caso 7 en verde), por lo que el 'if flow_name not in PREDECESSORS: return None' de TSK-12 no se dispara; la funcion cae al final del cuerpo sin mas sentencias y devuelve None de forma implicita para CUALQUIER estado del reporte (una asercion trivial 'resultado is None' pasaria hoy sin codigo nuevo, no seria rojo valido segun NC-5). El test fabrica ingestion_report.json (success:true) via helper local _fabricar_ingestion_report en 020_outputs/030_ingestion/ del cliente temporal (sin correr Ingestion real) y espia orchestrator_module.resolve_flow con monkeypatch para exigir que TSK-14 efectivamente lo invoque con 'ingestion' al resolver la ruta del reporte del predecesor (DS-PROF-4), no un error de import/sintaxis accidental. python -m pytest -q (suite completa) -> 182 passed, 1 failed (el nuevo rojo), sin regresiones."
+          "red_evidence": "python -m pytest tests/test_orchestrator.py::test_evaluate_predecessor_gate_profiling_devuelve_none_con_ingestion_report_success_true -q -> 1 failed. AssertionError: assert [] == ['ingestion'] (llamadas a resolve_flow espiado). Rojo genuino: 'profiling' SI esta en PREDECESSORS (caso 7 en verde), por lo que el 'if flow_name not in PREDECESSORS: return None' de TSK-12 no se dispara; la funcion cae al final del cuerpo sin mas sentencias y devuelve None de forma implicita para CUALQUIER estado del reporte (una asercion trivial 'resultado is None' pasaria hoy sin codigo nuevo, no seria rojo valido segun NC-5). El test fabrica ingestion_report.json (success:true) via helper local _fabricar_ingestion_report en 020_outputs/030_ingestion/ del cliente temporal (sin correr Ingestion real) y espia orchestrator_module.resolve_flow con monkeypatch para exigir que TSK-14 efectivamente lo invoque con 'ingestion' al resolver la ruta del reporte del predecesor (DS-PROF-4), no un error de import/sintaxis accidental. python -m pytest -q (suite completa) -> 182 passed, 1 failed (el nuevo rojo), sin regresiones.",
+          "green_files": [
+            "src/foda/orchestrator.py"
+          ],
+          "green_evidence": "python -m pytest tests/test_orchestrator.py::test_evaluate_predecessor_gate_profiling_devuelve_none_con_ingestion_report_success_true -q -> 1 passed (primer intento, sin reintentos); python -m pytest -q (suite completa) -> 183 passed, sin regresiones.",
+          "coder_note": "TSK-14 (minimo suficiente, NC-2/NC-3): dentro de la rama con predecesor de evaluate_predecessor_gate, se agrego 'predecessor_name = PREDECESSORS[flow_name]; report_path = resolve_flow(predecessor_name).produces[0].path(ctx); report = json.loads(report_path.read_text(encoding='utf-8')); if report['success'] is True: return None'. La ruta del reporte del predecesor se resuelve dinamicamente via resolve_flow(...).produces[0].path(ctx) (NO hardcodeada, DS-PROF-2/DS-PROF-4), y se agrego 'import json' al modulo. Solo se implemento la rama success:true -> None que el caso 8 exige; las ramas success:false -> mensaje (caso 9) y reporte ausente -> mensaje (caso 10) quedan sin cubrir a proposito: si el reporte falta (FileNotFoundError en read_text) o success es false, la funcion hoy no tiene un 'return' explicito al final y cae en None implicito, que es el placeholder minimo que no rompe el test del caso 8 ni anticipa logica de los casos 9/10 (se enduran con sus propios tests rojos en su turno)."
         },
         {
           "id": 9,

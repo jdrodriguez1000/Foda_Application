@@ -8,6 +8,8 @@ Vive fuera de core/ porque core no debe conocer flujos concretos (DS-ORQ-1).
 FLOWS es un registro literal explicito (NC-2: sin descubrimiento dinamico).
 """
 
+import json
+
 from foda.core.context import ClientContext
 from foda.core.flow import Flow
 from foda.flows.f020_onboarding.onboarding import Onboarding
@@ -39,4 +41,10 @@ def evaluate_predecessor_gate(flow_name: str, ctx: ClientContext) -> str | None:
     """Evalua el gate de predecesor de flow_name (DS-PROF-2). Si flow_name no
     tiene entrada en PREDECESSORS, el gate es no-op y devuelve None."""
     if flow_name not in PREDECESSORS:
+        return None
+
+    predecessor_name = PREDECESSORS[flow_name]
+    report_path = resolve_flow(predecessor_name).produces[0].path(ctx)
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    if report["success"] is True:
         return None
