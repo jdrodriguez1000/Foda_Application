@@ -19,6 +19,10 @@ invalido) / FileExistsError (duplicado) a stderr + codigo 1.
 construye el ClientContext del cliente existente y despacha a flow.run(ctx),
 traduciendo cada fallo (flujo desconocido, cliente inexistente,
 FlowContractError) a stderr + codigo 1 antes de escribir salida alguna.
+El exit code refleja el resultado del flujo (T-035, ADR D-080 punto 4): 0
+solo si el FlowResult tiene success=True; si success=False (camino blando de
+inconsistencia de datos, sin excepcion) sale 1 con un mensaje que NO afirma
+"completado", para no ocultar el fallo a scripts/CI (L-053).
 
 `status <name>` (DS-ORQ-3): construye el ClientContext y lista, por cada
 flujo registrado en FLOWS, sus artefactos requires/produces con un marcador
@@ -144,7 +148,8 @@ def _dispatch_run(args: argparse.Namespace, clients_root: Path) -> int:
     """Despacha `foda run <cliente> --flow <flujo>` (DS-ORQ-4): resuelve el
     flujo (puro, sin disco), construye el ClientContext (lectura del cliente
     existente) y ejecuta flow.run(ctx), traduciendo cada fallo a stderr +
-    codigo 1 antes de escribir salida alguna."""
+    codigo 1 antes de escribir salida alguna. Tras un flow.run sin excepcion,
+    el exit code refleja result.success (T-035): 0 si True, 1 si False."""
     try:
         flow = resolve_flow(args.flow)
     except ValueError as exc:
@@ -162,6 +167,17 @@ def _dispatch_run(args: argparse.Namespace, clients_root: Path) -> int:
         return 1
 
     outputs = ", ".join(str(path) for path in result.outputs)
+    if not result.success:
+        # T-035 (ADR D-080 punto 4): un flujo que termina sin excepcion pero con
+        # success=False (camino blando de inconsistencia de datos) no es un exito;
+        # el exit code debe reflejarlo (1) para no ocultar el fallo a scripts/CI
+        # que solo chequean el codigo de salida (L-053).
+        print(
+            f"foda: flujo {args.flow!r} finalizo SIN exito para el cliente "
+            f"{args.name!r} (revise el reporte del flujo): {outputs}"
+        )
+        return 1
+
     print(f"foda: flujo {args.flow!r} completado para el cliente {args.name!r}: {outputs}")
     return 0
 

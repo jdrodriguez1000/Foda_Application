@@ -276,6 +276,31 @@ def test_run_invoca_flow_run_una_sola_vez_con_ctx_cuyo_name_es_abc(
     assert calls[0].name == "ABC"
 
 
+def test_run_flujo_con_success_false_devuelve_1_sin_reportar_completado(
+    proyecto: Path, monkeypatch, capsys
+):
+    """T-035 (ADR D-080 punto 4): cuando el flujo termina con un FlowResult
+    de success=False (camino blando de inconsistencia de datos, sin
+    FlowContractError), main(["run",...]) debe devolver 1, no 0. Hoy
+    _dispatch_run devuelve 0 fijo tras un flow.run sin excepcion, ocultando el
+    fallo a scripts/CI que solo chequean el exit code (L-053). Se espia
+    Onboarding.run para devolver success=False de forma determinista (sin
+    depender de sembrar datos inconsistentes); la salida no debe afirmar que
+    el flujo se 'completado' cuando no tuvo exito."""
+    _seed_cliente_abc(proyecto, con_contrato=False)
+
+    def fake_run(self, ctx):
+        return FlowResult(success=False, outputs=[])
+
+    monkeypatch.setattr(Onboarding, "run", fake_run)
+
+    result = main(["run", "ABC", "--flow", "onboarding"])
+
+    assert result == 1
+    captured = capsys.readouterr()
+    assert "completado" not in captured.out
+
+
 def test_run_cliente_inexistente_devuelve_1_stderr_nombra_cliente_sin_traceback_ni_artefacto(
     proyecto: Path, capsys
 ):
