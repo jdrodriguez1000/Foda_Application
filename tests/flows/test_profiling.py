@@ -299,6 +299,107 @@ def test_profiling_report_health_files_declared_coincide_con_summary_files_decla
     assert reporte["health"]["files_declared"] == 2
 
 
+def _build_ctx_con_ingestion_report_mixto(tmp_path: Path) -> ClientContext:
+    """stab_1, DS-PRF-3: ClientContext bajo tmp_path con un
+    ingestion_report.json de fixture MIXTA (declara 4 archivos, ver spec.md
+    "Casos Limite y Errores", fila "Camino feliz parcial"):
+    summary.files_declared==4, datasets[0].files con 2 archivos SANOS
+    (status=="ingested" e inconsistencies==[]) y 2 archivos NO sanos: uno con
+    status!="ingested" ("rejected", inconsistencies==[]) y otro con
+    status=="ingested" pero inconsistencies NO vacia. Conteo esperado
+    (DS-PRF-3): files_healthy==2, files_with_problems==2. Sigue el esquema
+    DS-ING-2/DS-ING-9 de ingestion_report.json
+    (600_features/ingestion/tracer_bullet/spec.md), calcado del estilo de
+    _build_ctx_con_ingestion_report_todos_sanos."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    archivos = [
+        {
+            "name": "sano_1.csv",
+            "status": "ingested",
+            "rows": 10,
+            "columns": 3,
+            "separator": ",",
+            "bronze_path": "data/bronze/sano_1.csv",
+            "inconsistencies": [],
+        },
+        {
+            "name": "sano_2.csv",
+            "status": "ingested",
+            "rows": 8,
+            "columns": 3,
+            "separator": ",",
+            "bronze_path": "data/bronze/sano_2.csv",
+            "inconsistencies": [],
+        },
+        {
+            "name": "rechazado.csv",
+            "status": "rejected",
+            "rows": 0,
+            "columns": 0,
+            "separator": ",",
+            "bronze_path": "data/bronze/rechazado.csv",
+            "inconsistencies": [],
+        },
+        {
+            "name": "con_columna_faltante.csv",
+            "status": "ingested",
+            "rows": 5,
+            "columns": 2,
+            "separator": ",",
+            "bronze_path": "data/bronze/con_columna_faltante.csv",
+            "inconsistencies": [{"type": "missing_column", "detail": "falta col x"}],
+        },
+    ]
+
+    ingestion_report = {
+        "schema_version": "0.1",
+        "client": "ABC",
+        "flow": "ingestion",
+        "success": True,
+        "summary": {"files_declared": 4},
+        "datasets": [{"files": archivos}],
+        "unexpected_files": [],
+        "inconsistencies": [{"type": "missing_column", "detail": "falta col x"}],
+    }
+
+    report_path = ctx.outputs_dir / "030_ingestion/ingestion_report.json"
+    report_path.parent.mkdir(parents=True)
+    report_path.write_text(
+        json.dumps(ingestion_report, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    return ctx
+
+
+def test_profiling_report_health_files_healthy_coincide_con_conteo_de_archivos_sanos_fixture_mixta(
+    tmp_path: Path,
+) -> None:
+    """Caso 4 (CA-07, DS-PRF-3, TSK-06/TSK-08): tras Profiling().run(ctx) con
+    un ingestion_report.json de fixture MIXTA (ver
+    _build_ctx_con_ingestion_report_mixto: 4 archivos declarados, 2 sanos
+    -status=="ingested" e inconsistencies==[]-, 1 con status=="rejected" y 1
+    con inconsistencies no vacia), profiling_report.json['health']
+    ['files_healthy'] es EXACTAMENTE 2 (el conteo real de archivos sanos), no
+    un placeholder fijo.
+
+    Hoy (antes de tdd_coder) Profiling.execute() hardcodea
+    health.files_healthy en 0 (placeholder minimo del caso 2, ver
+    profiling.py), por lo que esta aserción falla en rojo limpio (0 != 2, un
+    valor distinto de 0 y del total declarado), no por un error accidental de
+    import/sintaxis."""
+    ctx = _build_ctx_con_ingestion_report_mixto(tmp_path)
+
+    Profiling().run(ctx)
+
+    ruta_reporte = ctx.outputs_dir / "040_profiling/profiling_report.json"
+    reporte = json.loads(ruta_reporte.read_text(encoding="utf-8"))
+
+    assert reporte["health"]["files_healthy"] == 2
+
+
 def test_profiling_validate_sin_ingestion_report_lanza_flowcontracterror_nombrandolo_y_no_escribe_profiling_report(
     tmp_path: Path,
 ) -> None:
