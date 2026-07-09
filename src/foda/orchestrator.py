@@ -1,11 +1,11 @@
 """Orquestador de flujos (feature flow_orchestrator, banda tracer_bullet).
 
 Fuente: 600_features/flow_orchestrator/tracer_bullet/spec.md (DS-ORQ-1, DS-ORQ-2)
-y plan.md (TSK-01). Bucle TDD: caso 1 (resolve_flow("onboarding") devuelve una
-instancia de Onboarding) en verde.
+y 600_features/profiling/tracer_bullet/spec.md (DS-PROF-2, DS-PROF-4).
 
 Vive fuera de core/ porque core no debe conocer flujos concretos (DS-ORQ-1).
-FLOWS es un registro literal explicito (NC-2: sin descubrimiento dinamico).
+FLOWS y PREDECESSORS son registros literales explicitos (NC-2: sin
+descubrimiento dinamico).
 """
 
 import json
@@ -39,7 +39,11 @@ def resolve_flow(name: str) -> Flow:
 
 def evaluate_predecessor_gate(flow_name: str, ctx: ClientContext) -> str | None:
     """Evalua el gate de predecesor de flow_name (DS-PROF-2). Si flow_name no
-    tiene entrada en PREDECESSORS, el gate es no-op y devuelve None."""
+    tiene entrada en PREDECESSORS, el gate es no-op y devuelve None.
+
+    Si flow_name tiene predecesor registrado, resuelve la ruta de su reporte
+    con resolve_flow(<predecesor>).produces[0].path(ctx) (DS-PROF-4) y, si el
+    reporte existe con success:true, el gate esta satisfecho y devuelve None."""
     if flow_name not in PREDECESSORS:
         return None
 
