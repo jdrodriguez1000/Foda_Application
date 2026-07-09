@@ -41,7 +41,7 @@ from pathlib import Path
 from foda.core.context import ClientContext
 from foda.core.flow import FlowContractError
 from foda.core.scaffold import create_client
-from foda.orchestrator import FLOWS, resolve_flow
+from foda.orchestrator import FLOWS, evaluate_predecessor_gate, resolve_flow
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -57,6 +57,7 @@ def _build_parser() -> argparse.ArgumentParser:
     run_parser = subparsers.add_parser("run")
     run_parser.add_argument("name")
     run_parser.add_argument("--flow", required=True)
+    run_parser.add_argument("--force", action="store_true")
 
     status_parser = subparsers.add_parser("status")
     status_parser.add_argument("name")
@@ -158,6 +159,11 @@ def _dispatch_run(args: argparse.Namespace, clients_root: Path) -> int:
 
     ctx = _build_client_context(args.name, clients_root)
     if ctx is None:
+        return 1
+
+    gate_message = evaluate_predecessor_gate(args.flow, ctx)
+    if gate_message is not None and not args.force:
+        print(f"foda: {gate_message}", file=sys.stderr)
         return 1
 
     try:

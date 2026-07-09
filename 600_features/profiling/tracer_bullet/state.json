@@ -2,7 +2,7 @@
   "feature": "profiling",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "tdd_tester",
+  "current_stage": "tdd_coder",
   "stages": {
     "feature_definer": {
       "status": "done",
@@ -171,9 +171,15 @@
           "id": 12,
           "desc": "CLI: success:false sin --force -> exit 1, stderr nombra ingestion+motivo, y no se escribe ningun artefacto bajo 040_profiling/",
           "ca": "CA-07,CA-08",
-          "status": "red",
+          "status": "green",
           "test": "tests/cli/test_profiling_gate_cli.py::test_run_profiling_con_ingestion_report_success_false_sin_force_devuelve_1_y_no_escribe_nada",
-          "red_evidence": "python -m pytest tests/cli/test_profiling_gate_cli.py::test_run_profiling_con_ingestion_report_success_false_sin_force_devuelve_1_y_no_escribe_nada -q -> 1 failed. AssertionError: assert 0 == 1 (result de main([...]) es 0, no 1). Rojo genuino: _dispatch_run (src/foda/cli.py) todavia NO llama a evaluate_predecessor_gate (TSK-20/TSK-21 pendientes); con ingestion_report.json (success:false) presente, Profiling.validate() heredado solo exige que el artefacto exista (existe, aunque con success:false), asi que flow.run(ctx) hoy completa con exito (stdout: \"foda: flujo 'profiling' completado...\") y SI escribe profiling_report.json, en vez de bloquear con exit 1 antes de flow.run. No es ImportError/typo: evaluate_predecessor_gate ya existe y esta en verde desde el caso 9 (orchestrator.py); falta el wiring en la CLI. python -m pytest -q (suite completa) -> 186 passed, 1 failed (el nuevo rojo), sin regresiones."
+          "red_evidence": "python -m pytest tests/cli/test_profiling_gate_cli.py::test_run_profiling_con_ingestion_report_success_false_sin_force_devuelve_1_y_no_escribe_nada -q -> 1 failed. AssertionError: assert 0 == 1 (result de main([...]) es 0, no 1). Rojo genuino: _dispatch_run (src/foda/cli.py) todavia NO llama a evaluate_predecessor_gate (TSK-20/TSK-21 pendientes); con ingestion_report.json (success:false) presente, Profiling.validate() heredado solo exige que el artefacto exista (existe, aunque con success:false), asi que flow.run(ctx) hoy completa con exito (stdout: \"foda: flujo 'profiling' completado...\") y SI escribe profiling_report.json, en vez de bloquear con exit 1 antes de flow.run. No es ImportError/typo: evaluate_predecessor_gate ya existe y esta en verde desde el caso 9 (orchestrator.py); falta el wiring en la CLI. python -m pytest -q (suite completa) -> 186 passed, 1 failed (el nuevo rojo), sin regresiones.",
+          "green_files": [
+            "src/foda/cli.py"
+          ],
+          "green_evidence": "python -m pytest tests/cli/test_profiling_gate_cli.py::test_run_profiling_con_ingestion_report_success_false_sin_force_devuelve_1_y_no_escribe_nada -q -> 1 passed (primer intento, sin reintentos); python -m pytest -q (suite completa) -> 187 passed, sin regresiones.",
+          "coder_note": "TSK-22 + TSK-23 (minimo suficiente, NC-2/NC-3): (1) se agrego run_parser.add_argument(\"--force\", action=\"store_true\") (default False) a la construccion del parser en _build_parser; (2) en _dispatch_run, tras construir ctx y antes de flow.run(ctx), se agrego 'gate_message = evaluate_predecessor_gate(args.flow, ctx); if gate_message is not None and not args.force: print(f\"foda: {gate_message}\", file=sys.stderr); return 1'. Se importo evaluate_predecessor_gate desde foda.orchestrator (junto a FLOWS, resolve_flow ya existentes). Solo se implemento la rama 'mensaje + sin --force -> stderr + return 1'; la rama '--force override -> advertencia + continua' es el caso 13 y no se implemento (NC-2: minimo suficiente, sin anticipar comportamiento no cubierto por un test). Con gate_message is None (caso 11, ya en verde) el flujo sigue igual a flow.run como antes."
+        },
         {
           "id": 13,
           "desc": "CLI: --force con success:false -> exit 0, profiling_report.json presente, y advertencia de gate en stderr",
