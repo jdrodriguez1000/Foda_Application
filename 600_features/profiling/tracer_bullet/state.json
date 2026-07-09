@@ -2,7 +2,7 @@
   "feature": "profiling",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "tdd_coder",
+  "current_stage": "tdd_tester",
   "stages": {
     "feature_definer": {
       "status": "done",
@@ -22,7 +22,7 @@
     },
     "tdd": {
       "status": "in_progress",
-      "next_case": 11,
+      "next_case": 12,
       "cases": [
         {
           "id": 1,
@@ -158,13 +158,14 @@
           "id": 11,
           "desc": "CLI: foda run <c> --flow profiling con success:true y sin --force -> exit 0, stdout de completado, profiling_report.json presente",
           "ca": "CA-06",
-          "status": "green",
+          "status": "done",
           "test": "tests/cli/test_profiling_gate_cli.py::test_run_profiling_con_ingestion_report_success_true_sin_force_devuelve_0_y_escribe_reporte",
           "note": "already_green (mismo patron que los casos 3/4/5): python -m pytest tests/cli/test_profiling_gate_cli.py -q -> 1 passed de inmediato, sin escribir codigo de produccion nuevo. No es un rojo invalido por error accidental (no ImportError/typo): _dispatch_run (src/foda/cli.py) TODAVIA no llama a evaluate_predecessor_gate (TSK-20 pendiente), pero para ESTE escenario especifico (ingestion_report.json con success:true, sin --force) el comportamiento observable es identico este el gate wireado o no -- el gate, si estuviera wireado, devolveria None (caso 8, orchestrator.py, ya en verde) y dejaria pasar a flow.run(ctx) igual que el codigo actual (que hoy invoca flow.run(ctx) sin consultar el gate en absoluto). 'profiling' ya esta registrado en FLOWS (caso 6) y Profiling.validate() (heredado de Flow) solo exige que ingestion_report.json exista -- lo cual el test fabrica -- por lo que flow.run(ctx) tiene exito, imprime el mensaje de completado ('foda: flujo 'profiling' completado para el cliente 'ABC': <ruta>', ya generico para cualquier flujo desde flow_orchestrator) y escribe profiling_report.json (execute/write_outputs, casos 3/4, ya en verde). TSK-20 (wiring del gate en _dispatch_run) sigue siendo trabajo real y necesario: se hara genuinamente rojo/verde en los casos 12 (success:false sin --force debe bloquear con exit 1, hoy correria igual con exit 0 sin el gate) y sucesivos, que si distinguen el comportamiento gate-wireado del no-wireado. python -m pytest -q (suite completa) -> 186 passed, sin regresiones.",
           "red_evidence": "python -m pytest tests/cli/test_profiling_gate_cli.py::test_run_profiling_con_ingestion_report_success_true_sin_force_devuelve_0_y_escribe_reporte -q -> 1 passed (no hay rojo: ver nota 'already_green'). python -m pytest -q (suite completa) -> 186 passed, sin regresiones tras agregar el test.",
           "green_files": [],
           "green_evidence": "tdd_coder confirmatorio (no-op de codigo, mismo patron que casos 3/4/5): python -m pytest tests/cli/test_profiling_gate_cli.py::test_run_profiling_con_ingestion_report_success_true_sin_force_devuelve_0_y_escribe_reporte -q -> 1 passed; python -m pytest -q (suite completa) -> 186 passed, sin regresiones. No se toco src/foda/ (NC-3): el comportamiento del caso 11 ya esta cubierto por _dispatch_run (src/foda/cli.py, sin gate wireado aun) + FLOWS['profiling'] (caso 6) + Profiling.validate/execute/write_outputs heredados (casos 1-5), que para este escenario especifico (success:true, sin --force) coinciden exactamente con el resultado que produciria el gate ya wireado (evaluate_predecessor_gate devuelve None, caso 8). El wiring real del gate en _dispatch_run (TSK-20) queda pendiente para el caso 12, donde si se hace rojo/verde genuino.",
-          "coder_note": "tdd_coder confirmatorio (no-op de codigo): se revalido el test del caso 11 -> 1 passed, y la suite completa -> 186 passed, sin regresiones. No se creo ni modifico ningun archivo en src/foda/. Caso listo para tdd_refactor (revision confirmatoria, sin cambios esperados, igual que casos 3/4/5)."
+          "coder_note": "tdd_coder confirmatorio (no-op de codigo): se revalido el test del caso 11 -> 1 passed, y la suite completa -> 186 passed, sin regresiones. No se creo ni modifico ningun archivo en src/foda/. Caso listo para tdd_refactor (revision confirmatoria, sin cambios esperados, igual que casos 3/4/5).",
+          "refactor": "no-op de codigo de produccion (igual que casos 3/4/5): no hubo cambios en src/foda/ atribuibles a este caso (el verde vino integramente de _dispatch_run + FLOWS['profiling'] + Profiling.validate/execute/write_outputs, ya revisados en sus propios turnos). Se reviso especificamente el diseno del test/helpers nuevos de este caso (tests/cli/test_profiling_gate_cli.py, unico artefacto nuevo del caso 11) buscando deuda real: (1) los helpers _seed_cliente_abc y la fixture proyecto son estructuralmente identicos en firma/proposito a sus homonimos en tests/cli/test_flow_orchestrator_cli.py, pero el docstring del modulo (lineas 1-12) ya documenta explicitamente esa duplicacion como decision deliberada de aislamiento (independencia de fixtures entre suites de tests/cli/, sin conftest.py compartido); introducir un conftest.py para deduplicarlos es un cambio de alcance mayor (afecta ambas suites, no solo el caso 11) y excede lo quirurgico de este refactor (NC-2/NC-3) -- se deja constancia como deuda conocida y aceptada, no oculta; (2) el nuevo helper _fabricar_ingestion_report tiene nombre claro, tipado completo (Path, bool con kwarg-only success, -> Path) y usa el mismo patron de serializacion determinista (sort_keys, indent=2, newline) que Profiling.write_outputs y los tests de test_orchestrator.py de los casos 8-10 -- consistente con el resto de la suite, sin deuda; (3) las aserciones del test (result==0, contenido de stdout, existencia del artefacto en disco) son especificas y no triviales, sin duplicacion interna. No se modifico ningun archivo (ni tests/ ni src/foda/), conforme a NC-3 (no se toca lo que no requiere cambio). python -m pytest -q -> 186 passed, sin regresiones tras revalidar la suite completa."
         },
         {
           "id": 12,
