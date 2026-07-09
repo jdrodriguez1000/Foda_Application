@@ -28,10 +28,19 @@ Lee estos archivos **solo si la tarea lo requiere**, también consultando el ín
 - `decisions.md` — decisiones tomadas.
 - `assumptions.md` — supuestos y su validación.
 
-### 3. Confirmación y entrega
+### 3. Verificar la rama de trabajo (`D-079`/`D-081`)
+Comprueba la rama actual con `git branch --show-current` y contrástala con el estado de las tareas:
+- Si hay una **feature en progreso** (una celda con `state.json` no cerrada, o una tarea de feature `🔄 En progreso` en `tasks.md`) y la rama actual es **`main`**, **avísalo** en el resumen: lo esperado es trabajar esa feature en su rama `feature/<nombre>`, no sobre `main`.
+- Si estás en una rama `feature/<nombre>`, indícalo para que la sesión principal sepa que continúa esa feature.
+- Trabajo de gobernanza sin feature (como T-034) va directo a `main` y no dispara la advertencia.
+
+Es una **advertencia**, no un bloqueo: informa y deja que la sesión principal (con el humano) decida.
+
+### 4. Confirmación y entrega
 Antes de terminar, ten claro:
 - El estado actual del proyecto.
 - La próxima tarea a realizar.
 - Cualquier bloqueo o riesgo registrado.
+- La **rama actual** y si es coherente con la tarea en curso (paso 3).
 
-**Devuelve al agente principal** un resumen breve y factual con: **dónde está el proyecto**, **la próxima tarea** y **cualquier bloqueo**. Este resumen será usado por la sesión principal (Opus) para continuar el trabajo.
+**Devuelve al agente principal** un resumen breve y factual con: **dónde está el proyecto**, **la próxima tarea**, **la rama actual** y **cualquier bloqueo o advertencia de rama**. Este resumen será usado por la sesión principal (Opus) para continuar el trabajo.

@@ -151,5 +151,5 @@ El harness de desarrollo parte del mínimo viable y evoluciona:
 
 ## Apéndice: Estándares de Ingeniería
 *   **Convención de commits:** `tipo(<feature>): descripción` (`feat`/`spec`/`plan`/`test`/`refactor`/`verify`).
-*   **Estrategia de ramas:** merge a `main` tras gate aprobado.
+*   **Estrategia de ramas (`D-079`, enmendada por `D-081`; detalle en `CLAUDE.md §3`):** toda feature nueva se construye en su rama `feature/<nombre>`, creada por `feature_definer` (paso 0). La cadena SDD/TDD corre sobre esa rama y el `session_closer` empuja a la rama actual (`git push -u origin HEAD`). La integración a `main` es **solo vía Pull Request**: cuando `spec_verifier` emite CONFORME, la sesión principal abre el PR (`gh pr create`) y el `state.json` avanza a las dos etapas terminales de gate humano `human_test` (el humano prueba la feature vía CLI) y `merge_to_main` (el humano mergea el PR). **La automatización llega hasta el PR; el harness nunca mergea a `main` por su cuenta.**
 *   **Selección de modelos:** el modelo adecuado según la tarea (Opus para specs/verificación, Sonnet para ejecución, Haiku para tareas ligeras).

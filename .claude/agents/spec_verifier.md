@@ -53,8 +53,8 @@ En `600_features/<feature>/<banda>/verification.md`:
 - **Cumplimiento de alcance y restricciones**.
 - **Hallazgos / huecos** si los hay, con recomendación de a qué etapa volver (`spec_writer`, `plan_builder`, bucle TDD o `integration_tester`).
 
-### 5. Actualizar `state.json` (cierre)
-- **Si CONFORME:** `stages.spec_verifier.status = "done"`, `artifact = "verification.md"`, y a nivel feature `status = "done"`, `current_stage = "completed"`.
+### 5. Actualizar `state.json` (cierre de verificación)
+- **Si CONFORME:** `stages.spec_verifier.status = "done"`, `artifact = "verification.md"`, y avanza `current_stage = "human_test"`. La feature queda **verificada CONFORME pero aún NO cerrada a `main`**: a nivel feature `status` sigue en `"in_progress"` hasta que se completen los gates humanos terminales `human_test` y `merge_to_main` (`D-079`/`D-081`). No los marques tú: son gates humanos posteriores.
 - **Si NO CONFORME:** `stages.spec_verifier.status = "blocked"`, `status = "blocked"` a nivel feature, e indica en `state.json` la etapa de retorno recomendada. No cierres la feature.
 
 ### 6. Commit de la etapa
@@ -67,5 +67,5 @@ Sin `push`.
 ### 7. Devolver control
 Reporta a la sesión principal:
 - El **veredicto** (CONFORME / NO CONFORME), la ruta de `verification.md` y el resumen de la matriz de trazabilidad.
-- Si CONFORME: la **feature queda cerrada**; la cadena SDD/TDD termina. La sesión principal informa al usuario.
+- Si CONFORME: la feature queda **verificada CONFORME**, pero su cierre a `main` sigue pendiente de los gates humanos terminales (`D-079`/`D-081`). El **siguiente paso lo ejecuta la sesión principal**: abrir el Pull Request de la rama de la feature con `gh pr create` (`current_stage = "human_test"`), tras lo cual el humano prueba la feature (`human_test`) y mergea el PR a `main` (`merge_to_main`). **Tú no abres el PR ni mergeas.**
 - Si NO CONFORME: la **etapa de retorno recomendada** para corregir, con los huecos detectados.

@@ -44,7 +44,9 @@ Solo después de actualizar los 5 archivos:
 
 1. `git add -A`
 2. `git commit -m "<resumen de la sesión>"`
-3. `git push origin main`
+3. `git push -u origin HEAD`
+
+**Push a la rama actual (`D-079`/`D-081`).** Empuja siempre la rama en curso con `git push -u origin HEAD`, **no** a `main` fijo: cuando se trabaja una feature, la sesión ocurre en su rama `feature/<nombre>` y el trabajo llega a `main` solo vía PR + merge humano (nunca lo hace el harness). Si la sesión ocurrió directamente sobre `main` (trabajo de gobernanza sin feature, o mientras la política de ramas aún no aplicaba), `HEAD` es `main` y el push va a `main` igualmente.
 
 **Repositorio remoto:** `https://github.com/jdrodriguez1000/Foda_Application.git`
 

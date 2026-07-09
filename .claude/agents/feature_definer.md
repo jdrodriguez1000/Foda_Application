@@ -32,6 +32,13 @@ Antes de escribir, alinéate con:
 
 ## Pasos
 
+### 0. Crear la rama de la feature
+Antes de escribir nada, crea y cámbiate a la rama de la feature (`D-079`, enmendada por `D-081`): toda feature nueva se construye en su propia rama y llega a `main` solo vía PR aprobado por un humano.
+```
+git checkout -b feature/<feature>
+```
+Si la rama ya existe (retomas una feature interrumpida), cámbiate a ella con `git checkout feature/<feature>` en vez de crearla. El resto de la cadena SDD/TDD corre sobre esta rama; el `push` lo hace el cierre de sesión (`git push -u origin HEAD`) y el merge a `main` es un gate humano posterior (nunca lo hace el harness).
+
 ### 1. Preparar la carpeta de la feature
 Los artefactos se organizan en **dos niveles** (`D-030`):
 - **Nivel feature:** `600_features/<feature>/feature_contract.md` (por encima de las bandas).
@@ -68,10 +75,14 @@ Crea `600_features/<feature>/<banda>/state.json` como **máquina de estado** de 
     "plan_builder":      { "status": "pending",  "artifact": "plan.md",      "gate": "human" },
     "tdd":               { "status": "pending",  "cases": [] },
     "integration_tester":{ "status": "pending" },
-    "spec_verifier":     { "status": "pending",  "artifact": "verification.md" }
+    "spec_verifier":     { "status": "pending",  "artifact": "verification.md" },
+    "human_test":        { "status": "pending",  "gate": "human" },
+    "merge_to_main":     { "status": "pending",  "gate": "human" }
   }
 }
 ```
+
+Las dos etapas terminales `human_test` y `merge_to_main` son **gates humanos posteriores a `spec_verifier`** (`D-079`): tras el veredicto CONFORME, la sesión principal abre el PR, el humano prueba la feature (`human_test`) y el humano mergea a `main` (`merge_to_main`).
 
 - `status` por etapa: `pending` | `in_progress` | `done` | `blocked`.
 - Deja `feature_definer.status = "done"` y `current_stage = "spec_writer"` como siguiente etapa a ejecutar.

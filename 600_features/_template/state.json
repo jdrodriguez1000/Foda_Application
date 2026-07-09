@@ -9,6 +9,8 @@
     "plan_builder":       { "status": "pending", "artifact": "plan.md",  "gate": "human", "awaiting_approval": false },
     "tdd":                { "status": "pending", "cases": [] },
     "integration_tester": { "status": "pending" },
-    "spec_verifier":      { "status": "pending", "artifact": "verification.md" }
+    "spec_verifier":      { "status": "pending", "artifact": "verification.md" },
+    "human_test":         { "status": "pending", "gate": "human" },
+    "merge_to_main":      { "status": "pending", "gate": "human" }
   }
 }

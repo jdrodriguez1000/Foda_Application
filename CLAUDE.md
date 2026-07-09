@@ -8,6 +8,7 @@ Este archivo define los protocolos obligatorios que todo agente debe seguir al t
 0. [Principios y Normas Vinculantes](#0-principios-y-normas-vinculantes)
 1. [Protocolo de Inicio de Sesión](#1-protocolo-de-inicio-de-sesión)
 2. [Protocolo de Cierre de Sesión](#2-protocolo-de-cierre-de-sesión)
+3. [Protocolo de Ramas y Merge por PR](#3-protocolo-de-ramas-y-merge-por-pr)
 
 ---
 
@@ -39,3 +40,17 @@ Al finalizar **cada** sesión —y en particular cuando el usuario diga **"cerre
 - El subagente actualiza los **5 archivos** de `800_persistence/` y ejecuta el **commit y push** a Git como último paso.
 - El detalle paso a paso del protocolo vive en `.claude/agents/session_closer.md`, que es la **única fuente de verdad**.
 - **Repositorio remoto:** `https://github.com/jdrodriguez1000/Foda_Application.git` (rama por defecto `main`).
+
+---
+
+## 3. Protocolo de Ramas y Merge por PR
+
+Política de gobernanza de integración a `main` (`D-079`, enmendada por `D-081`). Todo el trabajo de una feature ocurre en su propia rama y llega a `main` **solo** vía Pull Request aprobado por un humano.
+
+- **Rama por feature.** Toda feature nueva se trabaja en la rama `feature/<nombre>` (p. ej. `feature/ingestion`). La crea `feature_definer` como **paso 0** de la cadena SDD/TDD; el resto de la cadena corre sobre esa rama.
+- **Push a la rama actual.** El `session_closer` empuja a la rama en curso (`git push -u origin HEAD`), no a `main`.
+- **La automatización llega hasta el PR, nunca mergea (`D-081`).** Cuando `spec_verifier` emite **CONFORME**, la **sesión principal** abre el Pull Request con `gh pr create` (la rama y sus commits ya existen). El `state.json` avanza a la etapa `human_test`.
+- **Gates humanos terminales.** Tras el PR hay dos etapas de gate humano: `human_test` (el humano prueba la feature de punta a punta vía la CLI) y `merge_to_main` (el humano mergea el PR a `main`, p. ej. `gh pr merge --merge --delete-branch`). **El harness nunca mergea por su cuenta.**
+- **Flujo terminal:** `spec_verifier` CONFORME → sesión principal abre PR → `human_test` (humano) → `merge_to_main` (humano) → feature cerrada en `main`.
+
+> **Nota de transición (`D-081`).** La propia tarea que implementó esta política (T-034) se aplicó **directo sobre `main`**, sin rama `feature/`. A partir de su implementación, toda feature nueva sigue el flujo de ramas descrito aquí.
