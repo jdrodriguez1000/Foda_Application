@@ -2,7 +2,7 @@
   "feature": "profiling",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "tdd_coder",
+  "current_stage": "tdd_tester",
   "stages": {
     "feature_definer": {
       "status": "done",
@@ -22,7 +22,7 @@
     },
     "tdd": {
       "status": "in_progress",
-      "next_case": 13,
+      "next_case": 14,
       "cases": [
         {
           "id": 1,
@@ -185,15 +185,15 @@
           "id": 13,
           "desc": "CLI: --force con success:false -> exit 0, profiling_report.json presente, y advertencia de gate en stderr",
           "ca": "CA-09,CA-10",
-          "status": "red",
+          "status": "done",
           "test": "tests/cli/test_profiling_gate_cli.py::test_run_profiling_con_ingestion_report_success_false_con_force_devuelve_0_escribe_reporte_y_advierte",
           "red_evidence": "python -m pytest tests/cli/test_profiling_gate_cli.py::test_run_profiling_con_ingestion_report_success_false_con_force_devuelve_0_escribe_reporte_y_advierte -q -> 1 failed. AssertionError: assert 0 == 1 (len(stderr_lines) == 1), con where 0 = len([]) (stderr vacio). Rojo genuino: _dispatch_run (src/foda/cli.py) ya evalua el gate SIEMPRE (DS-PROF-1, wiring del caso 12) y con --force el 'if gate_message is not None and not args.force' es False, asi que el despacho SI continua a flow.run(ctx) -- exit 0 y profiling_report.json presente ya pasan hoy (las 2 primeras aserciones no fallan). Pero la rama --force de TSK-25 (advertencia a stderr) todavia no esta implementada: --force hoy solo evita el bloqueo, sin emitir advertencia, por lo que stderr queda vacio y la asercion de la advertencia (una linea, nombrando 'ingestion' y 'force') falla. No es ImportError/typo: evaluate_predecessor_gate ya esta completo y en verde desde el caso 9 (orchestrator.py); falta unicamente la rama de advertencia en la CLI. python -m pytest -q (suite completa) -> 187 passed, 1 failed (el nuevo rojo), sin regresiones.",
-          "status": "green",
           "green_files": [
             "src/foda/cli.py"
           ],
           "green_evidence": "python -m pytest tests/cli/test_profiling_gate_cli.py::test_run_profiling_con_ingestion_report_success_false_con_force_devuelve_0_escribe_reporte_y_advierte -q -> 1 passed (primer intento, sin reintentos); python -m pytest -q (suite completa) -> 188 passed, sin regresiones.",
-          "coder_note": "TSK-25 (minimo suficiente, NC-2/NC-3): dentro del bloque del gate en _dispatch_run, se reestructuro 'if gate_message is not None and not args.force: ...; return 1' en 'if gate_message is not None: if not args.force: print+return 1; else: print advertencia (sin return, continua a flow.run)'. La advertencia reutiliza gate_message (que ya nombra al predecesor 'ingestion', evaluate_predecessor_gate, caso 9) prefijandolo con 'foda: --force sobrepaso el gate del predecesor: ' -- una sola linea a stderr que menciona tanto 'ingestion' (via gate_message) como 'force' (via el prefijo), sin nuevo return (deja que el flujo caiga a flow.run(ctx) como antes). No se toco ninguna otra rama de _dispatch_run (bloqueo sin --force del caso 12, manejo de FlowContractError, exit code segun result.success) ni el docstring del modulo/funcion (queda como deuda para tdd_refactor, ya que documentaban la rama --force como 'aun no implementada')."
+          "coder_note": "TSK-25 (minimo suficiente, NC-2/NC-3): dentro del bloque del gate en _dispatch_run, se reestructuro 'if gate_message is not None and not args.force: ...; return 1' en 'if gate_message is not None: if not args.force: print+return 1; else: print advertencia (sin return, continua a flow.run)'. La advertencia reutiliza gate_message (que ya nombra al predecesor 'ingestion', evaluate_predecessor_gate, caso 9) prefijandolo con 'foda: --force sobrepaso el gate del predecesor: ' -- una sola linea a stderr que menciona tanto 'ingestion' (via gate_message) como 'force' (via el prefijo), sin nuevo return (deja que el flujo caiga a flow.run(ctx) como antes). No se toco ninguna otra rama de _dispatch_run (bloqueo sin --force del caso 12, manejo de FlowContractError, exit code segun result.success) ni el docstring del modulo/funcion (queda como deuda para tdd_refactor, ya que documentaban la rama --force como 'aun no implementada').",
+          "refactor": "diseno de conjunto del bloque del gate revisado ahora que sus 3 caminos estan completos (src/foda/cli.py::_dispatch_run): se reestructuro 'if gate_message is not None and not args.force: bloquea+return; print(advertencia)' (guard-clause con fallthrough implicito para la advertencia) a un if/else explicito anidado bajo una unica comprobacion de gate_message ('if gate_message is not None: if args.force: advertencia; else: bloquea+return'), evitando repetir la condicion 'gate_message is not None' dos veces y dejando ambos caminos (advertir-y-continuar vs bloquear-y-salir) visibles como ramas hermanas del mismo if, mas legible que el fallthrough previo. El comentario inline que preceda al bloque (linea ~183) tambien describia la advertencia como pendiente ('el caso siguiente del bucle TDD... debe advertir'); se actualizo para explicar el PORQUE de evaluar el gate siempre (incluso con --force), que sigue siendo valido y no depende del estado del bucle. Deuda de documentacion senalada por tdd_coder corregida (sin tocar comportamiento): el docstring de modulo (lineas 18-27) describia el bypass de --force sin mencionar la advertencia a stderr, y el docstring de _dispatch_run (lineas 158-172) todavia decia literalmente 'es el siguiente caso del bucle TDD y aun no esta implementada; hoy --force simplemente evita el bloqueo, sin emitir advertencia' (stale desde el refactor del caso 12); ambos se reescribieron para documentar el gate completo en sus 3 caminos (sin gate_message continua; con gate_message y sin --force bloquea; con gate_message y --force advierte y continua). Los dos mensajes a stderr del bloque ('foda: {gate_message}' para el bloqueo y 'foda: --force sobrepaso el gate del predecesor: {gate_message}' para la advertencia) ya eran claros, consistentes entre si (mismo prefijo 'foda:', ambos incluyen gate_message que nombra al predecesor) y distinguibles (el de advertencia menciona explicitamente '--force' y 'sobrepaso'); no requirieron cambio. Nombres (gate_message, sin ambiguedad con result) y tipado ya eran claros; no se toco ninguna otra rama de _dispatch_run (bloqueo del caso 12, manejo de FlowContractError, exit code segun result.success) ni tests/ (NC-3). python -m pytest -q -> 188 passed, sin regresiones tras revalidar la suite completa."
         },
         {
           "id": 14,

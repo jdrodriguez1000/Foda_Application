@@ -22,7 +22,9 @@ y, antes de invocar flow.run(ctx), evalua el gate de progresion entre flujos
 predecesor no tiene un reporte con success==true y no se paso --force, sale 1
 con un mensaje a stderr que nombra al predecesor y el motivo, sin invocar
 flow.run (por lo que no se escribe ningun artefacto del flujo solicitado); si
-se paso --force el gate se sobrepasa y el despacho continua a flow.run.
+se paso --force el gate se sobrepasa, se emite una advertencia a stderr que
+nombra al predecesor y el motivo del bloqueo sobrepasado, y el despacho
+continua a flow.run.
 Tras flow.run (con o sin --force), cada fallo (cliente inexistente,
 FlowContractError) se traduce a stderr + codigo 1 antes de escribir salida
 alguna. El exit code final refleja el resultado del flujo (T-035, ADR D-080
@@ -162,11 +164,12 @@ def _dispatch_run(args: argparse.Namespace, clients_root: Path) -> int:
     antes de escribir salida alguna. Tras un flow.run sin excepcion, el exit
     code refleja result.success (T-035): 0 si True, 1 si False.
 
-    Rama del gate implementada hasta ahora (caso 12, CA-07/CA-08): con
-    gate_message y sin --force, bloquea antes de flow.run. La rama
-    --force + gate_message (advertencia a stderr y continuar, CA-09/CA-10)
-    es el siguiente caso del bucle TDD y aun no esta implementada; hoy
-    --force simplemente evita el bloqueo, sin emitir advertencia."""
+    El gate queda completo en sus tres caminos (casos 12 y 13, CA-07..CA-10):
+    sin gate_message, continua a flow.run sin mas; con gate_message y sin
+    --force, bloquea (stderr + return 1) antes de flow.run; con gate_message
+    y --force, el bloqueo se sobrepasa -- se emite una advertencia a stderr
+    (nombrando al predecesor y el motivo) y el despacho continua a
+    flow.run."""
     try:
         flow = resolve_flow(args.flow)
     except ValueError as exc:
@@ -177,18 +180,19 @@ def _dispatch_run(args: argparse.Namespace, clients_root: Path) -> int:
     if ctx is None:
         return 1
 
-    # DS-PROF-1: el gate se evalua siempre (incluso con --force), porque el
-    # caso siguiente del bucle TDD (CA-09/CA-10) debe advertir a stderr
-    # cuando --force sobrepasa un gate que hubiera bloqueado.
+    # DS-PROF-1: el gate se evalua siempre (incluso con --force), para poder
+    # advertir a stderr cuando --force sobrepasa un gate que hubiera
+    # bloqueado (en vez de sobrepasarlo en silencio).
     gate_message = evaluate_predecessor_gate(args.flow, ctx)
     if gate_message is not None:
-        if not args.force:
+        if args.force:
+            print(
+                f"foda: --force sobrepaso el gate del predecesor: {gate_message}",
+                file=sys.stderr,
+            )
+        else:
             print(f"foda: {gate_message}", file=sys.stderr)
             return 1
-        print(
-            f"foda: --force sobrepaso el gate del predecesor: {gate_message}",
-            file=sys.stderr,
-        )
 
     try:
         result = flow.run(ctx)
