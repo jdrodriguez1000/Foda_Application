@@ -2,7 +2,7 @@
   "feature": "profiling",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "tdd_coder",
+  "current_stage": "tdd_tester",
   "stages": {
     "feature_definer": {
       "status": "done",
@@ -22,7 +22,7 @@
     },
     "tdd": {
       "status": "in_progress",
-      "next_case": 10,
+      "next_case": 11,
       "cases": [
         {
           "id": 1,
@@ -144,14 +144,15 @@
           "id": 10,
           "desc": "evaluate_predecessor_gate('profiling', ctx) devuelve un mensaje cuando ingestion_report.json esta ausente",
           "ca": "CA-13",
-          "status": "green",
+          "status": "done",
           "test": "tests/test_orchestrator.py::test_evaluate_predecessor_gate_profiling_devuelve_mensaje_con_ingestion_report_ausente",
           "red_evidence": "python -m pytest tests/test_orchestrator.py::test_evaluate_predecessor_gate_profiling_devuelve_mensaje_con_ingestion_report_ausente -q -> 1 failed. FileNotFoundError: [Errno 2] No such file or directory: '.../clients/ABC/020_outputs/030_ingestion/ingestion_report.json', lanzado dentro de evaluate_predecessor_gate en report_path.read_text(encoding='utf-8') (src/foda/orchestrator.py linea 54). Rojo genuino: la funcion hoy no comprueba si el reporte del predecesor existe antes de leerlo ni captura FileNotFoundError, asi que propaga la excepcion en vez de devolver el str legible que el test exige (isinstance(resultado, str), resultado != '', 'ingestion' in resultado); no es ImportError/TypeError por typo. python -m pytest -q (suite completa) -> 184 passed, 1 failed (el nuevo rojo), sin regresiones.",
           "green_files": [
             "src/foda/orchestrator.py"
           ],
           "green_evidence": "python -m pytest tests/test_orchestrator.py::test_evaluate_predecessor_gate_profiling_devuelve_mensaje_con_ingestion_report_ausente -q -> 1 passed (primer intento, sin reintentos); python -m pytest -q (suite completa) -> 185 passed, sin regresiones.",
-          "coder_note": "TSK-18 (minimo suficiente, NC-2/NC-3): dentro de evaluate_predecessor_gate, antes de leer el reporte del predecesor se agrego 'if not report_path.exists(): return f\"No se encontro un reporte de {predecessor_name!r} con success == true.\"'. Con este cambio la funcion queda completa en sus 4 ramas (sin predecesor->None, success:true->None, success:false->mensaje, reporte ausente->mensaje). No se modifico el test ni ninguna otra rama existente (casos 7/8/9 ya en verde)."
+          "coder_note": "TSK-18 (minimo suficiente, NC-2/NC-3): dentro de evaluate_predecessor_gate, antes de leer el reporte del predecesor se agrego 'if not report_path.exists(): return f\"No se encontro un reporte de {predecessor_name!r} con success == true.\"'. Con este cambio la funcion queda completa en sus 4 ramas (sin predecesor->None, success:true->None, success:false->mensaje, reporte ausente->mensaje). No se modifico el test ni ninguna otra rama existente (casos 7/8/9 ya en verde).",
+          "refactor": "revision de diseno de conjunto: con las 4 ramas completas se releyo evaluate_predecessor_gate integra (orden de ramas, mensajes, tipado, docstring) buscando deuda real (NC-2/NC-3). Orden de ramas correcto y legible: sin predecesor->None (corto-circuito temprano) -> resolver report_path via resolve_flow(predecessor_name).produces[0].path(ctx) (DS-PROF-4, sin hardcodear rutas) -> comprobar existencia antes de leer (evita excepcion no controlada) -> parsear y chequear success:true->None -> mensaje final para success!=true. No hay duplicacion real entre las dos ramas de mensaje (son 2 f-strings de una linea, cada uno con su propio motivo; extraerlas a un helper anadiria indireccion sin reducir deuda real, NC-2). Se encontro una inconsistencia menor de redaccion entre los 2 mensajes (el de 'ausente' decia 'No se encontro un reporte de X con success == true' -- sujeto y orden distinto al de 'success:false', que decia 'El reporte de X no tiene success == true') y se corrigio para que ambos compartan el mismo sujeto/estructura ('El reporte de {predecessor_name!r} ...'), mejorando la legibilidad y consistencia sin cambiar el contrato (ambos siguen siendo str no vacio que nombra a 'ingestion', que es lo unico que assertan los tests de los casos 9 y 10): 'El reporte de {predecessor_name!r} no existe (se esperaba con success == true).' (antes 'No se encontro un reporte de {predecessor_name!r} con success == true.') y 'El reporte de {predecessor_name!r} no tiene success == true.' (sin cambios, caso 9). Nombres (predecessor_name, report_path, report) y tipado (str, ClientContext, -> str | None) ya eran claros y no requirieron cambio. El docstring de la funcion (documenta las 4 ramas, DS-PROF-2/DS-PROF-4) ya estaba actualizado desde el refactor del caso 9 y sigue siendo preciso; no se toco. python -m pytest -q -> 185 passed, sin regresiones tras revalidar la suite completa (misma cuenta que antes del refactor: el cambio es puramente de redaccion de un mensaje, sin alterar comportamiento observable)."
         },
         {
           "id": 11,
