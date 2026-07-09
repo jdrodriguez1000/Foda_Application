@@ -2,7 +2,7 @@
   "feature": "profiling",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "tdd_coder",
+  "current_stage": "tdd_tester",
   "stages": {
     "feature_definer": {
       "status": "done",
@@ -22,7 +22,7 @@
     },
     "tdd": {
       "status": "in_progress",
-      "next_case": 12,
+      "next_case": 13,
       "cases": [
         {
           "id": 1,
@@ -171,14 +171,15 @@
           "id": 12,
           "desc": "CLI: success:false sin --force -> exit 1, stderr nombra ingestion+motivo, y no se escribe ningun artefacto bajo 040_profiling/",
           "ca": "CA-07,CA-08",
-          "status": "green",
+          "status": "done",
           "test": "tests/cli/test_profiling_gate_cli.py::test_run_profiling_con_ingestion_report_success_false_sin_force_devuelve_1_y_no_escribe_nada",
           "red_evidence": "python -m pytest tests/cli/test_profiling_gate_cli.py::test_run_profiling_con_ingestion_report_success_false_sin_force_devuelve_1_y_no_escribe_nada -q -> 1 failed. AssertionError: assert 0 == 1 (result de main([...]) es 0, no 1). Rojo genuino: _dispatch_run (src/foda/cli.py) todavia NO llama a evaluate_predecessor_gate (TSK-20/TSK-21 pendientes); con ingestion_report.json (success:false) presente, Profiling.validate() heredado solo exige que el artefacto exista (existe, aunque con success:false), asi que flow.run(ctx) hoy completa con exito (stdout: \"foda: flujo 'profiling' completado...\") y SI escribe profiling_report.json, en vez de bloquear con exit 1 antes de flow.run. No es ImportError/typo: evaluate_predecessor_gate ya existe y esta en verde desde el caso 9 (orchestrator.py); falta el wiring en la CLI. python -m pytest -q (suite completa) -> 186 passed, 1 failed (el nuevo rojo), sin regresiones.",
           "green_files": [
             "src/foda/cli.py"
           ],
           "green_evidence": "python -m pytest tests/cli/test_profiling_gate_cli.py::test_run_profiling_con_ingestion_report_success_false_sin_force_devuelve_1_y_no_escribe_nada -q -> 1 passed (primer intento, sin reintentos); python -m pytest -q (suite completa) -> 187 passed, sin regresiones.",
-          "coder_note": "TSK-22 + TSK-23 (minimo suficiente, NC-2/NC-3): (1) se agrego run_parser.add_argument(\"--force\", action=\"store_true\") (default False) a la construccion del parser en _build_parser; (2) en _dispatch_run, tras construir ctx y antes de flow.run(ctx), se agrego 'gate_message = evaluate_predecessor_gate(args.flow, ctx); if gate_message is not None and not args.force: print(f\"foda: {gate_message}\", file=sys.stderr); return 1'. Se importo evaluate_predecessor_gate desde foda.orchestrator (junto a FLOWS, resolve_flow ya existentes). Solo se implemento la rama 'mensaje + sin --force -> stderr + return 1'; la rama '--force override -> advertencia + continua' es el caso 13 y no se implemento (NC-2: minimo suficiente, sin anticipar comportamiento no cubierto por un test). Con gate_message is None (caso 11, ya en verde) el flujo sigue igual a flow.run como antes."
+          "coder_note": "TSK-22 + TSK-23 (minimo suficiente, NC-2/NC-3): (1) se agrego run_parser.add_argument(\"--force\", action=\"store_true\") (default False) a la construccion del parser en _build_parser; (2) en _dispatch_run, tras construir ctx y antes de flow.run(ctx), se agrego 'gate_message = evaluate_predecessor_gate(args.flow, ctx); if gate_message is not None and not args.force: print(f\"foda: {gate_message}\", file=sys.stderr); return 1'. Se importo evaluate_predecessor_gate desde foda.orchestrator (junto a FLOWS, resolve_flow ya existentes). Solo se implemento la rama 'mensaje + sin --force -> stderr + return 1'; la rama '--force override -> advertencia + continua' es el caso 13 y no se implemento (NC-2: minimo suficiente, sin anticipar comportamiento no cubierto por un test). Con gate_message is None (caso 11, ya en verde) el flujo sigue igual a flow.run como antes.",
+          "refactor": "documentacion actualizada (unico cambio, sin tocar comportamiento): se releyo src/foda/cli.py completo (parser, _dispatch_run, wiring del gate) buscando deuda de diseno atribuible a este caso (legibilidad del wiring, formato del mensaje a stderr, nombres, ubicacion del gate respecto a flow.run). El wiring en si (gate_message = evaluate_predecessor_gate(args.flow, ctx); if gate_message is not None and not args.force: print(...); return 1) ya tenia nombre claro (gate_message, sin ambiguedad con result), formato de mensaje consistente con el resto del modulo (f\"foda: {mensaje}\" a stderr, mismo patron que las 5 ramas de error preexistentes: raiz de proyecto ausente, ValueError de nombre invalido, FileExistsError, ValueError de resolve_flow, FlowContractError) y ubicacion correcta segun DS-PROF-1 (tras construir ctx, antes de flow.run, evaluado SIEMPRE -incluso con --force- para que el caso 13 pueda emitir la advertencia sin reordenar nada): no requirio cambios de codigo (NC-2/NC-3, minimo suficiente). La duplicacion del patron print(f\"foda: {msg}\", file=sys.stderr); return 1 (ahora 6 apariciones en el modulo, una mas que antes de este caso) es deuda preexistente desde antes de esta feature, no introducida por el caso 12: no se extrajo a un helper porque excede el alcance quirurgico de este refactor (NC-3, afectaria ramas de otros casos/features ya revisadas en sus propios turnos) y no hay evidencia de que sea necesaria todavia (NC-2, cambiaria interfaces sin pedido explicito); se deja constancia como deuda conocida y aceptada, igual que la duplicacion de fixtures senalada en el refactor del caso 11. Deuda real encontrada y corregida: el docstring de modulo (lineas 1-36) y el docstring de _dispatch_run documentaban run/--flow pero no mencionaban el gate de progresion ni --force (comportamiento nuevo introducido por TSK-22/TSK-23, sin documentar desde el coder); se actualizaron ambos (DS-ORQ-4, DS-PROF-1/DS-PROF-4, ADR D-080 puntos 1-3) para reflejar el flujo real: gate evaluado siempre, bloqueo sin --force, paso con --force. Se agrego ademas un comentario inline sobre gate_message explicando por que se evalua incondicionalmente (incluso con --force) -- para que el wiring del caso 13 (advertencia a stderr + continuar) no tenga que reordenar el codigo, solo anadir la rama 'gate_message is not None and args.force'. No se modificaron tests/ ni comportamiento observable. python -m pytest tests/cli/test_profiling_gate_cli.py -q -> 2 passed; python -m pytest -q (suite completa) -> 187 passed, sin regresiones tras revalidar."
         },
         {
           "id": 13,
