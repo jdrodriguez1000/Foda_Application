@@ -143,3 +143,53 @@ def test_run_profiling_con_ingestion_report_success_false_sin_force_devuelve_1_y
         tmp_path / "clients" / "ABC" / "020_outputs" / "040_profiling"
     )
     assert not profiling_dir.exists()
+
+
+def test_run_profiling_con_ingestion_report_success_false_con_force_devuelve_0_escribe_reporte_y_advierte(
+    tmp_path: Path, proyecto: Path, capsys
+):
+    """Caso 13 (CA-09/CA-10, TSK-24/TSK-25): con ingestion_report.json
+    (success:false) presente y CON --force,
+    main(["run","ABC","--flow","profiling","--force"]) debe devolver 0,
+    profiling_report.json debe existir en disco bajo 020_outputs/040_profiling/
+    (el gate se sobrepasa y flow.run corre con normalidad), y stderr debe
+    contener una advertencia (una linea) que indique que se forzo la
+    ejecucion sobrepasando el gate del predecesor 'ingestion'.
+
+    Rojo esperado (genuino, no accidental): _dispatch_run (src/foda/cli.py)
+    ya evalua el gate SIEMPRE (DS-PROF-1, wiring del caso 12) y, con
+    --force, el 'if gate_message is not None and not args.force' es False,
+    por lo que el despacho SI continua a flow.run(ctx) (exit 0, reporte
+    escrito) -- las dos primeras aserciones (result==0, reporte presente)
+    ya pasarian hoy. Pero la rama --force de TSK-25 (advertencia a stderr)
+    todavia NO esta implementada (ver docstring de _dispatch_run: 'aun no
+    esta implementada; hoy --force simplemente evita el bloqueo, sin emitir
+    advertencia'), asi que stderr queda vacio y la tercera aserto (mensaje de
+    advertencia en stderr, nombrando 'ingestion' y 'force') falla. No es un
+    error de import/sintaxis accidental: evaluate_predecessor_gate ya esta
+    completo y en verde desde el caso 9 (orchestrator.py); falta unicamente
+    la rama de advertencia en la CLI."""
+    from foda.cli import main
+
+    _seed_cliente_abc(proyecto)
+    _fabricar_ingestion_report(proyecto, success=False)
+
+    result = main(["run", "ABC", "--flow", "profiling", "--force"])
+
+    assert result == 0
+
+    profiling_report = (
+        tmp_path
+        / "clients"
+        / "ABC"
+        / "020_outputs"
+        / "040_profiling"
+        / "profiling_report.json"
+    )
+    assert profiling_report.exists()
+
+    captured = capsys.readouterr()
+    stderr_lines = [line for line in captured.err.splitlines() if line.strip()]
+    assert len(stderr_lines) == 1
+    assert "ingestion" in stderr_lines[0]
+    assert "force" in stderr_lines[0].lower()

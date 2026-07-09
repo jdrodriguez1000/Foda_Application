@@ -185,7 +185,9 @@
           "id": 13,
           "desc": "CLI: --force con success:false -> exit 0, profiling_report.json presente, y advertencia de gate en stderr",
           "ca": "CA-09,CA-10",
-          "status": "pending"
+          "status": "red",
+          "test": "tests/cli/test_profiling_gate_cli.py::test_run_profiling_con_ingestion_report_success_false_con_force_devuelve_0_escribe_reporte_y_advierte",
+          "red_evidence": "python -m pytest tests/cli/test_profiling_gate_cli.py::test_run_profiling_con_ingestion_report_success_false_con_force_devuelve_0_escribe_reporte_y_advierte -q -> 1 failed. AssertionError: assert 0 == 1 (len(stderr_lines) == 1), con where 0 = len([]) (stderr vacio). Rojo genuino: _dispatch_run (src/foda/cli.py) ya evalua el gate SIEMPRE (DS-PROF-1, wiring del caso 12) y con --force el 'if gate_message is not None and not args.force' es False, asi que el despacho SI continua a flow.run(ctx) -- exit 0 y profiling_report.json presente ya pasan hoy (las 2 primeras aserciones no fallan). Pero la rama --force de TSK-25 (advertencia a stderr) todavia no esta implementada: --force hoy solo evita el bloqueo, sin emitir advertencia, por lo que stderr queda vacio y la asercion de la advertencia (una linea, nombrando 'ingestion' y 'force') falla. No es ImportError/typo: evaluate_predecessor_gate ya esta completo y en verde desde el caso 9 (orchestrator.py); falta unicamente la rama de advertencia en la CLI. python -m pytest -q (suite completa) -> 187 passed, 1 failed (el nuevo rojo), sin regresiones."
         },
         {
           "id": 14,
