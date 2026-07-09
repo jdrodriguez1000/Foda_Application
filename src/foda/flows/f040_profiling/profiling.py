@@ -21,6 +21,11 @@ Banda stab_1 (bucle TDD en curso, red/green/refactor caso a caso):
   (cargado en load_inputs). files_healthy, files_with_problems,
   problems_by_type, global_score y pareto siguen como placeholders minimos
   (0 / {} / 1.0 / []) hasta sus propios casos (4-22).
+- Caso 4 (CA-07, DS-PRF-3): health.files_healthy ya no es un placeholder
+  fijo; se cuenta iterando datasets[].files[] de self._ingestion_report y
+  sumando los archivos sanos (status=="ingested" e inconsistencies==[]).
+  files_with_problems, problems_by_type, global_score y pareto siguen como
+  placeholders minimos (0 / {} / 1.0 / []) hasta sus propios casos (5-22).
 
 Nota (NC-6): una version previa del caso 2 adelanto de una vez toda la logica
 de health (DS-PRF-2..5). Por decision del humano se restauro el TDD estricto:
@@ -74,12 +79,16 @@ class Profiling(Flow):
         "0.2", client, flow, success) + bloque health con las 6 claves fijas.
 
         Caso 3 (DS-PRF-3): files_declared proviene de
-        ingestion_report.summary.files_declared. Los demas campos de health
-        siguen como placeholders minimos hasta sus propios casos (4-22),
-        TDD estricto (NC-2)."""
+        ingestion_report.summary.files_declared.
+        Caso 4 (DS-PRF-3): files_healthy proviene de contar, en
+        datasets[].files[], los archivos sanos (status=="ingested" e
+        inconsistencies==[]). Los demas campos de health siguen como
+        placeholders minimos hasta sus propios casos (5-22), TDD estricto
+        (NC-2)."""
         files_declared = self._ingestion_report.get("summary", {}).get(
             "files_declared", 0
         )
+        files_healthy = self._contar_archivos_sanos(self._ingestion_report)
         self._report = {
             "schema_version": "0.2",
             "client": ctx.name,
@@ -88,13 +97,26 @@ class Profiling(Flow):
             "health": {
                 "global_score": 1.0,
                 "files_declared": files_declared,
-                "files_healthy": 0,
+                "files_healthy": files_healthy,
                 "files_with_problems": 0,
                 "problems_by_type": {},
                 "pareto": [],
             },
         }
         return FlowResult(success=True, outputs=[self.produces[0].path(ctx)])
+
+    @staticmethod
+    def _contar_archivos_sanos(ingestion_report: dict) -> int:
+        """Caso 4 (CA-07, DS-PRF-3): cuenta, en datasets[].files[] del
+        ingestion_report, los archivos sanos: status=="ingested" e
+        inconsistencies==[]."""
+        return sum(
+            1
+            for dataset in ingestion_report.get("datasets", [])
+            for archivo in dataset.get("files", [])
+            if archivo.get("status") == "ingested"
+            and not archivo.get("inconsistencies")
+        )
 
     def write_outputs(self, ctx: ClientContext, result: FlowResult) -> None:
         """Escribe profiling_report.json de forma deterministica (sort_keys
