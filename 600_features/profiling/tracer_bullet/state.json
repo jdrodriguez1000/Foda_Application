@@ -116,7 +116,9 @@
           "id": 8,
           "desc": "evaluate_predecessor_gate('profiling', ctx) devuelve None cuando ingestion_report.json existe con success:true",
           "ca": "CA-06",
-          "status": "pending"
+          "status": "red",
+          "test": "tests/test_orchestrator.py::test_evaluate_predecessor_gate_profiling_devuelve_none_con_ingestion_report_success_true",
+          "red_evidence": "python -m pytest tests/test_orchestrator.py::test_evaluate_predecessor_gate_profiling_devuelve_none_con_ingestion_report_success_true -q -> 1 failed. AssertionError: assert [] == ['ingestion'] (llamadas a resolve_flow espiado). Rojo genuino: 'profiling' SI esta en PREDECESSORS (caso 7 en verde), por lo que el 'if flow_name not in PREDECESSORS: return None' de TSK-12 no se dispara; la funcion cae al final del cuerpo sin mas sentencias y devuelve None de forma implicita para CUALQUIER estado del reporte (una asercion trivial 'resultado is None' pasaria hoy sin codigo nuevo, no seria rojo valido segun NC-5). El test fabrica ingestion_report.json (success:true) via helper local _fabricar_ingestion_report en 020_outputs/030_ingestion/ del cliente temporal (sin correr Ingestion real) y espia orchestrator_module.resolve_flow con monkeypatch para exigir que TSK-14 efectivamente lo invoque con 'ingestion' al resolver la ruta del reporte del predecesor (DS-PROF-4), no un error de import/sintaxis accidental. python -m pytest -q (suite completa) -> 182 passed, 1 failed (el nuevo rojo), sin regresiones."
         },
         {
           "id": 9,

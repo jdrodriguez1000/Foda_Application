@@ -9,8 +9,11 @@ tracer_bullet (600_features/profiling/tracer_bullet/spec.md DS-PROF-2/DS-PROF-4,
 plan.md TSK-11..TSK-18): PREDECESSORS y evaluate_predecessor_gate.
 """
 
+import json
+
 import pytest
 
+import foda.orchestrator as orchestrator_module
 from foda.core.context import ClientContext
 from foda.core.flow import Flow
 from foda.core.scaffold import create_client
@@ -83,3 +86,59 @@ def test_predecessors_mapea_profiling_a_ingestion_y_gate_es_noop_sin_predecesor(
     ctx = ClientContext("ABC", clients_root)
 
     assert evaluate_predecessor_gate("ingestion", ctx) is None
+
+
+def _fabricar_ingestion_report(ctx: ClientContext, *, success: bool) -> None:
+    """Helper local (plan.md, Estrategia de Test): fabrica un
+    ingestion_report.json minimo en 020_outputs/030_ingestion/ del cliente,
+    sin correr Ingestion real (aislamiento de unidad)."""
+    report_dir = ctx.outputs_dir / "030_ingestion"
+    report_dir.mkdir(parents=True, exist_ok=True)
+    report = {
+        "schema_version": "0.1",
+        "client": ctx.name,
+        "flow": "ingestion",
+        "success": success,
+    }
+    (report_dir / "ingestion_report.json").write_text(
+        json.dumps(report, sort_keys=True, indent=2) + "\n", encoding="utf-8"
+    )
+
+
+def test_evaluate_predecessor_gate_profiling_devuelve_none_con_ingestion_report_success_true(
+    tmp_path, monkeypatch
+) -> None:
+    """Caso 8 (feature profiling/tracer_bullet, CA-06, TSK-13): con
+    ingestion_report.json presente y success:true, evaluate_predecessor_gate(
+    "profiling", ctx) devuelve None (predecesor satisfecho, DS-PROF-4).
+
+    "profiling" SI tiene entrada en PREDECESSORS (caso 7 ya en verde), asi que
+    hoy el `if flow_name not in PREDECESSORS: return None` no se dispara: la
+    funcion cae al final del cuerpo sin ninguna sentencia mas (TSK-12 solo
+    implemento el esqueleto de la rama "sin predecesor") y devuelve None de
+    forma implicita, para CUALQUIER estado del reporte -- no porque haya
+    resuelto y leido ingestion_report.json (DS-PROF-4: "resuelve la ruta del
+    reporte del predecesor con resolve_flow(<pred>).produces[0].path(ctx)").
+    Por eso una asercion trivial `is None` pasaria hoy sin codigo nuevo y no
+    seria un rojo valido (NC-5): se espia resolve_flow para exigir que la
+    implementacion real (TSK-14) efectivamente lo invoque con "ingestion" al
+    resolver la ruta del reporte, en vez de devolver None a ciegas. Rojo
+    genuino: resolve_flow no se llama todavia dentro de evaluate_predecessor_gate."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+    _fabricar_ingestion_report(ctx, success=True)
+
+    llamadas: list[str] = []
+    original_resolve_flow = orchestrator_module.resolve_flow
+
+    def resolve_flow_espia(name: str):
+        llamadas.append(name)
+        return original_resolve_flow(name)
+
+    monkeypatch.setattr(orchestrator_module, "resolve_flow", resolve_flow_espia)
+
+    resultado = orchestrator_module.evaluate_predecessor_gate("profiling", ctx)
+
+    assert resultado is None
+    assert llamadas == ["ingestion"]
