@@ -158,7 +158,10 @@
           "id": 11,
           "desc": "CLI: foda run <c> --flow profiling con success:true y sin --force -> exit 0, stdout de completado, profiling_report.json presente",
           "ca": "CA-06",
-          "status": "pending"
+          "status": "red",
+          "test": "tests/cli/test_profiling_gate_cli.py::test_run_profiling_con_ingestion_report_success_true_sin_force_devuelve_0_y_escribe_reporte",
+          "note": "already_green (mismo patron que los casos 3/4/5): python -m pytest tests/cli/test_profiling_gate_cli.py -q -> 1 passed de inmediato, sin escribir codigo de produccion nuevo. No es un rojo invalido por error accidental (no ImportError/typo): _dispatch_run (src/foda/cli.py) TODAVIA no llama a evaluate_predecessor_gate (TSK-20 pendiente), pero para ESTE escenario especifico (ingestion_report.json con success:true, sin --force) el comportamiento observable es identico este el gate wireado o no -- el gate, si estuviera wireado, devolveria None (caso 8, orchestrator.py, ya en verde) y dejaria pasar a flow.run(ctx) igual que el codigo actual (que hoy invoca flow.run(ctx) sin consultar el gate en absoluto). 'profiling' ya esta registrado en FLOWS (caso 6) y Profiling.validate() (heredado de Flow) solo exige que ingestion_report.json exista -- lo cual el test fabrica -- por lo que flow.run(ctx) tiene exito, imprime el mensaje de completado ('foda: flujo 'profiling' completado para el cliente 'ABC': <ruta>', ya generico para cualquier flujo desde flow_orchestrator) y escribe profiling_report.json (execute/write_outputs, casos 3/4, ya en verde). TSK-20 (wiring del gate en _dispatch_run) sigue siendo trabajo real y necesario: se hara genuinamente rojo/verde en los casos 12 (success:false sin --force debe bloquear con exit 1, hoy correria igual con exit 0 sin el gate) y sucesivos, que si distinguen el comportamiento gate-wireado del no-wireado. python -m pytest -q (suite completa) -> 186 passed, sin regresiones.",
+          "red_evidence": "python -m pytest tests/cli/test_profiling_gate_cli.py::test_run_profiling_con_ingestion_report_success_true_sin_force_devuelve_0_y_escribe_reporte -q -> 1 passed (no hay rojo: ver nota 'already_green'). python -m pytest -q (suite completa) -> 186 passed, sin regresiones tras agregar el test."
         },
         {
           "id": 12,
