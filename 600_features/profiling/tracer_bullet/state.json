@@ -2,7 +2,7 @@
   "feature": "profiling",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "tdd_coder",
+  "current_stage": "tdd_tester",
   "stages": {
     "feature_definer": {
       "status": "done",
@@ -22,7 +22,7 @@
     },
     "tdd": {
       "status": "in_progress",
-      "next_case": 16,
+      "next_case": 17,
       "cases": [
         {
           "id": 1,
@@ -224,13 +224,14 @@
           "id": 16,
           "desc": "CLI: --flow profiling con ingestion_report.json ausente y sin --force -> exit 1, stderr claro, sin artefacto de profiling",
           "ca": "CA-13",
-          "status": "green",
+          "status": "done",
           "test": "tests/cli/test_profiling_gate_cli.py::test_run_profiling_con_ingestion_report_ausente_sin_force_devuelve_1_y_no_escribe_nada",
           "note": "already_green (mismo patron que casos 3/4/5/11/14/15), previsto por plan.md linea 87: no hay tarea-codigo propia para este caso (CA-13 CLI queda cubierto por la rama 'reporte ausente' del gate, caso 10, orchestrator.py::evaluate_predecessor_gate, mas el wiring 'bloquea sin --force' en _dispatch_run, caso 12, cli.py, ambos ya en verde). python -m pytest tests/cli/test_profiling_gate_cli.py::test_run_profiling_con_ingestion_report_ausente_sin_force_devuelve_1_y_no_escribe_nada -q -> 1 passed de inmediato, sin escribir codigo de produccion ni esqueleto NotImplementedError. No es un verde invalido por trivialidad: el test NO fabrica ingestion_report.json (a diferencia del caso 12, que si lo fabrica con success:false) -- el punto es su ausencia total -- y sus aserciones son especificas: exit code exacto 1, stderr debe nombrar 'ingestion' (no un mensaje generico), y ausencia TOTAL del directorio 020_outputs/040_profiling/ en disco (no solo del archivo). evaluate_predecessor_gate('profiling', ctx) sin ingestion_report.json entra a la rama 'if not report_path.exists(): return mensaje' (TSK-18, caso 10, ya en verde) devolviendo un str no vacio que nombra 'ingestion'; en _dispatch_run el bloque 'if gate_message is not None: if not args.force: print a stderr + return 1' (TSK-22/23, caso 12, ya en verde) corta ANTES de flow.run(ctx), por lo que ni siquiera se crea el subdirectorio 040_profiling/.",
           "red_evidence": "python -m pytest tests/cli/test_profiling_gate_cli.py::test_run_profiling_con_ingestion_report_ausente_sin_force_devuelve_1_y_no_escribe_nada -q -> 1 passed (no hay rojo: ver nota 'already_green'). python -m pytest -q (suite completa) -> 191 passed, sin regresiones tras agregar el test.",
           "green_files": [],
           "green_evidence": "tdd_coder confirmatorio (no-op de codigo, mismo patron que casos 3/4/5/11/14/15): python -m pytest tests/cli/test_profiling_gate_cli.py::test_run_profiling_con_ingestion_report_ausente_sin_force_devuelve_1_y_no_escribe_nada -q -> 1 passed; python -m pytest -q (suite completa) -> 191 passed, sin regresiones.",
-          "coder_note": "tdd_coder confirmatorio (no-op de codigo): se revalido el test del caso 16 -> 1 passed, y la suite completa -> 191 passed, sin regresiones. No se creo ni modifico ningun archivo en src/foda/ (NC-3): el comportamiento del caso 16 ya esta cubierto por evaluate_predecessor_gate (rama 'reporte ausente', caso 10, orchestrator.py) mas el wiring del gate en _dispatch_run (caso 12, cli.py), ambos ya en verde. Caso listo para tdd_refactor (revision confirmatoria, sin cambios esperados, igual que casos 3/4/5/11/14/15)."
+          "coder_note": "tdd_coder confirmatorio (no-op de codigo): se revalido el test del caso 16 -> 1 passed, y la suite completa -> 191 passed, sin regresiones. No se creo ni modifico ningun archivo en src/foda/ (NC-3): el comportamiento del caso 16 ya esta cubierto por evaluate_predecessor_gate (rama 'reporte ausente', caso 10, orchestrator.py) mas el wiring del gate en _dispatch_run (caso 12, cli.py), ambos ya en verde. Caso listo para tdd_refactor (revision confirmatoria, sin cambios esperados, igual que casos 3/4/5/11/14/15).",
+          "refactor": "no-op de codigo de produccion (igual que casos 3/4/5/11/14/15): no hubo cambios en src/foda/ atribuibles a este caso (el verde vino integramente de evaluate_predecessor_gate, rama 'reporte ausente', caso 10, orchestrator.py, mas el wiring 'bloquea sin --force' en _dispatch_run, caso 12, cli.py, ambos ya revisados en sus propios turnos). Se releyo src/foda/cli.py (docstring de modulo y de _dispatch_run) y src/foda/orchestrator.py (evaluate_predecessor_gate, sus 2 mensajes de rama) completos buscando deuda de diseno atribuible a este caso: ambos ya documentan el camino 'reporte ausente -> bloquea' desde los refactors de los casos 10/12/13 y siguen siendo precisos para el escenario que ejercita el caso 16 (gate_message proviene de la rama FileNotFoundError-evitada de evaluate_predecessor_gate, no de la rama success:false); no requirieron cambio (NC-3). Se reviso especificamente el unico artefacto nuevo de este caso (test_run_profiling_con_ingestion_report_ausente_sin_force_devuelve_1_y_no_escribe_nada, tests/cli/test_profiling_gate_cli.py): (1) reutiliza integramente los helpers/fixture ya existentes en la suite (_seed_cliente_abc, proyecto) sin fabricar ingestion_report.json -- a proposito, ya que el punto del caso es la ausencia del reporte -- sin duplicacion nueva; (2) el docstring del test es especifico y distingue explicitamente su contrato de los casos 12 (success:false fabricado) y 15 (flujo sin predecesor), documentando por que las 3 aserciones (exit code exacto, stderr nombra 'ingestion', ausencia TOTAL del directorio 040_profiling/) no son triviales; (3) sus aserciones no se solapan entre si y no introducen logica condicional ni abstraccion nueva (NC-2). No se encontro deuda real (duplicacion, nombres, tipado, alineacion con Flow/ClientContext de system_design.md SS9) atribuible a este caso; no se modifico ningun archivo (ni tests/ ni src/foda/), conforme a NC-2/NC-3 (no se toca lo que no requiere cambio). python -m pytest -q -> 191 passed, sin regresiones tras revalidar la suite completa (misma cuenta que antes de este refactor, confirmando que no hubo cambio de comportamiento observable)."
         },
         {
           "id": 17,
