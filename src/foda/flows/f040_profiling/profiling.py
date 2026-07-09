@@ -31,7 +31,12 @@ Banda stab_1 (bucle TDD en curso, red/green/refactor caso a caso):
   self._ingestion_report y sumando los archivos con problemas
   (status!="ingested" o inconsistencies!=[]). problems_by_type, global_score
   y pareto siguen como placeholders minimos ({} / 1.0 / []) hasta sus propios
-  casos (7-22).
+  casos (7-22). Refactor: _contar_archivos_sanos (caso 4) y
+  _contar_archivos_con_problemas (caso 5) son predicados complementarios
+  (De Morgan) sobre la misma iteracion de datasets[].files[]; se extrajeron
+  _archivos() (aplana la estructura anidada) y _es_archivo_sano() (predicado
+  unico) para eliminar la duplicacion, sin cambiar el resultado de ninguno
+  de los dos contadores.
 
 Nota (NC-6): una version previa del caso 2 adelanto de una vez toda la logica
 de health (DS-PRF-2..5). Por decision del humano se restauro el TDD estricto:
@@ -115,28 +120,44 @@ class Profiling(Flow):
         return FlowResult(success=True, outputs=[self.produces[0].path(ctx)])
 
     @staticmethod
-    def _contar_archivos_sanos(ingestion_report: dict) -> int:
-        """Caso 4 (CA-07, DS-PRF-3): cuenta, en datasets[].files[] del
-        ingestion_report, los archivos sanos: status=="ingested" e
-        inconsistencies==[]."""
-        return sum(
-            1
+    def _archivos(ingestion_report: dict):
+        """Aplana datasets[].files[] del ingestion_report en un unico
+        iterable de archivos, evitando repetir el doble for en cada
+        contador (DS-PRF-3)."""
+        return (
+            archivo
             for dataset in ingestion_report.get("datasets", [])
             for archivo in dataset.get("files", [])
-            if archivo.get("status") == "ingested"
-            and not archivo.get("inconsistencies")
         )
 
     @staticmethod
-    def _contar_archivos_con_problemas(ingestion_report: dict) -> int:
-        """Caso 5 (CA-08, DS-PRF-3): cuenta, en datasets[].files[] del
-        ingestion_report, los archivos con problemas: status!="ingested" o
-        inconsistencies!=[]."""
+    def _es_archivo_sano(archivo: dict) -> bool:
+        """Un archivo esta sano si fue ingerido (status=="ingested") y no
+        tiene inconsistencias. "Con problemas" (CA-08) es exactamente la
+        negacion de "sano" (CA-07): status!="ingested" o inconsistencies!=[]
+        equivale, por De Morgan, a not(status=="ingested" e
+        inconsistencies==[])."""
+        return archivo.get("status") == "ingested" and not archivo.get(
+            "inconsistencies"
+        )
+
+    @classmethod
+    def _contar_archivos_sanos(cls, ingestion_report: dict) -> int:
+        """Caso 4 (CA-07, DS-PRF-3): cuenta, en datasets[].files[] del
+        ingestion_report, los archivos sanos."""
         return sum(
-            1
-            for dataset in ingestion_report.get("datasets", [])
-            for archivo in dataset.get("files", [])
-            if archivo.get("status") != "ingested" or archivo.get("inconsistencies")
+            1 for archivo in cls._archivos(ingestion_report)
+            if cls._es_archivo_sano(archivo)
+        )
+
+    @classmethod
+    def _contar_archivos_con_problemas(cls, ingestion_report: dict) -> int:
+        """Caso 5 (CA-08, DS-PRF-3): cuenta, en datasets[].files[] del
+        ingestion_report, los archivos con problemas (complemento exacto de
+        _es_archivo_sano)."""
+        return sum(
+            1 for archivo in cls._archivos(ingestion_report)
+            if not cls._es_archivo_sano(archivo)
         )
 
     def write_outputs(self, ctx: ClientContext, result: FlowResult) -> None:
