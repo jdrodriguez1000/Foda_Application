@@ -193,3 +193,53 @@ def test_run_profiling_con_ingestion_report_success_false_con_force_devuelve_0_e
     assert len(stderr_lines) == 1
     assert "ingestion" in stderr_lines[0]
     assert "force" in stderr_lines[0].lower()
+
+
+def test_run_profiling_con_ingestion_report_success_true_con_force_devuelve_0_escribe_reporte_y_sin_advertencia(
+    tmp_path: Path, proyecto: Path, capsys
+):
+    """Caso 14 (CA-11, TSK-26): con ingestion_report.json (success:true)
+    presente y CON --force, main(["run","ABC","--flow","profiling","--force"])
+    debe devolver 0, profiling_report.json debe existir en disco bajo
+    020_outputs/040_profiling/ (camino feliz: el gate ya deja pasar con
+    success:true, caso 8, orchestrator.py, --force es irrelevante aqui), y
+    stderr debe quedar COMPLETAMENTE VACIO: al ser gate_message is None
+    (evaluate_predecessor_gate("profiling", ctx) con success:true, caso 8),
+    la rama de advertencia de --force (TSK-25, "if gate_message is not None:
+    ... else advierte") nunca se dispara, sin importar el valor de
+    args.force. Distingue este caso del caso 13 (success:false + --force,
+    que SI emite una linea de advertencia a stderr): la asercion
+    'stderr == ""' es especifica del contrato "sin gate_message, --force no
+    tiene efecto observable" (CA-11), no una trivialidad.
+
+    Rojo esperado si lo hubiera (no se anticipa, ver nota TSK-26 en
+    plan.md linea 87): _dispatch_run (src/foda/cli.py) ya evalua el gate
+    SIEMPRE (DS-PROF-1) y, con success:true, evaluate_predecessor_gate
+    devuelve None (caso 8, orchestrator.py, ya en verde) por lo que el
+    bloque 'if gate_message is not None: ...' (TSK-25, caso 13, ya en verde)
+    no ejecuta ninguna de sus dos ramas (ni bloqueo ni advertencia) --
+    stderr queda vacio con o sin --force. Si esto se comprueba en verde sin
+    codigo de produccion nuevo, no es un rojo invalido por error accidental:
+    es un caso ya cubierto por el wiring de los casos 8/12/13 (already_green,
+    documentado en plan.md)."""
+    from foda.cli import main
+
+    _seed_cliente_abc(proyecto)
+    _fabricar_ingestion_report(proyecto, success=True)
+
+    result = main(["run", "ABC", "--flow", "profiling", "--force"])
+
+    assert result == 0
+
+    profiling_report = (
+        tmp_path
+        / "clients"
+        / "ABC"
+        / "020_outputs"
+        / "040_profiling"
+        / "profiling_report.json"
+    )
+    assert profiling_report.exists()
+
+    captured = capsys.readouterr()
+    assert captured.err == ""

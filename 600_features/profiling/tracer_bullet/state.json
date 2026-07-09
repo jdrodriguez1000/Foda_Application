@@ -199,7 +199,9 @@
           "id": 14,
           "desc": "CLI: --force con success:true -> exit 0, reporte presente, sin advertencia de gate en stderr",
           "ca": "CA-11",
-          "status": "pending"
+          "status": "red",
+          "test": "tests/cli/test_profiling_gate_cli.py::test_run_profiling_con_ingestion_report_success_true_con_force_devuelve_0_escribe_reporte_y_sin_advertencia",
+          "note": "already_green (mismo patron que casos 3/4/5/11), previsto por plan.md linea 87: no hay tarea-codigo propia para este caso (CA-11 queda cubierto por el gate ya wireado en los casos 8/12/13). python -m pytest tests/cli/test_profiling_gate_cli.py::test_run_profiling_con_ingestion_report_success_true_con_force_devuelve_0_escribe_reporte_y_sin_advertencia -q -> 1 passed de inmediato, sin escribir codigo de produccion nuevo. No es un rojo invalido por error accidental: evaluate_predecessor_gate('profiling', ctx) con ingestion_report.json success:true devuelve None (caso 8, orchestrator.py, ya en verde); en _dispatch_run (cli.py) el bloque 'if gate_message is not None: ...' (TSK-23/TSK-25, casos 12/13, ya en verde) es un guard que solo ejecuta sus ramas de bloqueo/advertencia cuando gate_message no es None -- con None, --force no tiene efecto observable alguno y stderr queda vacio con o sin la bandera. Las 3 aserciones son especificas y no triviales: result==0, profiling_report.json existe en disco (020_outputs/040_profiling/), y captured.err == '' (cadena vacia exacta, no solo 'sin la palabra force'), lo que distingue expresamente este caso del caso 13 (success:false + --force, que SI produce exactamente 1 linea de advertencia en stderr nombrando 'ingestion' y 'force'). python -m pytest -q (suite completa) -> 189 passed, sin regresiones."
         },
         {
           "id": 15,
