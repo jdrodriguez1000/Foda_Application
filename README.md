@@ -145,7 +145,7 @@ Salida esperada en el camino feliz (confirma el flujo, el cliente y la ruta del 
 foda: flujo 'onboarding' completado para el cliente 'DEMO_ABC': C:\...\clients\DEMO_ABC\020_outputs\020_onboarding\map_client_data.json
 ```
 
-**Flujos disponibles hoy:** `onboarding`. (El registro de flujos vive en `src/foda/orchestrator.py`; añadir un flujo nuevo es agregar una entrada a `FLOWS`, sin tocar la CLI.)
+**Flujos disponibles hoy:** `onboarding`, `ingestion`. (El registro de flujos vive en `src/foda/orchestrator.py`; añadir un flujo nuevo es agregar una entrada a `FLOWS`, sin tocar la CLI.)
 
 **Cuándo usarlo:** después de crear el cliente y de haber colocado los datos de entrada que el flujo requiere. Para `onboarding`, el flujo espera encontrar `020_outputs/010_discovery/contract_data.json` dentro del cliente; si falta (o está incompleto), `run` **no** escribe nada y termina con un error claro (ver tabla). Puedes volver a ejecutar `run` cuantas veces quieras: regenera los artefactos de salida.
 

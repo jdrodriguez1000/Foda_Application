@@ -587,11 +587,20 @@ def _map_client_data_completo() -> dict:
     }
 
 
-def _build_ctx_fixture_completo(tmp_path: Path) -> ClientContext:
+def _build_ctx_fixture_completo(
+    tmp_path: Path, precios_xlsx: bytes | None = None
+) -> ClientContext:
     """DS-ING-7 (fixture completo, caso 7): ClientContext con
     contract_data.json + map_client_data.json coherentes entre si (3
     datasets) y los 4 archivos crudos del landing (ventas.csv coma,
-    inventario_2024.txt ';', inventario_2025.csv '|', precios.xlsx)."""
+    inventario_2024.txt ';', inventario_2025.csv '|', precios.xlsx).
+
+    precios_xlsx permite inyectar los mismos bytes de xlsx en dos ctx
+    equivalentes; openpyxl embebe timestamps al serializar, de modo que
+    dos llamadas independientes a _precios_xlsx_bytes() producen bytes
+    distintos. El test de determinismo (CA-13) requiere origen identico
+    para aislar el determinismo de la copia en bronze. Por defecto genera
+    un xlsx fresco (comportamiento previo, suficiente para el resto)."""
     return _build_ctx(
         tmp_path,
         _contract_data_completo(),
@@ -606,7 +615,9 @@ def _build_ctx_fixture_completo(tmp_path: Path) -> ClientContext:
                 [_INVENTARIO_2025_HEADER, *_INVENTARIO_2025_ROWS]
             )
             + "\n",
-            "precios.xlsx": _precios_xlsx_bytes(),
+            "precios.xlsx": precios_xlsx
+            if precios_xlsx is not None
+            else _precios_xlsx_bytes(),
         },
     )
 
@@ -1368,8 +1379,9 @@ def test_dos_ejecuciones_con_las_mismas_entradas_producen_reporte_y_copias_bronz
     (mismo input -> mismo output), tal como exige DS-ING-6 (sort_keys=True
     + indent=2 + newline final + orden estable) para el reporte y la copia
     fiel sin re-serializar para bronze."""
-    ctx_1 = _build_ctx_fixture_completo(tmp_path / "corrida_1")
-    ctx_2 = _build_ctx_fixture_completo(tmp_path / "corrida_2")
+    precios_xlsx = _precios_xlsx_bytes()
+    ctx_1 = _build_ctx_fixture_completo(tmp_path / "corrida_1", precios_xlsx)
+    ctx_2 = _build_ctx_fixture_completo(tmp_path / "corrida_2", precios_xlsx)
 
     Ingestion().run(ctx_1)
     Ingestion().run(ctx_2)
