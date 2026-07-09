@@ -2,7 +2,7 @@
   "feature": "profiling",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "spec_verifier",
+  "current_stage": "human_test",
   "stages": {
     "feature_definer": {
       "status": "done",
@@ -254,8 +254,10 @@
       "evidence": "python -m pytest tests/integration/test_profiling_integration.py -q -> 15 passed; python -m pytest -q (suite completa) -> 207 passed (192 previos + 15 nuevos), sin regresiones. No se modifico src/foda/ (NC-3): los 15 tests de integracion pasaron en verde de inmediato, sin necesidad de tocar codigo de produccion (Profiling, orchestrator.evaluate_predecessor_gate y el wiring del gate en cli.py::_dispatch_run ya se comportaban correctamente end-to-end sobre cadenas multi-flujo reales; ningun defecto de integracion detectado)."
     },
     "spec_verifier": {
-      "status": "pending",
-      "artifact": "verification.md"
+      "status": "done",
+      "artifact": "verification.md",
+      "verdict": "CONFORME",
+      "evidence": "13/13 CA cubiertos; python -m pytest -q -> 207 passed (verde). Ver verification.md."
     },
     "human_test": {
       "status": "pending",
