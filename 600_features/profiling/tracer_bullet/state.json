@@ -76,7 +76,10 @@
           "id": 5,
           "desc": "Sin ingestion_report.json, Profiling().validate(ctx) lanza FlowContractError nombrando el artefacto ausente y no se escribe profiling_report.json",
           "ca": "CA-05",
-          "status": "pending"
+          "status": "already_green",
+          "test": "tests/flows/test_profiling.py::test_profiling_validate_sin_ingestion_report_lanza_flowcontracterror_nombrandolo_y_no_escribe_profiling_report",
+          "note": "tdd_tester: Profiling no sobreescribe validate() (hereda Flow.validate(), src/foda/core/flow.py:100-110), que ya recorre self.requires, comprueba artifact.exists(ctx) y lanza FlowContractError nombrando el/los artefacto(s) ausente(s) por name+path antes de execute(). El test escrito es especifico (no trivial): (1) llama a flow.validate(ctx) directo y asertan que el mensaje contiene 'ingestion_report' (el name exacto del unico Artifact en Profiling.requires, caso 1), (2) llama a flow.run(ctx) completo (template method heredado, orden load_inputs->validate->execute->write_outputs fijado en caso 2) y confirma que la misma FlowContractError se propaga antes de alcanzar write_outputs, y (3) tras el fallo, assert not (ctx.outputs_dir/040_profiling/profiling_report.json).exists() -- distingue este caso de los casos 3/4 (ejecucion exitosa que si escribe el reporte). Al ejecutarlo paso en verde de inmediato (1 passed) sin escribir codigo de produccion nuevo, por comportamiento heredado real (no un stub o mock), evidencia igual en espiritu a los already-green de los casos 3 y 4.",
+          "green_evidence": "python -m pytest tests/flows/test_profiling.py::test_profiling_validate_sin_ingestion_report_lanza_flowcontracterror_nombrandolo_y_no_escribe_profiling_report -q -> 1 passed; python -m pytest -q (suite completa) -> 180 passed, sin regresiones."
         },
         {
           "id": 6,

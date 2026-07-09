@@ -10,8 +10,10 @@ Fuente: 600_features/profiling/tracer_bullet/spec.md (CA-xx) y plan.md
 import json
 from pathlib import Path
 
+import pytest
+
 from foda.core.context import ClientContext
-from foda.core.flow import Artifact, Flow, FlowResult
+from foda.core.flow import Artifact, Flow, FlowContractError, FlowResult
 from foda.core.scaffold import create_client
 from foda.flows.f040_profiling.profiling import Profiling
 
@@ -179,3 +181,44 @@ def test_profiling_report_json_en_disco_es_parseable_con_campos_y_serializacion_
         json.dumps(reporte, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
     )
     assert contenido_bruto == contenido_esperado
+
+
+def test_profiling_validate_sin_ingestion_report_lanza_flowcontracterror_nombrandolo_y_no_escribe_profiling_report(
+    tmp_path: Path,
+) -> None:
+    """Caso 5 (CA-05, TSK-08): sin ingestion_report.json bajo
+    ctx.outputs_dir/030_ingestion (el unico Artifact de Profiling.requires,
+    caso 1), Profiling().validate(ctx) lanza FlowContractError cuyo mensaje
+    nombra especificamente el artefacto ausente ("ingestion_report", no un
+    mensaje generico), y una ejecucion real de Profiling().run(ctx) (que
+    invoca validate() antes de execute()/write_outputs(), caso 2) propaga esa
+    misma excepcion sin llegar a escribir profiling_report.json en disco:
+    tras el fallo, ctx.outputs_dir/040_profiling/profiling_report.json NO
+    existe.
+
+    Aserciones especificas de este caso (no basta con
+    isinstance(exc, FlowContractError), ya cubierto en espiritu por el
+    contrato heredado de Flow.validate): el mensaje debe contener el nombre
+    exacto del artefacto declarado en Profiling.requires
+    ("ingestion_report") y, tras el fallo, el reporte de profiling no debe
+    existir en disco (distingue este caso de los casos 3/4, que si escriben
+    el reporte tras una ejecucion exitosa)."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    ruta_ingestion_report = ctx.outputs_dir / "030_ingestion/ingestion_report.json"
+    assert not ruta_ingestion_report.exists()
+
+    flow = Profiling()
+
+    with pytest.raises(FlowContractError) as excinfo_validate:
+        flow.validate(ctx)
+    assert "ingestion_report" in str(excinfo_validate.value)
+
+    with pytest.raises(FlowContractError) as excinfo_run:
+        flow.run(ctx)
+    assert "ingestion_report" in str(excinfo_run.value)
+
+    ruta_profiling_report = ctx.outputs_dir / "040_profiling/profiling_report.json"
+    assert not ruta_profiling_report.exists()
