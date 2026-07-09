@@ -400,6 +400,32 @@ def test_profiling_report_health_files_healthy_coincide_con_conteo_de_archivos_s
     assert reporte["health"]["files_healthy"] == 2
 
 
+def test_profiling_report_health_files_with_problems_coincide_con_conteo_de_archivos_con_problemas_fixture_mixta(
+    tmp_path: Path,
+) -> None:
+    """stab_1, caso 5 (CA-08, DS-PRF-3, TSK-07/TSK-08): tras
+    Profiling().run(ctx) con la fixture MIXTA (ver
+    _build_ctx_con_ingestion_report_mixto: 4 archivos declarados, 2 sanos
+    -status=="ingested" e inconsistencies==[]-, 1 con status!="ingested"
+    ("rejected") y 1 con status=="ingested" pero inconsistencies NO vacia),
+    profiling_report.json['health']['files_with_problems'] es EXACTAMENTE 2
+    (el conteo real de archivos con problemas: status!="ingested" O
+    inconsistencies!=[]), no un placeholder fijo.
+
+    Hoy (antes de tdd_coder) Profiling.execute() hardcodea
+    health.files_with_problems en 0 (placeholder minimo heredado del caso 2,
+    ver profiling.py), por lo que esta aserción falla en rojo limpio (0 != 2,
+    un valor distinto de 0), no por un error accidental de import/sintaxis."""
+    ctx = _build_ctx_con_ingestion_report_mixto(tmp_path)
+
+    Profiling().run(ctx)
+
+    ruta_reporte = ctx.outputs_dir / "040_profiling/profiling_report.json"
+    reporte = json.loads(ruta_reporte.read_text(encoding="utf-8"))
+
+    assert reporte["health"]["files_with_problems"] == 2
+
+
 def test_profiling_validate_sin_ingestion_report_lanza_flowcontracterror_nombrandolo_y_no_escribe_profiling_report(
     tmp_path: Path,
 ) -> None:
