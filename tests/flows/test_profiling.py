@@ -276,6 +276,29 @@ def test_profiling_report_contiene_bloque_health_con_exactamente_6_claves_fixtur
     assert health["pareto"] == []
 
 
+def test_profiling_report_health_files_declared_coincide_con_summary_files_declared(
+    tmp_path: Path,
+) -> None:
+    """Caso 3 (CA-06, DS-PRF-3): tras Profiling().run(ctx) con un
+    ingestion_report.json de fixture "todos sanos" cuyo
+    summary.files_declared==2 (ver _build_ctx_con_ingestion_report_todos_sanos),
+    profiling_report.json['health']['files_declared'] es EXACTAMENTE igual a
+    ese valor (2), no un placeholder fijo.
+
+    Hoy (antes de tdd_coder) Profiling.execute() hardcodea
+    health.files_declared en 0 (implementacion minima del caso 2, ver
+    profiling.py), por lo que esta aserción falla en rojo limpio (0 != 2),
+    no por un error accidental de import/sintaxis."""
+    ctx = _build_ctx_con_ingestion_report_todos_sanos(tmp_path, n_files=2)
+
+    Profiling().run(ctx)
+
+    ruta_reporte = ctx.outputs_dir / "040_profiling/profiling_report.json"
+    reporte = json.loads(ruta_reporte.read_text(encoding="utf-8"))
+
+    assert reporte["health"]["files_declared"] == 2
+
+
 def test_profiling_validate_sin_ingestion_report_lanza_flowcontracterror_nombrandolo_y_no_escribe_profiling_report(
     tmp_path: Path,
 ) -> None:
