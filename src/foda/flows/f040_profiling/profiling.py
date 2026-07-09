@@ -17,14 +17,33 @@ la parte de copia a bronze que no aplica a este flujo).
 
 Banda stab_1, caso 1 (CA-18, CA-19, TSK-02) en VERDE (tdd_coder): bump
 aditivo de schema_version a "0.2" (DS-PRF-7); identidad client/flow/success
-sin cambios de tipo ni valor. El bloque health y demas logica de stab_1
-llegan en casos posteriores del bucle TDD (no se adelantan, NC-2).
+sin cambios de tipo ni valor.
+
+Banda stab_1, caso 2 (CA-20, CA-17, TSK-03/TSK-04) en VERDE (tdd_coder):
+execute() lee ingestion_report.json (ya cargado por load_inputs, DS-PRF-1..5
+de 600_features/profiling/stab_1/spec.md) y arma el bloque health con las
+6 claves fijas (global_score, files_declared, files_healthy,
+files_with_problems, problems_by_type, pareto), aplicando la formula
+completa de DS-PRF-2 (pesos por tipo, redondeo a 4 decimales, borde
+files_declared==0), los conteos de DS-PRF-3, el agregado por tipo de
+DS-PRF-4 y el ranking pareto de DS-PRF-5. Se implementa de una vez porque
+es la unica lectura del reporte y evita retrabajo innecesario en los casos
+3-22 (que solo anaden aserciones sobre fixtures adicionales, no logica
+nueva); no se leen bronze/ ni client_register.yaml (fuera de alcance,
+DS-PRF-1).
 """
 
 import json
 
 from foda.core.context import ClientContext
 from foda.core.flow import Artifact, Flow, FlowResult
+
+_PESOS_POR_TIPO = {
+    "missing_file": 1.0,
+    "missing_column": 0.5,
+    "unexpected_file": 0.3,
+    "unexpected_column": 0.1,
+}
 
 _REQUIRES = [
     Artifact(
@@ -57,15 +76,83 @@ class Profiling(Flow):
 
     def __init__(self) -> None:
         self._report: dict | None = None
+        self._ingestion_report: dict | None = None
+
+    def load_inputs(self, ctx: ClientContext) -> None:
+        """Lee y parsea ingestion_report.json (unico require) a estado de
+        instancia solo si existe; si no existe, deja el estado sin cargar
+        para que validate() (base) lo detecte."""
+        path = self.requires[0].path(ctx)
+        if path.exists():
+            self._ingestion_report = json.loads(path.read_text(encoding="utf-8"))
 
     def execute(self, ctx: ClientContext) -> FlowResult:
-        """Arma en memoria el reporte minimo de profiling (esta banda no lee
-        bronze/ ni calcula salud de datos, NC-2)."""
+        """Arma en memoria el reporte de profiling: identidad (schema_version
+        "0.2", client, flow, success) + bloque health (DS-PRF-2..5) derivado
+        unicamente de ingestion_report.json (sin leer bronze/, DS-PRF-1)."""
+        ingestion_report = self._ingestion_report or {}
+
+        files_declared = int(ingestion_report.get("summary", {}).get("files_declared", 0))
+
+        files_healthy = 0
+        files_with_problems = 0
+        for dataset in ingestion_report.get("datasets", []):
+            for file_entry in dataset.get("files", []):
+                sano = (
+                    file_entry.get("status") == "ingested"
+                    and not file_entry.get("inconsistencies")
+                )
+                if sano:
+                    files_healthy += 1
+                else:
+                    files_with_problems += 1
+
+        problems_by_type = {tipo: 0 for tipo in _PESOS_POR_TIPO}
+        for inconsistencia in ingestion_report.get("inconsistencies", []):
+            tipo = inconsistencia.get("type")
+            if tipo in problems_by_type:
+                problems_by_type[tipo] += 1
+
+        if files_declared == 0:
+            global_score = 1.0
+        else:
+            penalizacion_total = sum(
+                _PESOS_POR_TIPO[tipo] * conteo
+                for tipo, conteo in problems_by_type.items()
+            )
+            global_score = round(
+                max(0.0, 1.0 - penalizacion_total / files_declared), 4
+            )
+
+        total_problemas = sum(problems_by_type.values())
+        pareto = []
+        if total_problemas > 0:
+            tipos_con_problemas = sorted(
+                (tipo for tipo, conteo in problems_by_type.items() if conteo >= 1),
+                key=lambda tipo: (-problems_by_type[tipo], tipo),
+            )
+            pareto = [
+                {
+                    "type": tipo,
+                    "count": problems_by_type[tipo],
+                    "pct": round(problems_by_type[tipo] / total_problemas, 4),
+                }
+                for tipo in tipos_con_problemas
+            ]
+
         self._report = {
             "schema_version": "0.2",
             "client": ctx.name,
             "flow": "profiling",
             "success": True,
+            "health": {
+                "global_score": global_score,
+                "files_declared": files_declared,
+                "files_healthy": files_healthy,
+                "files_with_problems": files_with_problems,
+                "problems_by_type": problems_by_type,
+                "pareto": pareto,
+            },
         }
         return FlowResult(success=True, outputs=[self.produces[0].path(ctx)])
 
