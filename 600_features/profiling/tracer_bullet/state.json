@@ -2,7 +2,7 @@
   "feature": "profiling",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "tdd_tester",
+  "current_stage": "tdd_coder",
   "stages": {
     "feature_definer": {
       "status": "done",
@@ -144,9 +144,14 @@
           "id": 10,
           "desc": "evaluate_predecessor_gate('profiling', ctx) devuelve un mensaje cuando ingestion_report.json esta ausente",
           "ca": "CA-13",
-          "status": "red",
+          "status": "green",
           "test": "tests/test_orchestrator.py::test_evaluate_predecessor_gate_profiling_devuelve_mensaje_con_ingestion_report_ausente",
-          "red_evidence": "python -m pytest tests/test_orchestrator.py::test_evaluate_predecessor_gate_profiling_devuelve_mensaje_con_ingestion_report_ausente -q -> 1 failed. FileNotFoundError: [Errno 2] No such file or directory: '.../clients/ABC/020_outputs/030_ingestion/ingestion_report.json', lanzado dentro de evaluate_predecessor_gate en report_path.read_text(encoding='utf-8') (src/foda/orchestrator.py linea 54). Rojo genuino: la funcion hoy no comprueba si el reporte del predecesor existe antes de leerlo ni captura FileNotFoundError, asi que propaga la excepcion en vez de devolver el str legible que el test exige (isinstance(resultado, str), resultado != '', 'ingestion' in resultado); no es ImportError/TypeError por typo. python -m pytest -q (suite completa) -> 184 passed, 1 failed (el nuevo rojo), sin regresiones."
+          "red_evidence": "python -m pytest tests/test_orchestrator.py::test_evaluate_predecessor_gate_profiling_devuelve_mensaje_con_ingestion_report_ausente -q -> 1 failed. FileNotFoundError: [Errno 2] No such file or directory: '.../clients/ABC/020_outputs/030_ingestion/ingestion_report.json', lanzado dentro de evaluate_predecessor_gate en report_path.read_text(encoding='utf-8') (src/foda/orchestrator.py linea 54). Rojo genuino: la funcion hoy no comprueba si el reporte del predecesor existe antes de leerlo ni captura FileNotFoundError, asi que propaga la excepcion en vez de devolver el str legible que el test exige (isinstance(resultado, str), resultado != '', 'ingestion' in resultado); no es ImportError/TypeError por typo. python -m pytest -q (suite completa) -> 184 passed, 1 failed (el nuevo rojo), sin regresiones.",
+          "green_files": [
+            "src/foda/orchestrator.py"
+          ],
+          "green_evidence": "python -m pytest tests/test_orchestrator.py::test_evaluate_predecessor_gate_profiling_devuelve_mensaje_con_ingestion_report_ausente -q -> 1 passed (primer intento, sin reintentos); python -m pytest -q (suite completa) -> 185 passed, sin regresiones.",
+          "coder_note": "TSK-18 (minimo suficiente, NC-2/NC-3): dentro de evaluate_predecessor_gate, antes de leer el reporte del predecesor se agrego 'if not report_path.exists(): return f\"No se encontro un reporte de {predecessor_name!r} con success == true.\"'. Con este cambio la funcion queda completa en sus 4 ramas (sin predecesor->None, success:true->None, success:false->mensaje, reporte ausente->mensaje). No se modifico el test ni ninguna otra rama existente (casos 7/8/9 ya en verde)."
         },
         {
           "id": 11,

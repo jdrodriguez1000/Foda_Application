@@ -45,12 +45,16 @@ def evaluate_predecessor_gate(flow_name: str, ctx: ClientContext) -> str | None:
     con resolve_flow(<predecesor>).produces[0].path(ctx) (DS-PROF-4) y, si el
     reporte existe con success:true, el gate esta satisfecho y devuelve None.
     Si el reporte existe pero success no es true, devuelve un mensaje legible
-    que nombra al predecesor y el motivo (DS-PROF-4)."""
+    que nombra al predecesor y el motivo (DS-PROF-4). Si el reporte del
+    predecesor no existe en disco, tambien devuelve un mensaje legible que
+    nombra al predecesor y el motivo (DS-PROF-4)."""
     if flow_name not in PREDECESSORS:
         return None
 
     predecessor_name = PREDECESSORS[flow_name]
     report_path = resolve_flow(predecessor_name).produces[0].path(ctx)
+    if not report_path.exists():
+        return f"No se encontro un reporte de {predecessor_name!r} con success == true."
     report = json.loads(report_path.read_text(encoding="utf-8"))
     if report["success"] is True:
         return None
