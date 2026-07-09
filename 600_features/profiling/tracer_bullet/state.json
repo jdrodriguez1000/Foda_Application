@@ -2,7 +2,7 @@
   "feature": "profiling",
   "band": "tracer_bullet",
   "status": "in_progress",
-  "current_stage": "tdd_tester",
+  "current_stage": "tdd_coder",
   "stages": {
     "feature_definer": {
       "status": "done",
@@ -102,9 +102,14 @@
           "id": 7,
           "desc": "PREDECESSORS == {'profiling': 'ingestion'}; evaluate_predecessor_gate devuelve None para un flujo sin predecesor registrado",
           "ca": "CA-12",
-          "status": "red",
+          "status": "green",
           "test": "tests/test_orchestrator.py::test_predecessors_mapea_profiling_a_ingestion_y_gate_es_noop_sin_predecesor",
-          "red_evidence": "python -m pytest tests/test_orchestrator.py::test_predecessors_mapea_profiling_a_ingestion_y_gate_es_noop_sin_predecesor -q -> ERROR collecting tests/test_orchestrator.py: ImportError: cannot import name 'PREDECESSORS' from 'foda.orchestrator'. Rojo genuino (no typo/sintaxis accidental): PREDECESSORS y evaluate_predecessor_gate aun no existen en src/foda/orchestrator.py (TSK-10 -- registro de 'profiling' en FLOWS, caso 6 -- ya esta en verde; TSK-12 debe introducir el mapa y el esqueleto de la funcion)."
+          "red_evidence": "python -m pytest tests/test_orchestrator.py::test_predecessors_mapea_profiling_a_ingestion_y_gate_es_noop_sin_predecesor -q -> ERROR collecting tests/test_orchestrator.py: ImportError: cannot import name 'PREDECESSORS' from 'foda.orchestrator'. Rojo genuino (no typo/sintaxis accidental): PREDECESSORS y evaluate_predecessor_gate aun no existen en src/foda/orchestrator.py (TSK-10 -- registro de 'profiling' en FLOWS, caso 6 -- ya esta en verde; TSK-12 debe introducir el mapa y el esqueleto de la funcion).",
+          "green_files": [
+            "src/foda/orchestrator.py"
+          ],
+          "green_evidence": "python -m pytest tests/test_orchestrator.py::test_predecessors_mapea_profiling_a_ingestion_y_gate_es_noop_sin_predecesor -q -> 1 passed; python -m pytest -q (suite completa) -> 182 passed, sin regresiones.",
+          "coder_note": "TSK-12: se agrego PREDECESSORS: dict[str, str] = {'profiling': 'ingestion'} (mapa literal explicito, DS-PROF-2, mismo patron NC-2 ya usado en FLOWS) y el esqueleto minimo de evaluate_predecessor_gate(flow_name, ctx) -> str | None en src/foda/orchestrator.py: unica rama implementada es 'if flow_name not in PREDECESSORS: return None' (gate no-op sin predecesor registrado), que es todo lo que el caso 7 exige. Se importo ClientContext desde foda.core.context para el tipado del parametro ctx. Las ramas de reporte en disco (success:true -> None; success:false -> mensaje; ausente -> mensaje) NO se implementaron: corresponden a los casos 8, 9 y 10 (NC-2/NC-3, minimo suficiente)."
         },
         {
           "id": 8,

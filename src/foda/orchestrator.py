@@ -8,6 +8,7 @@ Vive fuera de core/ porque core no debe conocer flujos concretos (DS-ORQ-1).
 FLOWS es un registro literal explicito (NC-2: sin descubrimiento dinamico).
 """
 
+from foda.core.context import ClientContext
 from foda.core.flow import Flow
 from foda.flows.f020_onboarding.onboarding import Onboarding
 from foda.flows.f030_ingestion.ingestion import Ingestion
@@ -19,6 +20,10 @@ FLOWS: dict[str, type[Flow]] = {
     "profiling": Profiling,
 }
 
+PREDECESSORS: dict[str, str] = {
+    "profiling": "ingestion",
+}
+
 
 def resolve_flow(name: str) -> Flow:
     """Devuelve una instancia del Flow registrado bajo name; lanza ValueError
@@ -28,3 +33,10 @@ def resolve_flow(name: str) -> Flow:
     except KeyError as exc:
         raise ValueError(f"Flujo desconocido: {name!r}. Debe ser uno de {sorted(FLOWS)}.") from exc
     return flow_cls()
+
+
+def evaluate_predecessor_gate(flow_name: str, ctx: ClientContext) -> str | None:
+    """Evalua el gate de predecesor de flow_name (DS-PROF-2). Si flow_name no
+    tiene entrada en PREDECESSORS, el gate es no-op y devuelve None."""
+    if flow_name not in PREDECESSORS:
+        return None
