@@ -14,6 +14,11 @@ bronze todavia -esta banda no calcula salud de datos, NC-2) y
 write_outputs(ctx, result) lo persiste de forma deterministica, calcado del
 patron de Ingestion.write_outputs (sort_keys + indent=2 + newline final, sin
 la parte de copia a bronze que no aplica a este flujo).
+
+Banda stab_1, caso 1 (CA-18, CA-19, TSK-02) en VERDE (tdd_coder): bump
+aditivo de schema_version a "0.2" (DS-PRF-7); identidad client/flow/success
+sin cambios de tipo ni valor. El bloque health y demas logica de stab_1
+llegan en casos posteriores del bucle TDD (no se adelantan, NC-2).
 """
 
 import json
@@ -57,7 +62,7 @@ class Profiling(Flow):
         """Arma en memoria el reporte minimo de profiling (esta banda no lee
         bronze/ ni calcula salud de datos, NC-2)."""
         self._report = {
-            "schema_version": "0.1",
+            "schema_version": "0.2",
             "client": ctx.name,
             "flow": "profiling",
             "success": True,
