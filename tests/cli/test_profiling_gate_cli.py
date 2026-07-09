@@ -426,3 +426,82 @@ def test_run_profiling_con_ingestion_report_ausente_sin_force_devuelve_1_y_no_es
         tmp_path / "clients" / "ABC" / "020_outputs" / "040_profiling"
     )
     assert not profiling_dir.exists()
+
+
+def test_run_profiling_con_ingestion_report_ausente_con_force_devuelve_1_por_flow_contracterror(
+    tmp_path: Path, proyecto: Path, capsys
+):
+    """Caso 17 (CA-05, TSK-29, borde documentado, ULTIMO caso del bucle TDD):
+    con ingestion_report.json AUSENTE (no fabricado, mismo punto de partida
+    que el caso 16) y CON --force,
+    main(["run","ABC","--flow","profiling","--force"]) debe devolver 1 y NO
+    debe existir NINGUN artefacto bajo 020_outputs/040_profiling/ (ni el
+    directorio ni profiling_report.json).
+
+    A diferencia de los casos 13/14 (--force con reporte presente, que
+    terminan en exit 0), aqui --force SI sobrepasa el gate de progresion
+    (evaluate_predecessor_gate('profiling', ctx) devuelve el mensaje de la
+    rama 'reporte ausente', caso 10, orchestrator.py) -- el bloque
+    'if gate_message is not None: if args.force: advierte (sin return)'
+    (TSK-25, caso 13, cli.py) imprime la advertencia a stderr y el despacho
+    SI continua a flow.run(ctx), a diferencia del caso 16 (mismo escenario
+    sin --force, que bloquea con exit 1 ANTES de flow.run). Pero
+    Profiling.run(ctx) invoca Flow.run (caso 2, template method heredado:
+    load_inputs -> validate -> execute -> write_outputs) y Flow.validate()
+    heredado (caso 5, src/foda/core/flow.py) recorre self.requires y, al
+    encontrar que 'ingestion_report' sigue sin existir en disco (--force no
+    fabrica el archivo, solo sobrepasa el gate de la CLI, que es una
+    comprobacion independiente de Flow.validate), lanza FlowContractError
+    nombrando el artefacto ausente -- ANTES de que execute()/write_outputs()
+    puedan crear el subdirectorio 040_profiling/. _dispatch_run (cli.py) ya
+    envuelve flow.run(ctx) en 'except FlowContractError as exc: print a
+    stderr; return 1' (rama preexistente a esta feature, usada por otros
+    flujos), por lo que la excepcion se traduce a exit 1 sin necesidad de
+    codigo nuevo.
+
+    Aserciones especificas (no triviales, distinguen este caso del 13/14/16):
+    (1) exit code exacto 1 (no 0, pese a --force: el --force solo sobrepasa
+    el GATE de la CLI, no el contrato interno de Flow.validate); (2) stderr
+    NO vacio y con al menos 2 lineas no vacias: la advertencia de --force
+    (que nombra 'ingestion' y 'force', mismo patron que el caso 13) MAS el
+    mensaje de FlowContractError (que nombra 'ingestion_report', el name
+    exacto del Artifact en Profiling.requires, caso 1) -- evidencia de que
+    ambos mecanismos (gate de CLI y contrato de Flow) se ejecutaron, uno
+    tras otro, y no solo uno de los dos; (3) ausencia TOTAL del directorio
+    040_profiling/ en disco (no solo del archivo), igual que los casos 12/16,
+    confirmando que FlowContractError corto antes de write_outputs.
+
+    NO se fabrica ingestion_report.json (a proposito, mismo espiritu que el
+    caso 16): el punto de este caso es que el archivo sigue ausente incluso
+    con --force.
+
+    Previsto por plan.md linea 87 (TSK-29) como un caso SIN tarea-codigo
+    propia: el borde documentado surge de la composicion de comportamiento
+    ya en verde (gate wireado con --force, casos 12/13; Flow.validate
+    heredado, caso 5; traduccion de FlowContractError en _dispatch_run,
+    preexistente a esta feature). Si este test pasa de inmediato sin codigo
+    de produccion nuevo, no es un verde invalido -- documentar como
+    already_green con la evidencia de pytest, igual que los casos
+    3/4/5/11/14/15/16, verificando que las aserciones sean especificas (no
+    solo 'result != 0') para que el already_green no sea trivial."""
+    from foda.cli import main
+
+    _seed_cliente_abc(proyecto)
+    # No se fabrica ingestion_report.json: el punto de este caso es que sigue
+    # ausente incluso con --force (a diferencia de los casos 13/14, que si lo
+    # fabrican).
+
+    result = main(["run", "ABC", "--flow", "profiling", "--force"])
+
+    assert result == 1
+
+    captured = capsys.readouterr()
+    stderr_lines = [line for line in captured.err.splitlines() if line.strip()]
+    assert len(stderr_lines) >= 2
+    assert any("ingestion" in line and "force" in line.lower() for line in stderr_lines)
+    assert any("ingestion_report" in line for line in stderr_lines)
+
+    profiling_dir = (
+        tmp_path / "clients" / "ABC" / "020_outputs" / "040_profiling"
+    )
+    assert not profiling_dir.exists()
