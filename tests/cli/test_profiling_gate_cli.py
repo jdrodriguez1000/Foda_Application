@@ -378,3 +378,51 @@ def test_run_profiling_con_ingestion_report_success_true_con_force_devuelve_0_es
 
     captured = capsys.readouterr()
     assert captured.err == ""
+
+
+def test_run_profiling_con_ingestion_report_ausente_sin_force_devuelve_1_y_no_escribe_nada(
+    tmp_path: Path, proyecto: Path, capsys
+):
+    """Caso 16 (CA-13, TSK-28): con ingestion_report.json AUSENTE (no
+    fabricado por este test -- ese es precisamente el punto: el cliente
+    'ABC' existe (client.yaml) pero jamas corrio 'ingestion') y SIN --force,
+    main(["run","ABC","--flow","profiling"]) debe devolver 1, stderr debe
+    nombrar tanto al predecesor 'ingestion' como el motivo (el reporte no
+    existe/no se encontro; el gate ya produce ese mensaje exacto, caso 10,
+    orchestrator.py::evaluate_predecessor_gate, rama 'reporte ausente'), y no
+    debe existir NINGUN artefacto bajo 020_outputs/040_profiling/ (ni el
+    directorio ni profiling_report.json): el gate debe cortar ANTES de
+    flow.run, por lo que ni siquiera execute()/write_outputs() deben
+    alcanzar a crear el subdirectorio.
+
+    Previsto por plan.md linea 87 como already_green: la rama "reporte
+    ausente -> mensaje" del gate (caso 10, evaluate_predecessor_gate) y el
+    wiring "bloquea sin --force" en _dispatch_run (caso 12, cli.py) ya estan
+    en verde; para ESTE escenario (ausente en vez de success:false) el
+    comportamiento observable de la CLI deberia ser identico al del caso 12
+    (bloqueo, exit 1, sin escritura), solo que el mensaje de gate proviene de
+    la rama "reporte ausente" (FileNotFoundError capturado, caso 10) en vez
+    de la rama "success:false" (caso 9). Si este test pasa de inmediato sin
+    codigo de produccion nuevo, no es un verde invalido -- documentar como
+    already_green con la evidencia de pytest, igual que los casos 3/4/5/11/
+    14/15. Las aserciones son especificas y no triviales: exit code exacto
+    (1, no solo != 0), stderr debe nombrar el predecesor 'ingestion' (no
+    generico), y la ausencia TOTAL del directorio 040_profiling/ en disco
+    (no solo del archivo), distinguiendolo de un posible escenario donde el
+    directorio se cree pero el reporte no se escriba."""
+    from foda.cli import main
+
+    _seed_cliente_abc(proyecto)
+    # No se fabrica ingestion_report.json: el punto de este caso es su
+    # ausencia (a diferencia del caso 12, que si lo fabrica con success:false).
+
+    result = main(["run", "ABC", "--flow", "profiling"])
+
+    assert result == 1
+    captured = capsys.readouterr()
+    assert "ingestion" in captured.err
+
+    profiling_dir = (
+        tmp_path / "clients" / "ABC" / "020_outputs" / "040_profiling"
+    )
+    assert not profiling_dir.exists()
