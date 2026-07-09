@@ -171,8 +171,9 @@
           "id": 12,
           "desc": "CLI: success:false sin --force -> exit 1, stderr nombra ingestion+motivo, y no se escribe ningun artefacto bajo 040_profiling/",
           "ca": "CA-07,CA-08",
-          "status": "pending"
-        },
+          "status": "red",
+          "test": "tests/cli/test_profiling_gate_cli.py::test_run_profiling_con_ingestion_report_success_false_sin_force_devuelve_1_y_no_escribe_nada",
+          "red_evidence": "python -m pytest tests/cli/test_profiling_gate_cli.py::test_run_profiling_con_ingestion_report_success_false_sin_force_devuelve_1_y_no_escribe_nada -q -> 1 failed. AssertionError: assert 0 == 1 (result de main([...]) es 0, no 1). Rojo genuino: _dispatch_run (src/foda/cli.py) todavia NO llama a evaluate_predecessor_gate (TSK-20/TSK-21 pendientes); con ingestion_report.json (success:false) presente, Profiling.validate() heredado solo exige que el artefacto exista (existe, aunque con success:false), asi que flow.run(ctx) hoy completa con exito (stdout: \"foda: flujo 'profiling' completado...\") y SI escribe profiling_report.json, en vez de bloquear con exit 1 antes de flow.run. No es ImportError/typo: evaluate_predecessor_gate ya existe y esta en verde desde el caso 9 (orchestrator.py); falta el wiring en la CLI. python -m pytest -q (suite completa) -> 186 passed, 1 failed (el nuevo rojo), sin regresiones."
         {
           "id": 13,
           "desc": "CLI: --force con success:false -> exit 0, profiling_report.json presente, y advertencia de gate en stderr",

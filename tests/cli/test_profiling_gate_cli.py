@@ -104,3 +104,42 @@ def test_run_profiling_con_ingestion_report_success_true_sin_force_devuelve_0_y_
         / "profiling_report.json"
     )
     assert profiling_report.exists()
+
+
+def test_run_profiling_con_ingestion_report_success_false_sin_force_devuelve_1_y_no_escribe_nada(
+    tmp_path: Path, proyecto: Path, capsys
+):
+    """Caso 12 (CA-07/CA-08, TSK-21): con ingestion_report.json (success:false)
+    presente y SIN --force, main(["run","ABC","--flow","profiling"]) debe
+    devolver 1, stderr debe nombrar tanto al predecesor 'ingestion' como el
+    motivo del bloqueo (el reporte no tiene success == true; el gate ya
+    produce ese mensaje exacto, caso 9, orchestrator.py), y no debe existir
+    NINGUN artefacto bajo 020_outputs/040_profiling/ (ni el directorio ni
+    profiling_report.json): el gate debe cortar ANTES de flow.run, por lo que
+    ni siquiera execute()/write_outputs() deben alcanzar a crear el
+    subdirectorio.
+
+    Rojo esperado (genuino, no accidental): _dispatch_run (src/foda/cli.py)
+    hoy NO llama a evaluate_predecessor_gate (TSK-20/TSK-21 pendientes) antes
+    de flow.run(ctx); con este fabricado (success:false), Profiling.validate()
+    heredado solo exige que ingestion_report.json exista (existe, aunque con
+    success:false) por lo que flow.run(ctx) hoy completa con exito (exit 0) y
+    SI escribe profiling_report.json -- exactamente lo que este test prohibe.
+    El gate en si (evaluate_predecessor_gate) ya esta completo y en verde
+    desde el caso 9 (orchestrator.py); lo que falta es el wiring en la CLI."""
+    from foda.cli import main
+
+    _seed_cliente_abc(proyecto)
+    _fabricar_ingestion_report(proyecto, success=False)
+
+    result = main(["run", "ABC", "--flow", "profiling"])
+
+    assert result == 1
+    captured = capsys.readouterr()
+    assert "ingestion" in captured.err
+    assert "success" in captured.err
+
+    profiling_dir = (
+        tmp_path / "clients" / "ABC" / "020_outputs" / "040_profiling"
+    )
+    assert not profiling_dir.exists()
