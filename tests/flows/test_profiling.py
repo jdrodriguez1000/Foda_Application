@@ -121,3 +121,24 @@ def test_profiling_hereda_run_de_flow_e_invoca_las_4_fases_en_orden(
 
     assert calls == ["load_inputs", "validate", "execute", "write_outputs"]
     assert isinstance(result, FlowResult)
+
+
+def test_profiling_run_devuelve_flowresult_success_con_output_profiling_report(
+    tmp_path: Path,
+) -> None:
+    """Caso 3 (CA-03, TSK-04): con ingestion_report.json (success:true)
+    presente, Profiling().run(ctx) (ejecucion real y completa del template
+    method heredado, sin espias) devuelve un FlowResult cuyo success es
+    exactamente True y cuyo outputs es exactamente la lista de un solo
+    elemento con la ruta absoluta ctx.outputs_dir/040_profiling/
+    profiling_report.json (el unico Artifact declarado en Profiling.produces,
+    ver caso 1). Aserciones especificas del caso 3 (no basta con
+    isinstance(result, FlowResult) del caso 2): valor exacto de success y de
+    outputs."""
+    ctx = _build_ctx_con_ingestion_report_success_true(tmp_path)
+
+    result = Profiling().run(ctx)
+
+    expected_output_path = ctx.outputs_dir / "040_profiling/profiling_report.json"
+    assert result.success is True
+    assert result.outputs == [expected_output_path]
