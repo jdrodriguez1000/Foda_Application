@@ -193,6 +193,89 @@ def test_profiling_report_json_en_disco_es_parseable_con_campos_y_serializacion_
     assert contenido_bruto == contenido_esperado
 
 
+def _build_ctx_con_ingestion_report_todos_sanos(tmp_path: Path, n_files: int = 2) -> ClientContext:
+    """stab_1, DS-PRF-3/DS-PRF-7: ClientContext bajo tmp_path con un
+    ingestion_report.json de fixture "todos sanos" (ver spec.md, tabla
+    "Casos Limite y Errores"): summary.files_declared==n_files, un unico
+    dataset con n_files archivos, todos status=="ingested" e
+    inconsistencies==[], y la lista top-level inconsistencies==[] (sin
+    problemas de ningun tipo). Sigue el esquema DS-ING-2/DS-ING-9 de
+    ingestion_report.json (600_features/ingestion/tracer_bullet/spec.md)."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    archivos_sanos = [
+        {
+            "name": f"archivo_{i}.csv",
+            "status": "ingested",
+            "rows": 10,
+            "columns": 3,
+            "separator": ",",
+            "bronze_path": f"data/bronze/archivo_{i}.csv",
+            "inconsistencies": [],
+        }
+        for i in range(n_files)
+    ]
+
+    ingestion_report = {
+        "schema_version": "0.1",
+        "client": "ABC",
+        "flow": "ingestion",
+        "success": True,
+        "summary": {"files_declared": n_files},
+        "datasets": [{"files": archivos_sanos}],
+        "unexpected_files": [],
+        "inconsistencies": [],
+    }
+
+    report_path = ctx.outputs_dir / "030_ingestion/ingestion_report.json"
+    report_path.parent.mkdir(parents=True)
+    report_path.write_text(
+        json.dumps(ingestion_report, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    return ctx
+
+
+def test_profiling_report_contiene_bloque_health_con_exactamente_6_claves_fixture_todos_sanos(
+    tmp_path: Path,
+) -> None:
+    """Caso 2 (CA-20, CA-17, TSK-03/TSK-04): tras Profiling().run(ctx) con un
+    ingestion_report.json de fixture "todos sanos" (ver
+    _build_ctx_con_ingestion_report_todos_sanos y spec.md, tabla "Casos
+    Limite y Errores": files_declared=N>0, sin inconsistencias),
+    profiling_report.json contiene un objeto health cuyas claves son
+    EXACTAMENTE las 6 siguientes (ni de mas ni de menos): global_score,
+    files_declared, files_healthy, files_with_problems, problems_by_type,
+    pareto (DS-PRF-7). Para este fixture "todos sanos" se ancla ademas el
+    valor esperado global_score==1.0 y pareto==[] (sin problemas que
+    penalicen ni que listar en el ranking).
+
+    Hoy (antes de tdd_coder) Profiling.execute() aun no arma ningun bloque
+    health (profiling.py vigente solo produce schema_version/client/flow/
+    success), por lo que reporte["health"] lanza KeyError: rojo limpio por
+    ausencia de funcionalidad, no por error accidental."""
+    ctx = _build_ctx_con_ingestion_report_todos_sanos(tmp_path, n_files=2)
+
+    Profiling().run(ctx)
+
+    ruta_reporte = ctx.outputs_dir / "040_profiling/profiling_report.json"
+    reporte = json.loads(ruta_reporte.read_text(encoding="utf-8"))
+
+    health = reporte["health"]
+    assert set(health.keys()) == {
+        "global_score",
+        "files_declared",
+        "files_healthy",
+        "files_with_problems",
+        "problems_by_type",
+        "pareto",
+    }
+    assert health["global_score"] == 1.0
+    assert health["pareto"] == []
+
+
 def test_profiling_validate_sin_ingestion_report_lanza_flowcontracterror_nombrandolo_y_no_escribe_profiling_report(
     tmp_path: Path,
 ) -> None:
