@@ -16,6 +16,11 @@ Banda stab_1 (bucle TDD en curso, red/green/refactor caso a caso):
   la formula ponderada de global_score son placeholders (0 / {} / 1.0) que los
   casos 3-22 iran forzando a su forma real, uno a uno (fake-it-till-you-make-it).
   No se lee bronze/ ni client_register.yaml (fuera de alcance, DS-PRF-1).
+- Caso 3 (CA-06, DS-PRF-3): health.files_declared ya no es un placeholder
+  fijo; se lee de self._ingestion_report["summary"]["files_declared"]
+  (cargado en load_inputs). files_healthy, files_with_problems,
+  problems_by_type, global_score y pareto siguen como placeholders minimos
+  (0 / {} / 1.0 / []) hasta sus propios casos (4-22).
 
 Nota (NC-6): una version previa del caso 2 adelanto de una vez toda la logica
 de health (DS-PRF-2..5). Por decision del humano se restauro el TDD estricto:
@@ -68,9 +73,13 @@ class Profiling(Flow):
         """Arma en memoria el reporte de profiling: identidad (schema_version
         "0.2", client, flow, success) + bloque health con las 6 claves fijas.
 
-        Minimo del caso 2 (fixture "todos sanos"): global_score==1.0 y
-        pareto==[]; los conteos y problems_by_type son placeholders que los
-        casos 3-22 forzaran a su forma real (TDD estricto, NC-2)."""
+        Caso 3 (DS-PRF-3): files_declared proviene de
+        ingestion_report.summary.files_declared. Los demas campos de health
+        siguen como placeholders minimos hasta sus propios casos (4-22),
+        TDD estricto (NC-2)."""
+        files_declared = self._ingestion_report.get("summary", {}).get(
+            "files_declared", 0
+        )
         self._report = {
             "schema_version": "0.2",
             "client": ctx.name,
@@ -78,7 +87,7 @@ class Profiling(Flow):
             "success": True,
             "health": {
                 "global_score": 1.0,
-                "files_declared": 0,
+                "files_declared": files_declared,
                 "files_healthy": 0,
                 "files_with_problems": 0,
                 "problems_by_type": {},
