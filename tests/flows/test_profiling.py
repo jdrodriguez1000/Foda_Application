@@ -142,3 +142,40 @@ def test_profiling_run_devuelve_flowresult_success_con_output_profiling_report(
     expected_output_path = ctx.outputs_dir / "040_profiling/profiling_report.json"
     assert result.success is True
     assert result.outputs == [expected_output_path]
+
+
+def test_profiling_report_json_en_disco_es_parseable_con_campos_y_serializacion_deterministas(
+    tmp_path: Path,
+) -> None:
+    """Caso 4 (CA-04, TSK-06/TSK-07): tras Profiling().run(ctx) (con
+    ingestion_report.json success:true presente, caso 1) el archivo
+    ctx.outputs_dir/040_profiling/profiling_report.json existe en disco, es
+    JSON parseable con success==True (boolean), schema_version=="0.1",
+    client==ctx.name (=="ABC") y flow=="profiling"; y su contenido en disco
+    es EXACTAMENTE la serializacion deterministica exigida por la spec
+    (DS-PROF-3): json.dumps(<reporte>, ensure_ascii=False, indent=2,
+    sort_keys=True) + "\n" byte a byte (claves ordenadas alfabeticamente,
+    indentacion de 2 espacios y una unica newline final, sin espacio en
+    blanco extra). No basta con que el JSON sea "equivalente" en contenido
+    (ya cubierto en espiritu por json.loads()): esta asercion es especifica
+    del FORMATO exacto del archivo en disco, distinta de result.success/
+    result.outputs ya verificados en el caso 3."""
+    ctx = _build_ctx_con_ingestion_report_success_true(tmp_path)
+
+    Profiling().run(ctx)
+
+    ruta_reporte = ctx.outputs_dir / "040_profiling/profiling_report.json"
+    assert ruta_reporte.exists()
+
+    contenido_bruto = ruta_reporte.read_text(encoding="utf-8")
+    reporte = json.loads(contenido_bruto)
+
+    assert reporte["success"] is True
+    assert reporte["schema_version"] == "0.1"
+    assert reporte["client"] == ctx.name
+    assert reporte["flow"] == "profiling"
+
+    contenido_esperado = (
+        json.dumps(reporte, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    )
+    assert contenido_bruto == contenido_esperado
