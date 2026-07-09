@@ -54,13 +54,12 @@
 ## 3. Tareas En Progreso
 | ID | Tarea | Prioridad | Notas |
 |---|---|---|---|
-| _Ninguna._ | | | |
+| T-038 | Construir la feature `profiling` (flujo 040, esqueleto mínimo/tracer bullet) en la rama `feature/profiling`, incluyendo T-036 (gate de progresión por `success` del predecesor + `--force`) | 🔴 Alta | Octava feature en recorrer la cadena de 8 agentes; primera en usar el flujo de ramas D-079/D-081 en la práctica. Cadena SDD completa (`feature_definer` commit `01147c2`, `spec_writer` 13 CA/DS-PROF-1..4 GATE APROBADO commit `8883a1d`, `plan_builder` 17 casos TDD GATE APROBADO commit `8f3285a`). **Bucle TDD COMPLETO (17/17 casos cerrado)**: caso 1 (CA-01) cerrado en sesión previa; en esta sesión se cerraron los casos 2-17, incluyendo código de producción genuino en los casos 2 (`Profiling.execute`/`write_outputs`), 6 (registro en `FLOWS`), 7/8/9/10 (`evaluate_predecessor_gate` en sus 4 ramas + `PREDECESSORS`), 12/13 (wiring CLI `--force` en `_dispatch_run`, 3 caminos); 8 casos verde-directo (3, 4, 5, 11, 14, 15, 16, 17, D-037). `stages.tdd.status:"done"`, `current_stage:"integration_tester"`. Suite: 192 passed (176→192). Retoma invocando `integration_tester` (TSK-31). Ver D-082 a D-086, L-059, L-060. |
 
 ## 4. Tareas Pendientes
 | ID | Tarea | Prioridad | Notas |
 |---|---|---|---|
-| T-036 | Implementar el gate de progresión entre flujos por `success` del predecesor + flag `--force` | 🟡 Media | Puntos 1-3 del ADR D-080: ningún flujo puede ejecutarse si su predecesor no terminó con `success:true` (leyendo el reporte del predecesor, p. ej. `ingestion_report.json`); si no hay OK, `foda run` del flujo siguiente falla con código 1 y mensaje claro sin escribir nada; override `--force` permite correr de todos modos dejando advertencia registrada. Excepción temporal para `discovery` (no construido, se opera a mano) y `onboarding` (solo exige la presencia de `contract_data.json`, no un "OK de discovery"). Por NC-2/NC-4 se implementa junto al primer flujo consumidor de un reporte de `ingestion` en adelante (hoy no hay consumidor). Diferida hasta que exista un primer flujo consumidor de reportes (probablemente `discovery`, aún no construido). |
-| T-037 | Comando encadenado tipo `foda run <cliente> --flow onboarding→ingestion` | 🟢 Baja | Feature nueva vía SDD/TDD; depende de T-036 (gate de progresión) para tener sentido (encadenar solo si el predecesor puede fallar el gate). Diferida junto con T-036. |
+| T-037 | Comando encadenado tipo `foda run <cliente> --flow onboarding→ingestion` | 🟢 Baja | Feature nueva vía SDD/TDD; depende de T-036 (gate de progresión, ahora en implementación dentro de T-038/`profiling`) para tener sentido (encadenar solo si el predecesor puede fallar el gate). |
 
 ## 5. Backlog
 | ID | Tarea | Notas |

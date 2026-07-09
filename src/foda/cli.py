@@ -15,14 +15,23 @@ stderr + codigo 1, sin tocar disco).
 traduccion del camino de exito a consola y traduccion de ValueError (nombre
 invalido) / FileExistsError (duplicado) a stderr + codigo 1.
 
-`run <name> --flow <flow>` (DS-ORQ-4): resuelve el flujo via resolve_flow,
-construye el ClientContext del cliente existente y despacha a flow.run(ctx),
-traduciendo cada fallo (flujo desconocido, cliente inexistente,
-FlowContractError) a stderr + codigo 1 antes de escribir salida alguna.
-El exit code refleja el resultado del flujo (T-035, ADR D-080 punto 4): 0
-solo si el FlowResult tiene success=True; si success=False (camino blando de
-inconsistencia de datos, sin excepcion) sale 1 con un mensaje que NO afirma
-"completado", para no ocultar el fallo a scripts/CI (L-053).
+`run <name> --flow <flow> [--force]` (DS-ORQ-4, DS-PROF-1/DS-PROF-4): resuelve
+el flujo via resolve_flow, construye el ClientContext del cliente existente
+y, antes de invocar flow.run(ctx), evalua el gate de progresion entre flujos
+(evaluate_predecessor_gate, feature profiling, ADR D-080 puntos 1-3). Si el
+predecesor no tiene un reporte con success==true y no se paso --force, sale 1
+con un mensaje a stderr que nombra al predecesor y el motivo, sin invocar
+flow.run (por lo que no se escribe ningun artefacto del flujo solicitado); si
+se paso --force el gate se sobrepasa, se emite una advertencia a stderr que
+nombra al predecesor y el motivo del bloqueo sobrepasado, y el despacho
+continua a flow.run.
+Tras flow.run (con o sin --force), cada fallo (cliente inexistente,
+FlowContractError) se traduce a stderr + codigo 1 antes de escribir salida
+alguna. El exit code final refleja el resultado del flujo (T-035, ADR D-080
+punto 4): 0 solo si el FlowResult tiene success=True; si success=False
+(camino blando de inconsistencia de datos, sin excepcion) sale 1 con un
+mensaje que NO afirma "completado", para no ocultar el fallo a scripts/CI
+(L-053).
 
 `status <name>` (DS-ORQ-3): construye el ClientContext y lista, por cada
 flujo registrado en FLOWS, sus artefactos requires/produces con un marcador
@@ -41,7 +50,7 @@ from pathlib import Path
 from foda.core.context import ClientContext
 from foda.core.flow import FlowContractError
 from foda.core.scaffold import create_client
-from foda.orchestrator import FLOWS, resolve_flow
+from foda.orchestrator import FLOWS, evaluate_predecessor_gate, resolve_flow
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -57,6 +66,7 @@ def _build_parser() -> argparse.ArgumentParser:
     run_parser = subparsers.add_parser("run")
     run_parser.add_argument("name")
     run_parser.add_argument("--flow", required=True)
+    run_parser.add_argument("--force", action="store_true")
 
     status_parser = subparsers.add_parser("status")
     status_parser.add_argument("name")
@@ -145,11 +155,21 @@ def _build_client_context(name: str, clients_root: Path) -> ClientContext | None
 
 
 def _dispatch_run(args: argparse.Namespace, clients_root: Path) -> int:
-    """Despacha `foda run <cliente> --flow <flujo>` (DS-ORQ-4): resuelve el
-    flujo (puro, sin disco), construye el ClientContext (lectura del cliente
-    existente) y ejecuta flow.run(ctx), traduciendo cada fallo a stderr +
-    codigo 1 antes de escribir salida alguna. Tras un flow.run sin excepcion,
-    el exit code refleja result.success (T-035): 0 si True, 1 si False."""
+    """Despacha `foda run <cliente> --flow <flujo> [--force]` (DS-ORQ-4,
+    DS-PROF-1): resuelve el flujo (puro, sin disco), construye el
+    ClientContext (lectura del cliente existente), evalua el gate de
+    progresion entre flujos (evaluate_predecessor_gate) y, si el gate deja
+    pasar (sin predecesor, o predecesor con success==true) o se paso
+    --force, ejecuta flow.run(ctx). Traduce cada fallo a stderr + codigo 1
+    antes de escribir salida alguna. Tras un flow.run sin excepcion, el exit
+    code refleja result.success (T-035): 0 si True, 1 si False.
+
+    El gate queda completo en sus tres caminos (casos 12 y 13, CA-07..CA-10):
+    sin gate_message, continua a flow.run sin mas; con gate_message y sin
+    --force, bloquea (stderr + return 1) antes de flow.run; con gate_message
+    y --force, el bloqueo se sobrepasa -- se emite una advertencia a stderr
+    (nombrando al predecesor y el motivo) y el despacho continua a
+    flow.run."""
     try:
         flow = resolve_flow(args.flow)
     except ValueError as exc:
@@ -159,6 +179,20 @@ def _dispatch_run(args: argparse.Namespace, clients_root: Path) -> int:
     ctx = _build_client_context(args.name, clients_root)
     if ctx is None:
         return 1
+
+    # DS-PROF-1: el gate se evalua siempre (incluso con --force), para poder
+    # advertir a stderr cuando --force sobrepasa un gate que hubiera
+    # bloqueado (en vez de sobrepasarlo en silencio).
+    gate_message = evaluate_predecessor_gate(args.flow, ctx)
+    if gate_message is not None:
+        if args.force:
+            print(
+                f"foda: --force sobrepaso el gate del predecesor: {gate_message}",
+                file=sys.stderr,
+            )
+        else:
+            print(f"foda: {gate_message}", file=sys.stderr)
+            return 1
 
     try:
         result = flow.run(ctx)

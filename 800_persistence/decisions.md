@@ -98,6 +98,11 @@ Cada decisión sigue el formato: **ID**, **título**, **estado** (Propuesta / Ac
 | D-079 | Política de gobernanza: rama por feature (`feature/<nombre>`) + merge por PR tras prueba humana | Aceptada — **Implementada por T-034** (2026-07-09) | 2026-07-08 |
 | D-080 | Gate de progresión entre flujos por `success` del predecesor + `--force`; `foda run` refleja `success` en el exit code | Aceptada — punto 4 (exit code) implementado por T-035; puntos 1-3 (gate + `--force`) pendientes (T-036) | 2026-07-09 |
 | D-081 | Enmienda a D-079: mientras no se implemente T-034, todo trabajo va directo a `main` (incluida la propia T-034); contrato aclarado — la automatización lleva el trabajo hasta el PR, el merge a `main` es gate humano explícito | Aceptada — T-034 implementada conforme a esta enmienda (2026-07-09) | 2026-07-09 |
+| D-082 | Próxima feature = `profiling` (flujo 040), esqueleto mínimo/tracer bullet, anfitrión concreto de T-036 (gate de progresión); Profiling identificado como el flujo consumidor real que sigue a `ingestion`, no `discovery` | Aceptada — EN PROGRESO (2026-07-09) | 2026-07-09 |
+| D-083 | `profiling` — DS-PROF-1: el gate de progresión vive en `_dispatch_run` de `src/foda/cli.py`, antes de `flow.run(ctx)`, no dentro del contrato de `Flow` | Aceptada | 2026-07-09 |
+| D-084 | `profiling` — DS-PROF-2: `PREDECESSORS = {"profiling": "ingestion"}` en `orchestrator.py`; ruta del reporte del predecesor vía `resolve_flow("ingestion").produces[0].path(ctx)` | Aceptada | 2026-07-09 |
+| D-085 | `profiling` — DS-PROF-3: `profiling_report.json` mínimo (`schema_version`, `client`, `flow`, `success`), único campo vinculante `success`; advertencia de `--force` a stderr | Aceptada | 2026-07-09 |
+| D-086 | `profiling` — DS-PROF-4: `--force` como `store_true` en `run_parser`, evaluador puro `evaluate_predecessor_gate(flow_name, ctx) -> str \| None` en `orchestrator.py`, sin tocar `ClientContext` ni `Flow.run` | Aceptada | 2026-07-09 |
 
 ## 3. Detalle de Decisiones
 
@@ -669,3 +674,38 @@ Cada decisión sigue el formato: **ID**, **título**, **estado** (Propuesta / Ac
 - **Decisión:** (1) **Alcance provisional**: mientras T-034 no esté implementada, todo el trabajo —incluida la propia implementación de T-034 cuando se aborde— se hace directo sobre `main`, sin abrir ramas `feature/`. Esto resuelve el punto de alcance abierto de D-079: T-034 se aplica directo a `main`, no en su propia rama. (2) **Contrato de la política (aclaración vinculante para cuando T-034 se implemente)**: la automatización (harness/agentes) lleva el trabajo HASTA el Pull Request — crea la rama `feature/<nombre>`, commitea, abre el PR con la información de la feature —, pero el MERGE de ese PR a `main` es un gate humano explícito; el harness nunca mergea por su cuenta.
 - **Consecuencias:** Se despeja el punto de alcance abierto de D-079/T-034 sin cambiar el resto de su diseño (7 ajustes de implementación siguen vigentes). Mientras tanto, `session_closer` sigue empujando a `origin main` en cada cierre (sin cambios respecto al comportamiento actual); T-034 pasa a ser la próxima tarea prioritaria del backlog de gobernanza. Refuerza que A-018 (feature-a-la-vez, sin conflictos de rama) sigue aplicando sin cambios mientras se opera directo sobre `main`.
 - **Nota de implementación (2026-07-09, T-034):** T-034 quedó implementada conforme a esta enmienda: se aplicó directo sobre `main` (sin rama `feature/`), y el contrato "automatización hasta el PR, merge humano" quedó codificado en `CLAUDE.md` §3 y en los agentes (`feature_definer.md` crea la rama, `spec_verifier.md` dirige a `human_test` en vez de mergear, la sesión principal abre el PR). A partir de la siguiente feature nueva, el push de cierre de sesión ya no será siempre a `main` (ver nota en A-018).
+
+### D-082 — Próxima feature = `profiling` (flujo 040), esqueleto mínimo/tracer bullet, anfitrión concreto de T-036
+- **Estado:** Aceptada — EN PROGRESO
+- **Fecha:** 2026-07-09
+- **Contexto:** T-036 (gate de progresión entre flujos por `success` del predecesor, D-080 puntos 1-3) estaba diferida por NC-2/NC-4: no había un flujo consumidor real de un reporte de `ingestion` que la ejerciera. Se buscó ese consumidor releyendo `990_documents/expected_workflow.md`: el flujo que sigue a `ingestion` (030) en el pipeline de negocio es **Profiling (040)**, no `discovery` (010, que precede a `onboarding`, no lo sucede) — ver L-059.
+- **Decisión:** La próxima feature es `profiling`, construida como **esqueleto mínimo (tracer bullet)** que sirve de anfitrión concreto de T-036, en vez del flujo profiling completo. Se ejecuta en la rama `feature/profiling` (primera vez que se ejerce D-079/D-081 en la práctica).
+- **Consecuencias:** T-036 deja de estar diferida y se implementa dentro de esta feature. Fuera de alcance explícito: lógica de salud de datos, lectura de `bronze/`, exportables csv/xlsx, comparación contra `client_register.yaml` (diferido a `stab_1`). Ver L-060.
+
+### D-083 — `profiling`: DS-PROF-1, el gate de progresión vive en `_dispatch_run` de `cli.py`
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-09
+- **Contexto:** `spec_writer` necesitaba decidir dónde vive la lógica del gate de progresión (D-080 puntos 1-3): dentro del contrato de `Flow` (afectando a `flow_base`, ya CONFORME) o en la capa de orquestación/CLI.
+- **Decisión:** El gate vive en `_dispatch_run` de `src/foda/cli.py`, evaluado antes de invocar `flow.run(ctx)`. El contrato de `Flow` (`load_inputs→validate→execute→write_outputs`) no se toca ni se ensucia con la lógica de `--force`.
+- **Consecuencias:** `flow_base` permanece intacto (NC-3); el gate es responsabilidad exclusiva de la capa de orquestación, coherente con `flow_orchestrator` (D-062 a D-067).
+
+### D-084 — `profiling`: DS-PROF-2, `PREDECESSORS` literal en `orchestrator.py`
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-09
+- **Contexto:** Había que decidir cómo se declara la relación predecesor→sucesor entre flujos para que el gate sepa qué reporte leer.
+- **Decisión:** `PREDECESSORS = {"profiling": "ingestion"}`, mapa literal en `orchestrator.py`, mismo estilo que `FLOWS`; un flujo sin entrada en el mapa no tiene gate. La ruta del reporte del predecesor se resuelve vía `resolve_flow("ingestion").produces[0].path(ctx)`.
+- **Consecuencias:** Extensible flujo a flujo sin descubrimiento dinámico (evita sobre-diseño, E4/NC-2); añadir un gate a un flujo futuro es una línea en el mapa.
+
+### D-085 — `profiling`: DS-PROF-3, esquema mínimo de `profiling_report.json`
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-09
+- **Contexto:** El esqueleto tracer bullet de `profiling` necesita producir un reporte propio (para que un futuro sucesor pueda gatear sobre él), sin construir la lógica de negocio real de profiling.
+- **Decisión:** `profiling_report.json` mínimo con `schema_version:"0.1"`, `client`, `flow:"profiling"`, `success:bool`; el único campo vinculante para el gate de un futuro sucesor es `success`. La advertencia de uso de `--force` se imprime a stderr (una línea).
+- **Consecuencias:** Reporte mínimo suficiente para hospedar T-036 sin comprometer un esquema más rico que la feature completa de profiling deberá definir en `stab_1`.
+
+### D-086 — `profiling`: DS-PROF-4, `--force` vía `store_true` + evaluador puro `evaluate_predecessor_gate`
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-09
+- **Contexto:** Había que fijar la firma exacta del mecanismo de override y dónde vive la función que evalúa el gate.
+- **Decisión:** `--force` se declara como `store_true` en `run_parser` (`argparse`), se propaga `args.force`→`_dispatch_run`; la evaluación del gate se aísla en una función pura `evaluate_predecessor_gate(flow_name, ctx) -> str | None` en `orchestrator.py` (devuelve `None` si el gate pasa, o un mensaje de error si no). No se toca `ClientContext` ni `Flow.run`.
+- **Consecuencias:** Función testeable de forma aislada (unit puro, sin CLI ni filesystem real más allá de leer el reporte); separación clara entre evaluación del gate (orchestrator) y su aplicación (cli).
