@@ -130,7 +130,9 @@
           "id": 9,
           "desc": "evaluate_predecessor_gate('profiling', ctx) devuelve un mensaje que nombra a ingestion cuando ingestion_report.json tiene success:false",
           "ca": "CA-07",
-          "status": "pending"
+          "status": "red",
+          "test": "tests/test_orchestrator.py::test_evaluate_predecessor_gate_profiling_devuelve_mensaje_con_ingestion_report_success_false",
+          "red_evidence": "python -m pytest tests/test_orchestrator.py::test_evaluate_predecessor_gate_profiling_devuelve_mensaje_con_ingestion_report_success_false -q -> 1 failed. AssertionError: assert False (isinstance(None, str)). Rojo genuino: evaluate_predecessor_gate solo tiene la rama 'if report[\"success\"] is True: return None' (TSK-14, caso 8); para success:false el cuerpo cae al final sin sentencia adicional y Python devuelve None implicito, que falla contra la asercion isinstance(resultado, str) exigida por este test -- no es un error de import/sintaxis accidental. El test fabrica ingestion_report.json (success:false) via el helper local _fabricar_ingestion_report en 020_outputs/030_ingestion/ del cliente temporal (sin correr Ingestion real). python -m pytest -q (suite completa) -> 183 passed, 1 failed (el nuevo rojo), sin regresiones."
         },
         {
           "id": 10,

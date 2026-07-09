@@ -142,3 +142,31 @@ def test_evaluate_predecessor_gate_profiling_devuelve_none_con_ingestion_report_
 
     assert resultado is None
     assert llamadas == ["ingestion"]
+
+
+def test_evaluate_predecessor_gate_profiling_devuelve_mensaje_con_ingestion_report_success_false(
+    tmp_path,
+) -> None:
+    """Caso 9 (feature profiling/tracer_bullet, CA-07, TSK-15): con
+    ingestion_report.json presente y success:false, evaluate_predecessor_gate(
+    "profiling", ctx) devuelve un MENSAJE (str no vacio) que nombra a
+    "ingestion" (DS-PROF-4: el gate debe identificar cual predecesor fallo).
+
+    Hoy (TSK-14) evaluate_predecessor_gate solo tiene la rama explicita
+    `if report["success"] is True: return None`; no hay ninguna rama para
+    success:false, asi que el cuerpo de la funcion cae al final sin una
+    sentencia `return` adicional y Python devuelve None de forma implicita.
+    Este test exige `isinstance(resultado, str)` y `"ingestion" in resultado`,
+    lo cual falla contra ese None implicito (AssertionError, no
+    ImportError/TypeError accidental): rojo genuino que TSK-15 debe resolver
+    agregando la rama success:false -> mensaje."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+    _fabricar_ingestion_report(ctx, success=False)
+
+    resultado = orchestrator_module.evaluate_predecessor_gate("profiling", ctx)
+
+    assert isinstance(resultado, str)
+    assert resultado != ""
+    assert "ingestion" in resultado
