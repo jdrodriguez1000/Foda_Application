@@ -597,6 +597,46 @@ def test_profiling_report_health_problems_by_type_tiene_las_4_claves_en_cero_fix
     }
 
 
+def test_profiling_report_health_global_score_es_float_en_rango_0_1_fixture_mixta(
+    tmp_path: Path,
+) -> None:
+    """stab_1, caso 9 (CA-01, DS-PRF-2, TSK-13): tras Profiling().run(ctx) con
+    la fixture MIXTA (ver _build_ctx_con_ingestion_report_mixto: 4 archivos
+    declarados, 2 sanos y 2 con problemas, con una inconsistencia top-level
+    missing_column), profiling_report.json['health']['global_score'] es
+    EXACTAMENTE un valor de tipo float y cae dentro del rango cerrado
+    [0.0, 1.0] (CA-01). Este caso NO exige el valor exacto de la formula
+    ponderada (eso es CA-02, caso 10, con su propia ancla 0.875): solo el
+    tipo y el rango del campo, condicion necesaria previa a verificar la
+    formula completa.
+
+    Nota (NC-1/NC-6, plan.md Sec. "Cases sin tarea-codigo propia"): TSK-13
+    es la unica tarea de este caso y es de tipo test (no hay tarea-codigo
+    asignada a tdd_coder para el caso 9, plan.md lista explicitamente el
+    caso 9 en esa seccion). Profiling.execute() aun deja
+    health.global_score como placeholder fijo 1.0 (heredado del caso 2, ver
+    profiling.py): 1.0 es de tipo float y pertenece a [0.0, 1.0], por lo que
+    esta aserción PASA EN VERDE DE INMEDIATO incluso con la fixture MIXTA
+    (no la trivial "todos sanos" del caso 2), sin que se necesite escribir
+    ningun codigo de produccion nuevo. No es un rojo accidental invalido:
+    es la excepcion pre-aprobada por el humano en el gate de plan_builder
+    para este caso especifico (igual que los casos 6 y 8); su valor esta en
+    dejar el contrato de tipo/rango de global_score protegido de
+    regresiones futuras (p. ej. si una implementacion futura de la formula
+    ponderada -caso 10- devolviera un int, un valor negativo o mayor que
+    1.0, este test lo detectaria)."""
+    ctx = _build_ctx_con_ingestion_report_mixto(tmp_path)
+
+    Profiling().run(ctx)
+
+    ruta_reporte = ctx.outputs_dir / "040_profiling/profiling_report.json"
+    reporte = json.loads(ruta_reporte.read_text(encoding="utf-8"))
+
+    global_score = reporte["health"]["global_score"]
+    assert isinstance(global_score, float)
+    assert 0.0 <= global_score <= 1.0
+
+
 def test_profiling_validate_sin_ingestion_report_lanza_flowcontracterror_nombrandolo_y_no_escribe_profiling_report(
     tmp_path: Path,
 ) -> None:
