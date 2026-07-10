@@ -89,11 +89,12 @@ fijas que siempre debe tener health.problems_by_type (CA-11, CA-12)."""
 
 _PESOS_GLOBAL_SCORE = {
     "missing_file": 1.0,
-    "missing_column": 0.5,
     "unexpected_file": 0.3,
+    "missing_column": 0.5,
     "unexpected_column": 0.1,
 }
-"""Pesos ratificados de la formula ponderada de global_score (DS-PRF-2)."""
+"""Pesos ratificados de la formula ponderada de global_score (DS-PRF-2),
+con las mismas 4 claves y el mismo orden que _TIPOS_INCONSISTENCIA."""
 
 
 class Profiling(Flow):
