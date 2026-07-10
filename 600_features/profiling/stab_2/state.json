@@ -1,0 +1,16 @@
+{
+  "feature": "profiling",
+  "band": "stab_2",
+  "status": "in_progress",
+  "current_stage": "spec_writer",
+  "stages": {
+    "feature_definer":   { "status": "done",    "artifact": "definition.md" },
+    "spec_writer":       { "status": "pending",  "artifact": "spec.md",      "gate": "human" },
+    "plan_builder":      { "status": "pending",  "artifact": "plan.md",      "gate": "human" },
+    "tdd":               { "status": "pending",  "cases": [] },
+    "integration_tester":{ "status": "pending" },
+    "spec_verifier":     { "status": "pending",  "artifact": "verification.md" },
+    "human_test":        { "status": "pending",  "gate": "human" },
+    "merge_to_main":     { "status": "pending",  "gate": "human" }
+  }
+}
