@@ -58,8 +58,10 @@ Banda stab_1 (bucle TDD en curso, red/green/refactor caso a caso):
   sus propios casos (17-19).
 - Caso 18 (CA-13, DS-PRF-5): las entradas de pareto quedan ordenadas por
   count descendente (sorted() estable sobre la lista ya construida en los
-  casos 16-17). El desempate explicito por type alfabetico ascendente
-  (CA-14) sigue pendiente del caso 19.
+  casos 16-17).
+- Caso 19 (CA-14, DS-PRF-5): ante empate de count, las entradas de pareto
+  se desempatan por type alfabetico ascendente, mediante la clave de orden
+  compuesta (-count, type) en _pareto().
 
 Nota (NC-6): una version previa del caso 2 adelanto de una vez toda la logica
 de health (DS-PRF-2..5). Por decision del humano se restauro el TDD estricto:
@@ -244,16 +246,18 @@ class Profiling(Flow):
         problems_by_type.values()); no hay division por cero porque solo se
         entra a este calculo cuando existe al menos un tipo con count>=1
         (total>=1 en ese caso). Caso 18 (CA-13): las entradas quedan
-        ordenadas por count descendente (sorted es estable, por lo que los
-        empates preservan por ahora el orden de _TIPOS_INCONSISTENCIA; el
-        desempate explicito por type asc queda para el caso 19, CA-14)."""
+        ordenadas por count descendente. Caso 19 (CA-14): ante empate de
+        count, se desempata por type alfabetico ascendente, con una clave
+        de orden compuesta (-count, type) en una unica llamada a sorted()."""
         total = sum(problems_by_type.values())
         entradas = [
             {"type": tipo, "count": count, "pct": round(count / total, 4)}
             for tipo, count in problems_by_type.items()
             if count >= 1
         ]
-        return sorted(entradas, key=lambda entrada: -entrada["count"])
+        return sorted(
+            entradas, key=lambda entrada: (-entrada["count"], entrada["type"])
+        )
 
     def write_outputs(self, ctx: ClientContext, result: FlowResult) -> None:
         """Escribe profiling_report.json de forma deterministica (sort_keys
