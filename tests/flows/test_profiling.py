@@ -1649,6 +1649,143 @@ def test_profiling_report_dos_ejecuciones_con_mismo_ingestion_report_producen_pr
     ]
 
 
+def _build_ctx_con_ingestion_report_success_false(tmp_path: Path) -> ClientContext:
+    """stab_1, caso 21 (CA-22, DS-PRF-6): ClientContext bajo tmp_path con un
+    ingestion_report.json cuyo campo top-level success es EXACTAMENTE False
+    (el flujo predecesor ingestion fallo), pero con datos validos y no
+    triviales para ejercitar el bloque health completo (calcado del estilo
+    de _build_ctx_con_ingestion_report_mixto): summary.files_declared==3,
+    datasets[0].files con 1 archivo sano (status=="ingested",
+    inconsistencies==[]) y 2 archivos con problemas (uno status=="rejected",
+    otro status=="ingested" con inconsistencies no vacia), y la lista
+    top-level inconsistencies[] con 2 ocurrencias de missing_file (DS-PRF-4).
+    DS-PRF-6 ratifica que Profiling calcula la salud igual sobre estos datos
+    disponibles, sin que el success==false de ingestion lo altere."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    archivos = [
+        {
+            "name": "sano_1.csv",
+            "status": "ingested",
+            "rows": 10,
+            "columns": 3,
+            "separator": ",",
+            "bronze_path": "data/bronze/sano_1.csv",
+            "inconsistencies": [],
+        },
+        {
+            "name": "rechazado.csv",
+            "status": "rejected",
+            "rows": 0,
+            "columns": 0,
+            "separator": ",",
+            "bronze_path": "data/bronze/rechazado.csv",
+            "inconsistencies": [],
+        },
+        {
+            "name": "con_archivo_faltante.csv",
+            "status": "ingested",
+            "rows": 5,
+            "columns": 2,
+            "separator": ",",
+            "bronze_path": "data/bronze/con_archivo_faltante.csv",
+            "inconsistencies": [{"type": "missing_file", "detail": "referencia rota"}],
+        },
+    ]
+
+    ingestion_report = {
+        "schema_version": "0.1",
+        "client": "ABC",
+        "flow": "ingestion",
+        "success": False,
+        "summary": {"files_declared": 3},
+        "datasets": [{"files": archivos}],
+        "unexpected_files": [],
+        "inconsistencies": [
+            {"type": "missing_file", "detail": "falta archivo 1"},
+            {"type": "missing_file", "detail": "falta archivo 2"},
+        ],
+    }
+
+    report_path = ctx.outputs_dir / "030_ingestion/ingestion_report.json"
+    report_path.parent.mkdir(parents=True)
+    report_path.write_text(
+        json.dumps(ingestion_report, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    return ctx
+
+
+def test_profiling_report_con_ingestion_success_false_no_lanza_y_reporte_tiene_success_true_con_health_calculado(
+    tmp_path: Path,
+) -> None:
+    """stab_1, caso 21 (CA-22, DS-PRF-6, TSK-33): con un ingestion_report.json
+    cuyo success es EXACTAMENTE False pero con datos validos y no triviales
+    (ver _build_ctx_con_ingestion_report_success_false: files_declared=3, 1
+    archivo sano, 2 con problemas, 2 ocurrencias top-level de missing_file),
+    Profiling().run(ctx):
+
+    (a) NO lanza ninguna excepcion (la llamada se completa con normalidad).
+    (b) devuelve un FlowResult cuyo success es EXACTAMENTE True (el
+        success de profiling_report refleja la ejecucion del propio flujo
+        Profiling, independiente del success de ingestion, DS-PRF-6).
+    (c) el profiling_report.json escrito en disco tiene success == true
+        (bool, no el string "true").
+    (d) el bloque health esta calculado sobre los datos disponibles, no
+        vacio ni degradado por el success==false de ingestion:
+        files_declared==3, files_healthy==1, files_with_problems==2,
+        problems_by_type['missing_file']==2 (resto de tipos en 0),
+        global_score==round(max(0.0, 1.0 - 1.0*2/3), 4)==0.3333 (formula
+        ponderada real, DS-PRF-2, peso missing_file=1.0), y pareto tiene
+        exactamente 1 entrada {'type':'missing_file','count':2,
+        'pct':1.0} (unico tipo con count>=1, DS-PRF-5).
+
+    Motivo esperado (NC-1/NC-6): revisado
+    src/foda/flows/f040_profiling/profiling.py completo (execute(), casos
+    1-19): Profiling.execute() nunca lee self._ingestion_report['success']
+    en ningun punto (ni para condicionar el FlowResult ni para alterar el
+    calculo de health); FlowResult(success=True, ...) es un literal
+    incondicional (linea 166) y files_declared/files_healthy/
+    files_with_problems/problems_by_type/global_score/pareto se derivan
+    unicamente de summary.files_declared, datasets[].files[] y la lista
+    top-level inconsistencies[] (DS-PRF-2..5), fuentes todas independientes
+    del campo success del ingestion_report de entrada. Se ejecuto el test
+    tal como esta escrito contra el profiling.py vigente (sin ningun cambio
+    de produccion) y PASO EN VERDE DE INMEDIATO: no es un rojo accidental
+    invalido ni una decision silenciosa, es la misma excepcion pre-aprobada
+    por el humano en el gate de plan_builder que ya se documento en los
+    casos 6/8/9/11/12/13/14/15/20 (logica generica ya construida en casos
+    previos que satisface por construccion un caso confirmatorio posterior).
+    Se recomienda saltar tdd_coder para este caso (no hay codigo que
+    escribir) y pasar directo a tdd_refactor; queda a decision de la sesion
+    principal."""
+    ctx = _build_ctx_con_ingestion_report_success_false(tmp_path)
+
+    result = Profiling().run(ctx)
+
+    assert result.success is True
+
+    ruta_reporte = ctx.outputs_dir / "040_profiling/profiling_report.json"
+    reporte = json.loads(ruta_reporte.read_text(encoding="utf-8"))
+
+    assert reporte["success"] is True
+
+    health = reporte["health"]
+    assert health["files_declared"] == 3
+    assert health["files_healthy"] == 1
+    assert health["files_with_problems"] == 2
+    assert health["problems_by_type"] == {
+        "missing_file": 2,
+        "unexpected_file": 0,
+        "missing_column": 0,
+        "unexpected_column": 0,
+    }
+    assert health["global_score"] == 0.3333
+    assert health["pareto"] == [{"type": "missing_file", "count": 2, "pct": 1.0}]
+
+
 def test_profiling_validate_sin_ingestion_report_lanza_flowcontracterror_nombrandolo_y_no_escribe_profiling_report(
     tmp_path: Path,
 ) -> None:
