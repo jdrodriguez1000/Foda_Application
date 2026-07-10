@@ -1019,6 +1019,53 @@ def test_profiling_report_health_unexpected_file_no_incrementa_files_declared_pe
     assert health["global_score"] < 1.0
 
 
+def test_profiling_report_health_pareto_es_lista_vacia_fixture_sin_inconsistencias(
+    tmp_path: Path,
+) -> None:
+    """stab_1, caso 15 (CA-17, DS-PRF-5, TSK-23, test-only): tras
+    Profiling().run(ctx) con la fixture "todos sanos" (ver
+    _build_ctx_con_ingestion_report_todos_sanos: lista top-level
+    inconsistencies==[], sin problemas de ningun tipo),
+    profiling_report.json['health']['pareto'] == [] (sin entradas, porque no
+    hay ningun tipo de inconsistencia con count>=1 que rankear).
+
+    Nota (NC-1/NC-6, plan.md linea 63 TSK-23 y linea 79 "Cases sin
+    tarea-codigo propia", que lista explicitamente el caso 15): TSK-23 es la
+    UNICA tarea de este caso y es de tipo test (no hay tarea-codigo asignada
+    a tdd_coder para el caso 15; la tarea-codigo que arma el bloque health
+    completo para el camino "todos sanos", incluido pareto=[], es TSK-04 del
+    caso 2, ya "done"). Se ejecuto el test tal como esta escrito contra el
+    profiling.py vigente (sin ningun cambio de produccion) y PASO EN VERDE DE
+    INMEDIATO: Profiling.execute() (linea 149) todavia deja
+    health["pareto"] como el literal fijo [] (placeholder minimo desde el
+    caso 2, documentado explicitamente en su propio docstring como pendiente
+    "hasta sus propios casos (15-19)"), y ese literal cumple CA-17 por
+    construccion para CUALQUIER ingestion_report, no solo para el "todos
+    sanos" de este caso -- es decir, el placeholder actual no es capaz aun
+    de discriminar entre "sin inconsistencias" (donde pareto==[] es
+    correcto) y "con inconsistencias" (donde pareto==[] seria INCORRECTO,
+    ver caso 16/CA-15). Por eso este test especifico, aislado con su propia
+    fixture "todos sanos", SI es geninamente discriminante del contrato
+    CA-17 (detectaria una regresion si una futura implementacion de pareto
+    dejara de devolver [] cuando no hay inconsistencias), aunque no
+    discrimina "placeholder" de "logica real" -- esa distincion la cubriran
+    los casos 16-19, que exigiran contenido no vacio y forzaran la
+    implementacion real de _pareto(problems_by_type). No es un rojo
+    accidental invalido ni una decision silenciosa: es la excepcion
+    pre-aprobada por el humano en el gate de plan_builder (plan.md, casos
+    "sin tarea-codigo propia"), mismo patron que los casos 6/8/9/11/12/13/14.
+    Se recomienda saltar tdd_coder para este caso y pasar directo a
+    tdd_refactor; queda a decision de la sesion principal."""
+    ctx = _build_ctx_con_ingestion_report_todos_sanos(tmp_path, n_files=2)
+
+    Profiling().run(ctx)
+
+    ruta_reporte = ctx.outputs_dir / "040_profiling/profiling_report.json"
+    reporte = json.loads(ruta_reporte.read_text(encoding="utf-8"))
+
+    assert reporte["health"]["pareto"] == []
+
+
 def test_profiling_validate_sin_ingestion_report_lanza_flowcontracterror_nombrandolo_y_no_escribe_profiling_report(
     tmp_path: Path,
 ) -> None:
