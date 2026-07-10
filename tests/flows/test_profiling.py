@@ -552,6 +552,51 @@ def test_profiling_report_health_problems_by_type_tiene_las_4_claves_fijas_con_c
     }
 
 
+def test_profiling_report_health_problems_by_type_tiene_las_4_claves_en_cero_fixture_sin_inconsistencias(
+    tmp_path: Path,
+) -> None:
+    """stab_1, caso 8 (CA-12, DS-PRF-4, TSK-12): tras Profiling().run(ctx) con
+    la fixture "todos sanos" (ver _build_ctx_con_ingestion_report_todos_sanos:
+    lista top-level inconsistencies==[], sin problemas de ningun tipo),
+    profiling_report.json['health']['problems_by_type'] es EXACTAMENTE un
+    dict con las 4 claves fijas missing_file/unexpected_file/missing_column/
+    unexpected_column, TODAS con valor 0 (esquema estable y completo incluso
+    sin inconsistencias que contar, DS-PRF-4: "las claves con cero
+    ocurrencias se incluyen igualmente").
+
+    Nota (NC-1/NC-6, plan.md Sec. "Cases sin tarea-codigo propia"): TSK-12 es
+    la unica tarea de este caso y es de tipo test (no hay tarea-codigo
+    asignada a tdd_coder para el caso 8). El caso 7 (TSK-10/TSK-11) ya
+    implemento Profiling._problems_by_type(ingestion_report), que inicializa
+    las 4 claves fijas en 0 antes de iterar la lista top-level
+    inconsistencies[] sumando ocurrencias; con una lista vacia (fixture "todos
+    sanos"), el resultado es necesariamente {todas las claves: 0} por
+    construccion, sin codigo nuevo. Se documenta explicitamente (NC-1/NC-6)
+    que este test se ejecuta y pasa en VERDE de inmediato: es un test de
+    CONFIRMACION del contrato ya garantizado por la implementacion del caso 7
+    (la inicializacion a 0 de las 4 claves), no una funcionalidad nueva. No es
+    un rojo accidental invalido ni una decision silenciosa: es la excepcion
+    pre-aprobada por el humano en el gate de plan_builder (plan.md, casos
+    "sin tarea-codigo propia", que lista explicitamente el caso 8) para este
+    caso especifico; su valor esta en dejar el contrato de esquema completo
+    (4 claves siempre presentes, incluso en 0) protegido de regresiones
+    futuras."""
+    ctx = _build_ctx_con_ingestion_report_todos_sanos(tmp_path, n_files=2)
+
+    Profiling().run(ctx)
+
+    ruta_reporte = ctx.outputs_dir / "040_profiling/profiling_report.json"
+    reporte = json.loads(ruta_reporte.read_text(encoding="utf-8"))
+
+    problems_by_type = reporte["health"]["problems_by_type"]
+    assert problems_by_type == {
+        "missing_file": 0,
+        "unexpected_file": 0,
+        "missing_column": 0,
+        "unexpected_column": 0,
+    }
+
+
 def test_profiling_validate_sin_ingestion_report_lanza_flowcontracterror_nombrandolo_y_no_escribe_profiling_report(
     tmp_path: Path,
 ) -> None:
