@@ -813,6 +813,85 @@ def test_profiling_report_health_global_score_es_1_0_cuando_files_declared_es_ce
     assert reporte["health"]["global_score"] == 1.0
 
 
+def _build_ctx_con_ingestion_report_division_no_exacta(tmp_path: Path) -> ClientContext:
+    """stab_1, caso 13 (CA-05, DS-PRF-2): ClientContext bajo tmp_path con un
+    ingestion_report.json cuya division penalizacion_total/files_declared NO
+    es exacta a 4 decimales, para que el redondeo round(x,4) de DS-PRF-2 sea
+    observable: files_declared=3, lista top-level inconsistencies[] con
+    exactamente 1 ocurrencia de missing_column (peso 0.5, resto de tipos en
+    0) => penalizacion_total=0.5, 1.0 - 0.5/3 == 0.8333333333333334 (decimal
+    periodico, float sin redondear), que round(...,4) deja en EXACTAMENTE
+    0.8333. Sin el round(x,4), el valor comparado por igualdad estricta
+    (0.8333333333333334) no coincidiria con el ancla 0.8333: el test es
+    discriminante respecto del redondeo, no solo de la formula (ya cubierta
+    por el caso 10). datasets[]/files[] se dejan vacios: este caso no
+    verifica files_healthy/files_with_problems (ya cubiertos en casos 4-6)."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    inconsistencias = [
+        {"type": "missing_column", "detail": "columna faltante 1"},
+    ]
+
+    ingestion_report = {
+        "schema_version": "0.1",
+        "client": "ABC",
+        "flow": "ingestion",
+        "success": True,
+        "summary": {"files_declared": 3},
+        "datasets": [],
+        "unexpected_files": [],
+        "inconsistencies": inconsistencias,
+    }
+
+    report_path = ctx.outputs_dir / "030_ingestion/ingestion_report.json"
+    report_path.parent.mkdir(parents=True)
+    report_path.write_text(
+        json.dumps(ingestion_report, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    return ctx
+
+
+def test_profiling_report_health_global_score_redondeado_a_4_decimales_y_deterministico_para_entradas_identicas(
+    tmp_path: Path,
+) -> None:
+    """stab_1, caso 13 (CA-05, DS-PRF-2, TSK-20): tras Profiling().run(ctx)
+    con un ingestion_report.json cuya division no es exacta a 4 decimales
+    (ver _build_ctx_con_ingestion_report_division_no_exacta: files_declared=3,
+    missing_column=1 => penalizacion_total=0.5, 1.0-0.5/3==
+    0.8333333333333334 sin redondear),
+    profiling_report.json['health']['global_score'] es EXACTAMENTE 0.8333
+    (round(x,4) de DS-PRF-2/CA-05), NO el float largo sin redondear. Ademas,
+    dos ejecuciones independientes con la misma entrada (dos ClientContext
+    distintos construidos con la misma fixture, dos llamadas separadas a
+    Profiling().run(ctx)) producen exactamente el mismo valor de
+    global_score (determinismo exigido por CA-05: 'dos entradas identicas
+    dan exactamente el mismo valor').
+
+    Motivo del rojo esperado (no accidental, sujeto a confirmacion): si
+    Profiling._global_score(...) (ver profiling.py, caso 10) NO aplicara
+    round(...,4) sobre el resultado de la formula ponderada, la primera
+    aserción de igualdad estricta fallaria por valor incorrecto (float largo
+    0.8333333333333334 != ancla 0.8333 redondeada a 4 decimales), no por
+    ImportError/AttributeError/KeyError (el bloque health y la clave
+    global_score existen desde los casos 2, 9 y 10)."""
+    ctx_1 = _build_ctx_con_ingestion_report_division_no_exacta(tmp_path / "run_1")
+    ctx_2 = _build_ctx_con_ingestion_report_division_no_exacta(tmp_path / "run_2")
+
+    Profiling().run(ctx_1)
+    Profiling().run(ctx_2)
+
+    ruta_reporte_1 = ctx_1.outputs_dir / "040_profiling/profiling_report.json"
+    ruta_reporte_2 = ctx_2.outputs_dir / "040_profiling/profiling_report.json"
+    reporte_1 = json.loads(ruta_reporte_1.read_text(encoding="utf-8"))
+    reporte_2 = json.loads(ruta_reporte_2.read_text(encoding="utf-8"))
+
+    assert reporte_1["health"]["global_score"] == 0.8333
+    assert reporte_2["health"]["global_score"] == reporte_1["health"]["global_score"]
+
+
 def test_profiling_validate_sin_ingestion_report_lanza_flowcontracterror_nombrandolo_y_no_escribe_profiling_report(
     tmp_path: Path,
 ) -> None:
