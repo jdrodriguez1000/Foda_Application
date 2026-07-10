@@ -62,12 +62,6 @@ _REQUIRES = [
         relative="030_ingestion/ingestion_report.json",
     ),
 ]
-_TIPOS_INCONSISTENCIA = (
-    "missing_file",
-    "unexpected_file",
-    "missing_column",
-    "unexpected_column",
-)
 
 _PRODUCES = [
     Artifact(
@@ -76,6 +70,15 @@ _PRODUCES = [
         relative="040_profiling/profiling_report.json",
     ),
 ]
+
+_TIPOS_INCONSISTENCIA = (
+    "missing_file",
+    "unexpected_file",
+    "missing_column",
+    "unexpected_column",
+)
+"""Vocabulario cerrado de tipos de inconsistencia (DS-PRF-4): las 4 claves
+fijas que siempre debe tener health.problems_by_type (CA-11, CA-12)."""
 
 
 class Profiling(Flow):
@@ -102,13 +105,11 @@ class Profiling(Flow):
         """Arma en memoria el reporte de profiling: identidad (schema_version
         "0.2", client, flow, success) + bloque health con las 6 claves fijas.
 
-        Caso 3 (DS-PRF-3): files_declared proviene de
-        ingestion_report.summary.files_declared.
-        Caso 4 (DS-PRF-3): files_healthy proviene de contar, en
-        datasets[].files[], los archivos sanos (status=="ingested" e
-        inconsistencies==[]). Los demas campos de health siguen como
-        placeholders minimos hasta sus propios casos (5-22), TDD estricto
-        (NC-2)."""
+        files_declared (caso 3, DS-PRF-3), files_healthy/files_with_problems
+        (casos 4-5, DS-PRF-3) y problems_by_type (caso 7, DS-PRF-4) ya se
+        derivan del ingestion_report real. global_score y pareto siguen como
+        placeholders minimos (1.0 / []) hasta sus propios casos (9-19), TDD
+        estricto (NC-2)."""
         files_declared = self._ingestion_report.get("summary", {}).get(
             "files_declared", 0
         )
