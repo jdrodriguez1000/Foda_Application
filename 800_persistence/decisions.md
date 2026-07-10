@@ -119,6 +119,10 @@ Cada decisión sigue el formato: **ID**, **título**, **estado** (Propuesta / Ac
 | D-100 | `profiling` `stab_2` — valores centinela parametrizados por cliente vía `profiling_config.yaml` (archivo propio, no dentro de `client.yaml`), catálogo vacío si el cliente no lo define | Aceptada | 2026-07-10 |
 | D-101 | `profiling` `stab_3` — consistencia categórica: Caso A (variantes tipográficas) detectable deterministamente y reportado como candidato; Caso B (equivalencia semántica) declarado FUERA DE ALCANCE de la feature; Profiling audita y señala, nunca corrige (sin LLM) | Aceptada | 2026-07-10 |
 | D-102 | `profiling` `stab_3` — valores atípicos numéricos por método IQR/Tukey, informativo (no penaliza el score), con exclusión de nulos/centinelas antes de calcular cuartiles | Aceptada | 2026-07-10 |
+| D-103 | `profiling` `stab_2` — A-020 resuelto: SÍ usar `pandas` como dependencia para leer `bronze/` y detectar defectos (nulos, duplicados, centinelas) | Aceptada | 2026-07-10 |
+| D-104 | `profiling` `stab_2` — A-021 resuelto: pesos default 0.25 c/u para las 4 dimensiones del `global_score`, sobreescribibles por cliente vía `profiling_config.yaml` | Aceptada | 2026-07-10 |
+| D-105 | `profiling` `stab_2` — `profiling_config.yaml` es vendor-owned, ubicado fuera de `clients/` en `650_vendor/profiling/<name>/profiling_config.yaml`; opcional (ausente ⇒ catálogo vacío + pesos default); un config dentro de `clients/<name>/` NO se lee | Aceptada | 2026-07-10 |
+| D-106 | `profiling` `stab_2` — DS-PRF2-7: riesgos de facturación R-BILL-1 (`-999` vs `-999.0` sin normalizar) y R-BILL-2 (denominador cero ⇒ sub-score 1.0 ⇒ archivo vacío puntúa perfecto) reconocidos y diferidos a `stab_3` | Aceptada | 2026-07-10 |
 
 ## 3. Detalle de Decisiones
 
@@ -837,3 +841,31 @@ Cada decisión sigue el formato: **ID**, **título**, **estado** (Propuesta / Ac
 - **Contexto:** Había que elegir un método para detectar valores atípicos en columnas numéricas, informativo (no penaliza el score, D-098) porque un atípico puede ser un dato válido extremo.
 - **Decisión:** Método IQR/Tukey (fences Q1−1.5·IQR / Q3+1.5·IQR) como default: robusto, no asume normalidad, simple (alternativas Z-score/MAD descartadas por ahora). Solo columnas numéricas. Orden de cálculo obligatorio: se EXCLUYEN nulos y centinelas ANTES de calcular cuartiles/IQR (un centinela -999 reventaría los fences).
 - **Consecuencias:** Detección de atípicos coherente con el resto del diseño determinista de Profiling; depende de que `stab_2` ya identifique/excluya nulos y centinelas antes de que `stab_3` calcule cuartiles, estableciendo un orden de dependencia entre las dos bandas.
+
+### D-103 — `profiling` `stab_2`: A-020 resuelto, SÍ usar `pandas`
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-10
+- **Contexto:** A-020 (planeación previa) dejaba pendiente si `pandas` era la dependencia adecuada para leer `bronze/` y calcular defectos a nivel celda/fila (nulos, duplicados, centinelas); `ingestion` no la usa (parsea CSV a mano y XLSX con `openpyxl`), y `pandas` no estaba declarada en `pyproject.toml` pese a estar instalada (v2.3.2).
+- **Decisión:** El humano confirmó explícitamente usar `pandas` en `profiling` `stab_2` para leer `bronze/` y calcular `total_cells`, `null_cells`, `duplicate_rows`, etc.
+- **Consecuencias:** A-020 pasa a Resuelto/cerrado (ya no es supuesto abierto). `plan_builder` añadió TSK-12 (declarar `pandas` en `pyproject.toml`, corrige la premisa errónea de que ya era dependencia transitiva de Ingestion).
+
+### D-104 — `profiling` `stab_2`: A-021 resuelto, pesos default 0.25 c/u sobreescribibles
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-10
+- **Contexto:** A-021 dejaba pendiente si pesos igualitarios (0.25 cada una) para las 4 dimensiones del `global_score` multi-dimensión (D-099) eran el punto de partida correcto, o si debían fijarse de otra forma desde el inicio.
+- **Decisión:** El humano confirmó pesos default 0.25 para cada una de las 4 dimensiones (`structural`, `completeness`, `validity`, `uniqueness`), sobreescribibles por cliente vía `weights` en `profiling_config.yaml`; si el cliente define `weights` inválidos (no suman 1, claves faltantes/extra), `FlowContractError` sin escribir el reporte.
+- **Consecuencias:** A-021 pasa a Resuelto/cerrado. CA-19…CA-21 de `spec.md` codifican el comportamiento default/override/inválido.
+
+### D-105 — `profiling` `stab_2`: `profiling_config.yaml` vendor-owned en `650_vendor/`
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-10
+- **Contexto:** El humano aportó contexto de negocio durante la revisión de la spec: el `global_score` de profiling dejará de ser meramente informativo y pasará a ser el INPUT de una tarifa contractual (modelo SaaS con sobrecargo por científico de datos; score bajo ⇒ cobro adicional, p. ej. <50% ⇒ ~200% de tarifa base, ~95% ⇒ solo tarifa base — regla de negocio aguas abajo, fuera de profiling). Esto convierte al score en un artefacto que debe ser AUDITABLE, DEFENDIBLE y NO manipulable por el cliente que paga en función de él; el diseño original ubicaba `profiling_config.yaml` (pesos + catálogo de centinelas, D-100) dentro de `clients/<name>/`, editable por el propio cliente — conflicto de interés directo.
+- **Decisión:** `profiling_config.yaml` pasa a ser VENDOR-OWNED, ubicado FUERA de `clients/`, en `650_vendor/profiling/<name>/profiling_config.yaml` (nombre del área `650_vendor` fijado explícitamente por el humano, no `900_vendor` propuesto inicialmente por el agente). Sigue OPCIONAL: si falta, catálogo vacío + pesos default (D-104). CA-17 de `spec.md` gana una aserción NEGATIVA explícita: un `profiling_config.yaml` colocado dentro de `clients/<name>/` NO se lee. El core se toca mínimamente: nuevo helper puro `_vendor_config_path(ctx) = ctx.root.parent.parent / "650_vendor" / "profiling" / ctx.name / "profiling_config.yaml"`, sin ampliar `ClientContext` ni `Artifact`.
+- **Consecuencias:** Enmienda a `spec.md` (commits `df802c2`/`2e757cb`) y re-ajuste de `plan.md` (commit `a4ababa`) tras el GATE de spec ya aprobado, antes del GATE de plan. Nuevo elemento de estructura de carpetas pendiente de crear en producción: `650_vendor/profiling/<name>/` (aún no existe en el repo; los tests lo crean bajo `tmp_path`). Supuesto derivado documentado en `assumptions.md`: el helper asume que `clients/` cuelga directo del project root (`ctx.root.parent.parent == project_root`).
+
+### D-106 — `profiling` `stab_2`: DS-PRF2-7, riesgos de facturación reconocidos y diferidos a `stab_3`
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-10
+- **Contexto:** Al convertirse el `global_score` en input de facturación (D-105), la sesión identificó dos vectores de riesgo del diseño actual que podrían distorsionar el score facturable, pero resolverlos en `stab_2` ampliaría el alcance ya aprobado en el GATE de spec.
+- **Decisión:** Se reconocen y documentan como DS-PRF2-7 dos riesgos, diferidos explícitamente a `stab_3`: **R-BILL-1** — los tokens centinela `-999` y `-999.0` no se normalizan entre sí (match exacto de token, D-100/D-101), por lo que variantes de formato del mismo centinela podrían no detectarse todas, inflando artificialmente `validity_score`. **R-BILL-2** — cuando el denominador de una dimensión es cero (p. ej. `total_cells==0` en un archivo vacío), el sub-score correspondiente se fija en 1.0 (comportamiento seguro por defecto ya acordado en `stab_1`/D-091), lo que permite que un archivo vacío puntúe perfecto, un vector potencial de "gaming" del score facturable.
+- **Consecuencias:** `stab_2` se construye sin resolver R-BILL-1/R-BILL-2 (alcance acotado, NC-2/NC-4); quedan como riesgos conocidos y aceptados a evaluar al diseñar `stab_3` o una banda posterior de endurecimiento anti-fraude del score facturable.

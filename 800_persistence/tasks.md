@@ -56,12 +56,11 @@
 ## 3. Tareas En Progreso
 | ID | Tarea | Prioridad | Notas |
 |---|---|---|---|
-| — | _Sin registros aún._ | — | — |
+| T-040 | Construir `profiling` banda `stab_2` ("defectos con score": nulos, filas duplicadas, valores centinela, score multi-dimensión, `profiling_config.yaml`) ejecutando la cadena de 8 agentes | 🔴 Alta | Rama `feature/profiling-stab2`. `feature_definer`→`spec_writer` (25 CA, enmienda config vendor-owned en `650_vendor/`, GATE APROBADO)→`plan_builder` (24 casos TDD, GATE APROBADO). Bucle TDD SIN ARRANCAR: próxima sesión invoca `tdd_tester` con el caso 1 (CA-19/CA-20, `schema_version=="0.3"`+identidad). Ver D-103 a D-106, L-072, A-020/A-021 (resueltos). |
 
 ## 4. Tareas Pendientes
 | ID | Tarea | Prioridad | Notas |
 |---|---|---|---|
-| T-040 | Construir `profiling` banda `stab_2` ("defectos con score": nulos, filas duplicadas, valores centinela, score multi-dimensión, `profiling_config.yaml`) ejecutando la cadena de 8 agentes | 🔴 Alta | Próxima tarea prioritaria. Arranca con `feature_definer` (crea rama `feature/profiling-stab2` y actualiza la tabla "Bandas Previstas" del `feature_contract.md` de `profiling` para añadir filas `stab_2`/`stab_3`). Ver D-097 a D-102, A-020, A-021. |
 | T-037 | Comando encadenado tipo `foda run <cliente> --flow onboarding→ingestion` | 🟢 Baja | Feature nueva vía SDD/TDD; depende de T-036 (gate de progresión, ya implementado dentro de T-038/`profiling`) para tener sentido (encadenar solo si el predecesor puede fallar el gate). |
 
 ## 5. Backlog

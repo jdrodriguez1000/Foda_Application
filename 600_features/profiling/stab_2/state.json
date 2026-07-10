@@ -2,11 +2,11 @@
   "feature": "profiling",
   "band": "stab_2",
   "status": "in_progress",
-  "current_stage": "spec_writer",
+  "current_stage": "tdd",
   "stages": {
     "feature_definer":   { "status": "done",    "artifact": "definition.md" },
     "spec_writer":       { "status": "done",       "artifact": "spec.md",   "gate": "human", "awaiting_approval": false, "amended": "config_vendor_owned_en_650_vendor_fuera_de_clients + riesgos_facturacion R-BILL-1/2 (DS-PRF2-6, DS-PRF2-7); gate humano aprobado con correccion de nombre 650_vendor" },
-    "plan_builder":      { "status": "stale",    "artifact": "plan.md",     "gate": "human", "awaiting_approval": false, "note": "re-ajustar tras enmienda de spec: config vendor-owned en 650_vendor/profiling/<name>/ (antes 010_inputs); resolucion fuera de bases de ClientContext" },
+    "plan_builder":      { "status": "done",     "artifact": "plan.md",     "gate": "human", "awaiting_approval": false, "note": "re-ajustado tras enmienda (commit a4ababa): config vendor-owned en 650_vendor/profiling/<name>/, helper _vendor_config_path (ctx.root.parent.parent), TSK-12 declara pandas en pyproject.toml, caso 13 con asercion negativa. GATE humano APROBADO: listo para arrancar bucle TDD en caso 1" },
     "tdd": {
       "status": "pending",
       "cases": [
