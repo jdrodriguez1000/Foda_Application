@@ -1066,6 +1066,97 @@ def test_profiling_report_health_pareto_es_lista_vacia_fixture_sin_inconsistenci
     assert reporte["health"]["pareto"] == []
 
 
+def _build_ctx_con_ingestion_report_inconsistencias_para_pareto(tmp_path: Path) -> ClientContext:
+    """stab_1, caso 16 (CA-15, DS-PRF-5): ClientContext bajo tmp_path con un
+    ingestion_report.json cuya lista top-level inconsistencies[] tiene
+    ocurrencias reales de AL MENOS 2 tipos distintos del vocabulario cerrado
+    con count>=1 (missing_file=2, missing_column=3), dejando los otros 2
+    tipos (unexpected_file, unexpected_column) en count==0 (DS-PRF-4), para
+    poder verificar que health.pareto NO incluye entradas para los tipos en
+    0 (CA-15) y que la suma de los counts de pareto no pierde informacion
+    respecto a problems_by_type. files_declared/datasets[].files[] se dejan
+    minimos y no relacionados con este conteo (igual que en la fixture del
+    caso 7, _build_ctx_con_ingestion_report_inconsistencias_variadas)."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    inconsistencias = (
+        [{"type": "missing_file", "detail": f"falta archivo {i}"} for i in range(2)]
+        + [{"type": "missing_column", "detail": f"falta columna {i}"} for i in range(3)]
+    )
+
+    ingestion_report = {
+        "schema_version": "0.1",
+        "client": "ABC",
+        "flow": "ingestion",
+        "success": True,
+        "summary": {"files_declared": 0},
+        "datasets": [],
+        "unexpected_files": [],
+        "inconsistencies": inconsistencias,
+    }
+
+    report_path = ctx.outputs_dir / "030_ingestion/ingestion_report.json"
+    report_path.parent.mkdir(parents=True)
+    report_path.write_text(
+        json.dumps(ingestion_report, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    return ctx
+
+
+def test_profiling_report_health_pareto_incluye_solo_tipos_con_count_mayor_igual_1_y_suma_de_counts_igual_a_suma_de_problems_by_type(
+    tmp_path: Path,
+) -> None:
+    """stab_1, caso 16 (CA-15, DS-PRF-5, TSK-24/TSK-25): tras
+    Profiling().run(ctx) con un ingestion_report.json cuya lista top-level
+    inconsistencies[] tiene ocurrencias reales de 2 tipos distintos del
+    vocabulario cerrado (ver
+    _build_ctx_con_ingestion_report_inconsistencias_para_pareto:
+    missing_file=2, missing_column=3, resto de tipos -unexpected_file,
+    unexpected_column- en 0), profiling_report.json['health']['pareto']
+    cumple (CA-15):
+
+    (a) contiene ENTRADAS SOLO para los tipos con count>=1 (missing_file,
+        missing_column): ningun tipo con count==0 (unexpected_file,
+        unexpected_column) aparece en pareto, aunque las 4 claves si
+        aparecen siempre en problems_by_type (DS-PRF-4, ya verificado en el
+        caso 7).
+    (b) Σ(entrada['count'] for entrada in pareto) ==
+        Σ(problems_by_type.values()) (5 == 2+3+0+0): sin perdida de
+        informacion entre problems_by_type y pareto.
+
+    Motivo del rojo esperado (no accidental): Profiling.execute() todavia
+    deja health.pareto como el literal fijo [] (placeholder heredado del
+    caso 2, confirmado sin cambios en el caso 15 para la fixture "todos
+    sanos"); con esta fixture problems_by_type tiene 2 tipos con count>=1
+    (missing_file=2, missing_column=3), por lo que pareto==[] NO satisface
+    (a) (debe tener 2 entradas, no 0) ni (b) (Σ(pareto[].count)==0 !=
+    Σ(problems_by_type.values())==5): fallo por valor/contenido incorrecto,
+    no por ImportError/AttributeError/KeyError (el bloque health, la clave
+    pareto y problems_by_type ya existen desde los casos 2, 7 y 15)."""
+    ctx = _build_ctx_con_ingestion_report_inconsistencias_para_pareto(tmp_path)
+
+    Profiling().run(ctx)
+
+    ruta_reporte = ctx.outputs_dir / "040_profiling/profiling_report.json"
+    reporte = json.loads(ruta_reporte.read_text(encoding="utf-8"))
+
+    health = reporte["health"]
+    problems_by_type = health["problems_by_type"]
+    pareto = health["pareto"]
+
+    tipos_en_pareto = {entrada["type"] for entrada in pareto}
+    assert tipos_en_pareto == {"missing_file", "missing_column"}
+    for tipo_en_cero in ("unexpected_file", "unexpected_column"):
+        assert tipo_en_cero not in tipos_en_pareto
+
+    assert sum(entrada["count"] for entrada in pareto) == sum(
+        problems_by_type.values()
+    )
+
+
 def test_profiling_validate_sin_ingestion_report_lanza_flowcontracterror_nombrandolo_y_no_escribe_profiling_report(
     tmp_path: Path,
 ) -> None:
