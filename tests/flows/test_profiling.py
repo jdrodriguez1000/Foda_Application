@@ -468,6 +468,90 @@ def test_profiling_report_health_cumple_invariante_files_healthy_mas_files_with_
     assert health["files_healthy"] + health["files_with_problems"] == health["files_declared"]
 
 
+def _build_ctx_con_ingestion_report_inconsistencias_variadas(tmp_path: Path) -> ClientContext:
+    """stab_1, caso 7 (CA-11, DS-PRF-4): ClientContext bajo tmp_path con un
+    ingestion_report.json cuya lista top-level inconsistencies[] mezcla los
+    4 tipos del vocabulario cerrado con conteos DISTINTOS entre si y >1 para
+    al menos uno (missing_file: 2, unexpected_file: 1, missing_column: 3,
+    unexpected_column: 0), de forma que una implementacion que solo pase el
+    fixture "todos ceros" (caso 8) o un placeholder {} no pueda acertar por
+    casualidad: exige realmente contar ocurrencias por type sobre la lista
+    top-level inconsistencies[] (DS-PRF-4), no sobre datasets[].files[]
+    (fuente distinta, DS-PRF-3, ya cubierta en casos 3-6). files_declared/
+    datasets[].files[] se dejan minimos y no relacionados con este conteo:
+    este caso no verifica files_healthy/files_with_problems."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    inconsistencias = (
+        [{"type": "missing_file", "detail": f"falta archivo {i}"} for i in range(2)]
+        + [{"type": "unexpected_file", "detail": "archivo sobrante"}]
+        + [{"type": "missing_column", "detail": f"falta columna {i}"} for i in range(3)]
+    )
+
+    ingestion_report = {
+        "schema_version": "0.1",
+        "client": "ABC",
+        "flow": "ingestion",
+        "success": True,
+        "summary": {"files_declared": 0},
+        "datasets": [],
+        "unexpected_files": [],
+        "inconsistencies": inconsistencias,
+    }
+
+    report_path = ctx.outputs_dir / "030_ingestion/ingestion_report.json"
+    report_path.parent.mkdir(parents=True)
+    report_path.write_text(
+        json.dumps(ingestion_report, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    return ctx
+
+
+def test_profiling_report_health_problems_by_type_tiene_las_4_claves_fijas_con_conteos_correctos_de_inconsistencies_top_level(
+    tmp_path: Path,
+) -> None:
+    """stab_1, caso 7 (CA-11, DS-PRF-4, TSK-10/TSK-11): tras
+    Profiling().run(ctx) con un ingestion_report.json cuya lista top-level
+    inconsistencies[] mezcla los 4 tipos del vocabulario cerrado con
+    conteos variados (ver
+    _build_ctx_con_ingestion_report_inconsistencias_variadas: missing_file=2,
+    unexpected_file=1, missing_column=3, unexpected_column=0),
+    profiling_report.json['health']['problems_by_type'] es EXACTAMENTE un
+    dict con las 4 claves fijas missing_file/unexpected_file/missing_column/
+    unexpected_column, cada una un int>=0 igual al nº de ocurrencias de ese
+    type en esa lista top-level (no en datasets[].files[], fuente distinta
+    ya cubierta en los casos 3-6).
+
+    Hoy (antes de tdd_coder) Profiling.execute() hardcodea
+    health.problems_by_type en {} (placeholder minimo del caso 2, ver
+    profiling.py), por lo que health['problems_by_type']['missing_file']
+    lanza KeyError: rojo limpio por ausencia de funcionalidad (el conteo
+    real aun no existe), no por un error accidental de import/sintaxis."""
+    ctx = _build_ctx_con_ingestion_report_inconsistencias_variadas(tmp_path)
+
+    Profiling().run(ctx)
+
+    ruta_reporte = ctx.outputs_dir / "040_profiling/profiling_report.json"
+    reporte = json.loads(ruta_reporte.read_text(encoding="utf-8"))
+
+    problems_by_type = reporte["health"]["problems_by_type"]
+    assert set(problems_by_type.keys()) == {
+        "missing_file",
+        "unexpected_file",
+        "missing_column",
+        "unexpected_column",
+    }
+    assert problems_by_type == {
+        "missing_file": 2,
+        "unexpected_file": 1,
+        "missing_column": 3,
+        "unexpected_column": 0,
+    }
+
+
 def test_profiling_validate_sin_ingestion_report_lanza_flowcontracterror_nombrandolo_y_no_escribe_profiling_report(
     tmp_path: Path,
 ) -> None:
