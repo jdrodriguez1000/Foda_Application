@@ -892,6 +892,133 @@ def test_profiling_report_health_global_score_redondeado_a_4_decimales_y_determi
     assert reporte_2["health"]["global_score"] == reporte_1["health"]["global_score"]
 
 
+def _build_ctx_con_ingestion_report_con_unexpected_files(tmp_path: Path) -> ClientContext:
+    """stab_1, caso 14 (CA-10, DS-PRF-3/DS-PRF-4): ClientContext bajo
+    tmp_path con un ingestion_report.json cuyo summary.files_declared==2
+    (2 archivos SANOS en datasets[0].files, status=="ingested" e
+    inconsistencies==[]) y, ADEMAS, 2 archivos "unexpected_file"
+    (sobrantes no declarados): reflejados en la lista informativa top-level
+    unexpected_files[] (contrato de ingestion, DS-ING-9) y, sobre todo, con
+    2 entradas type=="unexpected_file" en la lista top-level
+    inconsistencies[] (fuente canonica de problems_by_type, DS-PRF-4, igual
+    que missing_file/missing_column en los casos 7/10). Un archivo sobrante
+    NO es un archivo declarado (DS-PRF-3: 'los unexpected_file NO son
+    archivos declarados: no cuentan en files_declared'), por lo que
+    summary.files_declared se deja fijo en 2 (no en 4), pese a que hay 2
+    archivos sanos + 2 sobrantes en el filesystem simulado."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    archivos_declarados_sanos = [
+        {
+            "name": "sano_1.csv",
+            "status": "ingested",
+            "rows": 10,
+            "columns": 3,
+            "separator": ",",
+            "bronze_path": "data/bronze/sano_1.csv",
+            "inconsistencies": [],
+        },
+        {
+            "name": "sano_2.csv",
+            "status": "ingested",
+            "rows": 8,
+            "columns": 3,
+            "separator": ",",
+            "bronze_path": "data/bronze/sano_2.csv",
+            "inconsistencies": [],
+        },
+    ]
+
+    inconsistencias = [
+        {"type": "unexpected_file", "detail": "archivo sobrante 1"},
+        {"type": "unexpected_file", "detail": "archivo sobrante 2"},
+    ]
+
+    ingestion_report = {
+        "schema_version": "0.1",
+        "client": "ABC",
+        "flow": "ingestion",
+        "success": True,
+        "summary": {"files_declared": 2},
+        "datasets": [{"files": archivos_declarados_sanos}],
+        "unexpected_files": ["sobrante_1.csv", "sobrante_2.csv"],
+        "inconsistencies": inconsistencias,
+    }
+
+    report_path = ctx.outputs_dir / "030_ingestion/ingestion_report.json"
+    report_path.parent.mkdir(parents=True)
+    report_path.write_text(
+        json.dumps(ingestion_report, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    return ctx
+
+
+def test_profiling_report_health_unexpected_file_no_incrementa_files_declared_pero_aporta_a_problems_by_type_y_reduce_global_score(
+    tmp_path: Path,
+) -> None:
+    """stab_1, caso 14 (CA-10, DS-PRF-3/DS-PRF-4, TSK-22, test-only): tras
+    Profiling().run(ctx) con un ingestion_report.json con >=1
+    unexpected_file (ver _build_ctx_con_ingestion_report_con_unexpected_files:
+    summary.files_declared==2, 2 archivos declarados sanos, y 2 entradas
+    type=="unexpected_file" en la lista top-level inconsistencies[]), se
+    cumplen las 3 aserciones de CA-10 simultaneamente sobre el MISMO
+    profiling_report.json:
+
+    (a) health.files_declared == 2 (EXACTAMENTE el valor de
+        summary.files_declared, NO 4): los 2 archivos sobrantes NO
+        incrementan files_declared (DS-PRF-3, ya ratificado por el caso 3,
+        pero aqui bajo presencia real de unexpected_file, no solo por
+        ausencia de ellos).
+    (b) health.problems_by_type["unexpected_file"] == 2 (EXACTAMENTE el
+        conteo real de esas 2 entradas top-level, DS-PRF-4, mismo mecanismo
+        que missing_file/missing_column ya verificado en el caso 7 pero
+        anclado especificamente al tipo unexpected_file).
+    (c) health.global_score < 1.0 (el peso 0.3 de unexpected_file, DS-PRF-2,
+        penaliza el score: round(max(0.0, 1.0 - 0.3*2/2), 4) == 0.7, ancla
+        exacta que se verifica ademas del "< 1.0" generico).
+
+    Nota (NC-1/NC-6, plan.md linea 62 TSK-22 y linea 117 caso 14): segun
+    plan.md este caso tiene UNICAMENTE TSK-22 (tarea de tipo test), SIN
+    tarea-codigo propia asociada (no hay una TSK-2x de tipo "Codigo" para
+    CA-10 en la tabla de plan.md). Se ejecuto el test tal como esta escrito
+    contra el profiling.py vigente (sin ningun cambio de produccion) y
+    PASO EN VERDE DE INMEDIATO: Profiling.execute() ya lee files_declared
+    exclusivamente de summary.files_declared (caso 3/DS-PRF-3, sin tocar
+    datasets[].files[] ni unexpected_files[] para ese conteo),
+    Profiling._problems_by_type ya cuenta type=="unexpected_file" sobre la
+    lista top-level inconsistencies[] igual que cualquier otro tipo del
+    vocabulario cerrado (caso 7/DS-PRF-4, sin trato especial ni exclusion),
+    y Profiling._global_score ya pondera unexpected_file con su peso 0.3
+    dentro de la formula generica (caso 10/DS-PRF-2). Las 3 aserciones de
+    CA-10 son, por tanto, consecuencia directa de logica YA CONSTRUIDA y
+    generica en los casos 3/7/10 (que nunca trataron unexpected_file como
+    caso especial, sino como un tipo mas del vocabulario cerrado), no una
+    funcionalidad nueva: no hay codigo que escribir para este caso, siguiendo
+    el precedente documentado en los casos 6/8/9/11/12/13 (excepcion
+    pre-aprobada por el humano en el gate de plan_builder). Se deja el test
+    como CONFIRMACION/guardia de regresion especifica de CA-10 (detectaria,
+    por ejemplo, que una futura refactorizacion empezara a sumar
+    unexpected_file a files_declared, o a excluirlo por error de
+    problems_by_type/global_score). Se recomienda saltar tdd_coder para este
+    caso y pasar directo a tdd_refactor, igual que en los casos
+    6/8/9/11/12/13; queda a decision de la sesion principal."""
+    ctx = _build_ctx_con_ingestion_report_con_unexpected_files(tmp_path)
+
+    Profiling().run(ctx)
+
+    ruta_reporte = ctx.outputs_dir / "040_profiling/profiling_report.json"
+    reporte = json.loads(ruta_reporte.read_text(encoding="utf-8"))
+
+    health = reporte["health"]
+    assert health["files_declared"] == 2
+    assert health["problems_by_type"]["unexpected_file"] == 2
+    assert health["global_score"] == 0.7
+    assert health["global_score"] < 1.0
+
+
 def test_profiling_validate_sin_ingestion_report_lanza_flowcontracterror_nombrandolo_y_no_escribe_profiling_report(
     tmp_path: Path,
 ) -> None:
