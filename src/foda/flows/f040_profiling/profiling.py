@@ -50,6 +50,12 @@ Banda stab_1 (bucle TDD en curso, red/green/refactor caso a caso):
   files_declared==0 -> 1.0 (sin division por cero, ratificado en spec.md).
   pareto sigue como placeholder minimo ([]) hasta sus propios casos
   (15-19).
+- Caso 16 (CA-15, DS-PRF-5): health.pareto ya no es un placeholder fijo;
+  se construye con el helper _pareto(problems_by_type), que incluye solo
+  los tipos con count>=1 (sin entradas para los tipos en 0), preservando
+  la suma total de counts respecto a problems_by_type. pct (CA-16) y el
+  ordenamiento por count desc/type asc (CA-13/CA-14) siguen pendientes de
+  sus propios casos (17-19).
 
 Nota (NC-6): una version previa del caso 2 adelanto de una vez toda la logica
 de health (DS-PRF-2..5). Por decision del humano se restauro el TDD estricto:
@@ -122,10 +128,11 @@ class Profiling(Flow):
         "0.2", client, flow, success) + bloque health con las 6 claves fijas.
 
         files_declared (caso 3, DS-PRF-3), files_healthy/files_with_problems
-        (casos 4-5, DS-PRF-3), problems_by_type (caso 7, DS-PRF-4) y
-        global_score (caso 10, DS-PRF-2) ya se derivan del ingestion_report
-        real. pareto sigue como placeholder minimo ([]) hasta sus propios
-        casos (15-19), TDD estricto (NC-2)."""
+        (casos 4-5, DS-PRF-3), problems_by_type (caso 7, DS-PRF-4),
+        global_score (caso 10, DS-PRF-2) y pareto (caso 16, DS-PRF-5) ya se
+        derivan del ingestion_report real. pct (CA-16) y el ordenamiento de
+        pareto (CA-13/CA-14) siguen pendientes de sus propios casos
+        (17-19), TDD estricto (NC-2)."""
         files_declared = self._ingestion_report.get("summary", {}).get(
             "files_declared", 0
         )
@@ -135,6 +142,7 @@ class Profiling(Flow):
         )
         problems_by_type = self._problems_by_type(self._ingestion_report)
         global_score = self._global_score(files_declared, problems_by_type)
+        pareto = self._pareto(problems_by_type)
         self._report = {
             "schema_version": "0.2",
             "client": ctx.name,
@@ -146,7 +154,7 @@ class Profiling(Flow):
                 "files_healthy": files_healthy,
                 "files_with_problems": files_with_problems,
                 "problems_by_type": problems_by_type,
-                "pareto": [],
+                "pareto": pareto,
             },
         }
         return FlowResult(success=True, outputs=[self.produces[0].path(ctx)])
@@ -220,6 +228,20 @@ class Profiling(Flow):
             for tipo, peso in _PESOS_GLOBAL_SCORE.items()
         )
         return round(max(0.0, 1.0 - penalizacion_total / files_declared), 4)
+
+    @staticmethod
+    def _pareto(problems_by_type: dict) -> list:
+        """Caso 16 (CA-15, DS-PRF-5): construye pareto a partir de
+        problems_by_type incluyendo solo los tipos con count>=1 (sin
+        entradas para los tipos en 0), sin perder informacion: la suma de
+        los counts de pareto siempre coincide con la suma de
+        problems_by_type.values(). pct/orden quedan para sus propios casos
+        (17-19)."""
+        return [
+            {"type": tipo, "count": count}
+            for tipo, count in problems_by_type.items()
+            if count >= 1
+        ]
 
     def write_outputs(self, ctx: ClientContext, result: FlowResult) -> None:
         """Escribe profiling_report.json de forma deterministica (sort_keys
