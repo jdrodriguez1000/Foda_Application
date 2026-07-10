@@ -637,6 +637,43 @@ def test_profiling_report_health_global_score_es_float_en_rango_0_1_fixture_mixt
     assert 0.0 <= global_score <= 1.0
 
 
+def test_profiling_report_health_global_score_coincide_con_formula_ponderada_ancla_0_875(
+    tmp_path: Path,
+) -> None:
+    """stab_1, caso 10 (CA-02, DS-PRF-2, TSK-14): tras Profiling().run(ctx)
+    con la fixture MIXTA (ver _build_ctx_con_ingestion_report_mixto:
+    files_declared==4, y la lista top-level inconsistencies[] con exactamente
+    1 ocurrencia de missing_column, resto de tipos en 0 -ver
+    problems_by_type ya verificado en el caso 7-), profiling_report.json
+    ['health']['global_score'] es EXACTAMENTE igual al valor que produce la
+    formula ponderada de DS-PRF-2:
+
+        penalizacion_total = Sum(peso[tipo] * problems_by_type[tipo])
+                            = 1.0*0 + 0.5*1 + 0.3*0 + 0.1*0 = 0.5
+        global_score = round(max(0.0, 1.0 - penalizacion_total/files_declared), 4)
+                     = round(max(0.0, 1.0 - 0.5/4), 4)
+                     = round(0.875, 4) = 0.875
+
+    Esta es la ancla numerica exacta de la spec (spec.md, tabla "Casos
+    Limite y Errores", fila "Camino feliz parcial", y CA-02: "1
+    missing_column sobre files_declared=4 => 0.875").
+
+    Motivo del rojo esperado (no accidental): Profiling.execute() todavia
+    deja health.global_score como placeholder fijo 1.0 (heredado del caso 2
+    y confirmado sin cambios en el caso 9); con la fixture MIXTA
+    1.0 != 0.875, por lo que la asercion de igualdad exacta debe fallar por
+    valor incorrecto, no por ImportError/AttributeError/KeyError (el bloque
+    health y la clave global_score ya existen desde los casos 2 y 9)."""
+    ctx = _build_ctx_con_ingestion_report_mixto(tmp_path)
+
+    Profiling().run(ctx)
+
+    ruta_reporte = ctx.outputs_dir / "040_profiling/profiling_report.json"
+    reporte = json.loads(ruta_reporte.read_text(encoding="utf-8"))
+
+    assert reporte["health"]["global_score"] == 0.875
+
+
 def test_profiling_validate_sin_ingestion_report_lanza_flowcontracterror_nombrandolo_y_no_escribe_profiling_report(
     tmp_path: Path,
 ) -> None:
