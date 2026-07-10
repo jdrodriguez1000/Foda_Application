@@ -5,7 +5,7 @@
   "current_stage": "spec_writer",
   "stages": {
     "feature_definer":   { "status": "done",    "artifact": "definition.md" },
-    "spec_writer":       { "status": "pending",  "artifact": "spec.md",      "gate": "human" },
+    "spec_writer":       { "status": "done",       "artifact": "spec.md",   "gate": "human", "awaiting_approval": true },
     "plan_builder":      { "status": "pending",  "artifact": "plan.md",      "gate": "human" },
     "tdd":               { "status": "pending",  "cases": [] },
     "integration_tester":{ "status": "pending" },
