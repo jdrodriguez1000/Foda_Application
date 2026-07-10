@@ -1157,6 +1157,101 @@ def test_profiling_report_health_pareto_incluye_solo_tipos_con_count_mayor_igual
     )
 
 
+def _build_ctx_con_ingestion_report_inconsistencias_para_pct(tmp_path: Path) -> ClientContext:
+    """stab_1, caso 17 (CA-16, DS-PRF-5): ClientContext bajo tmp_path con un
+    ingestion_report.json cuya lista top-level inconsistencies[] produce,
+    deliberadamente, un total NO divisible exacto (missing_file=1,
+    missing_column=2 => Σ=3), para que pct=round(count/Σ,4) de un decimal
+    periodico (1/3=0.3333..., 2/3=0.6666...) y el round(.,4) sea realmente
+    discriminante: si execute() no redondeara (o no calculara pct en
+    absoluto), el valor no coincidiria con la ancla exacta de 4 decimales.
+    Resto de tipos (unexpected_file, unexpected_column) en count==0, para
+    reconfirmar (igual que el caso 16) que no aparecen en pareto.
+    files_declared/datasets[].files[] se dejan minimos y no relacionados con
+    este conteo (igual que en la fixture del caso 16)."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    inconsistencias = (
+        [{"type": "missing_file", "detail": "falta archivo 0"}]
+        + [{"type": "missing_column", "detail": f"falta columna {i}"} for i in range(2)]
+    )
+
+    ingestion_report = {
+        "schema_version": "0.1",
+        "client": "ABC",
+        "flow": "ingestion",
+        "success": True,
+        "summary": {"files_declared": 0},
+        "datasets": [],
+        "unexpected_files": [],
+        "inconsistencies": inconsistencias,
+    }
+
+    report_path = ctx.outputs_dir / "030_ingestion/ingestion_report.json"
+    report_path.parent.mkdir(parents=True)
+    report_path.write_text(
+        json.dumps(ingestion_report, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    return ctx
+
+
+def test_profiling_report_health_pareto_cada_entrada_tiene_type_count_pct_con_pct_igual_a_round_count_sobre_total_4(
+    tmp_path: Path,
+) -> None:
+    """stab_1, caso 17 (CA-16, DS-PRF-5, TSK-26/TSK-27): tras
+    Profiling().run(ctx) con un ingestion_report.json cuya lista top-level
+    inconsistencies[] produce un total no divisible exacto (ver
+    _build_ctx_con_ingestion_report_inconsistencias_para_pct: missing_file=1,
+    missing_column=2, Σ(problems_by_type.values())==3),
+    profiling_report.json['health']['pareto'] cumple (CA-16):
+
+    (a) cada entrada tiene EXACTAMENTE las 3 claves type/count/pct (ni de
+        mas ni de menos).
+    (b) 'type' es str, 'count' es int >= 1 (ya cubierto en espiritu por el
+        caso 16, se reconfirma aqui con los tipos exactos).
+    (c) 'pct' es float e IGUAL a round(count/Σ(problems_by_type.values()),4):
+        para missing_file (count=1) pct==round(1/3,4)==0.3333; para
+        missing_column (count=2) pct==round(2/3,4)==0.6667. Al ser un
+        decimal periodico, esta ancla es genuinamente discriminante del
+        round(.,4): un pct sin redondear (0.3333333333333333) o ausente NO
+        pasaria esta asercion.
+
+    Motivo del rojo esperado (no accidental): Profiling._pareto(...)
+    (src/foda/flows/f040_profiling/profiling.py, caso 16) construye hoy cada
+    entrada de pareto SOLO con las claves {type, count} (list comprehension
+    literal, sin 'pct'); por lo tanto cada entrada de pareto carece de la
+    clave 'pct' -> KeyError al acceder a entrada['pct'], no
+    ImportError/AttributeError accidental (el bloque health, la clave
+    pareto, problems_by_type y las claves type/count de cada entrada ya
+    existen desde los casos 2, 7 y 16)."""
+    ctx = _build_ctx_con_ingestion_report_inconsistencias_para_pct(tmp_path)
+
+    Profiling().run(ctx)
+
+    ruta_reporte = ctx.outputs_dir / "040_profiling/profiling_report.json"
+    reporte = json.loads(ruta_reporte.read_text(encoding="utf-8"))
+
+    health = reporte["health"]
+    problems_by_type = health["problems_by_type"]
+    pareto = health["pareto"]
+    total = sum(problems_by_type.values())
+
+    assert len(pareto) == 2
+    for entrada in pareto:
+        assert set(entrada.keys()) == {"type", "count", "pct"}
+        assert isinstance(entrada["type"], str)
+        assert isinstance(entrada["count"], int) and entrada["count"] >= 1
+        assert isinstance(entrada["pct"], float)
+        assert entrada["pct"] == round(entrada["count"] / total, 4)
+
+    entradas_por_tipo = {entrada["type"]: entrada for entrada in pareto}
+    assert entradas_por_tipo["missing_file"]["pct"] == 0.3333
+    assert entradas_por_tipo["missing_column"]["pct"] == 0.6667
+
+
 def test_profiling_validate_sin_ingestion_report_lanza_flowcontracterror_nombrandolo_y_no_escribe_profiling_report(
     tmp_path: Path,
 ) -> None:
