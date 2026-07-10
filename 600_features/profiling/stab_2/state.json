@@ -22,7 +22,7 @@
         { "id": 10, "desc": "defects.uniqueness.total_rows == suma rows sobre los ingeridos", "status": "pending" },
         { "id": 11, "desc": "defects.uniqueness.duplicate_rows == suma por archivo de duplicated(keep='first'); suma by_file[].duplicate_rows == duplicate_rows", "status": "pending" },
         { "id": 12, "desc": "health.uniqueness_score == round(1 - duplicate_rows/total_rows, 4), ==1.0 si total_rows==0", "status": "pending" },
-        { "id": 13, "desc": "Profiling lee profiling_config.yaml unificando numeric/non_numeric/boolean; defects.validity.catalog_size == n de tokens de la union", "status": "pending" },
+        { "id": 13, "desc": "Profiling lee el profiling_config.yaml vendor-owned de 650_vendor/profiling/<name>/ unificando numeric/non_numeric/boolean; catalog_size == n de tokens de la union; un profiling_config.yaml dentro de clients/<name>/ NO se lee (asercion negativa)", "status": "pending" },
         { "id": 14, "desc": "Con catalogo no vacio, defects.validity.sentinel_cells == n de celdas no nulas con match exacto de token", "status": "pending" },
         { "id": 15, "desc": "health.validity_score == round(1 - sentinel_cells/total_cells, 4), ==1.0 si total_cells==0", "status": "pending" },
         { "id": 16, "desc": "Celda nula no es centinela aunque '' este en catalogo (exclusion mutua); token -999 no matchea '-999.0' (match exacto)", "status": "pending" },
