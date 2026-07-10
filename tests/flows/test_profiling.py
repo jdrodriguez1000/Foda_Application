@@ -1461,6 +1461,194 @@ def test_profiling_report_health_pareto_ante_empate_de_count_desempata_por_type_
     ]
 
 
+def _build_ctx_con_ingestion_report_determinismo_pareto_completo(
+    tmp_path: Path,
+) -> ClientContext:
+    """stab_1, caso 20 (CA-21, DS-PRF-7, TSK-32): ClientContext bajo
+    tmp_path con un ingestion_report.json de fixture "con inconsistencias
+    reales" disenada para ejercitar TODO el bloque health (no solo
+    global_score/pareto de forma trivial):
+
+    - summary.files_declared==5, datasets[0].files con 5 archivos
+      declarados: 2 SANOS (status=="ingested" e inconsistencies==[]) y 3
+      con problemas (2 con status=="rejected", 1 status=="ingested" pero
+      con inconsistencies no vacia), de forma que files_healthy==2 y
+      files_with_problems==3 (DS-PRF-3, mismo patron que la fixture MIXTA
+      de los casos 4-6).
+    - lista top-level inconsistencies[] con los 4 tipos del vocabulario
+      cerrado en counts variados y con un EMPATE deliberado
+      (missing_file=4, missing_column=4, unexpected_file=2,
+      unexpected_column=0), para que problems_by_type tenga las 4 claves
+      con valores no triviales y pareto deba ejercitar el filtro
+      count>=1, el calculo de pct, el orden por count descendente Y el
+      desempate alfabetico ascendente (DS-PRF-5, CA-13/CA-14/CA-15/CA-16)
+      en un unico fixture, calcado del patron de las fixtures de los casos
+      16-19 (_build_ctx_con_ingestion_report_counts_distintos_para_orden_pareto/
+      _empate_de_count_para_desempate_pareto).
+
+    global_score resultante (DS-PRF-2, no exacto por division, ejercita
+    tambien el redondeo a 4 decimales del caso 13):
+    penalizacion_total = 1.0*4 + 0.3*2 + 0.5*4 + 0.1*0 = 4.0+0.6+2.0 = 6.6
+    score = round(max(0.0, 1.0 - 6.6/5), 4) = round(max(0.0, -0.32), 4) = 0.0
+    (clamp inferior, caso 11, tambien ejercitado)."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    archivos = [
+        {
+            "name": "sano_1.csv",
+            "status": "ingested",
+            "rows": 10,
+            "columns": 3,
+            "separator": ",",
+            "bronze_path": "data/bronze/sano_1.csv",
+            "inconsistencies": [],
+        },
+        {
+            "name": "sano_2.csv",
+            "status": "ingested",
+            "rows": 8,
+            "columns": 3,
+            "separator": ",",
+            "bronze_path": "data/bronze/sano_2.csv",
+            "inconsistencies": [],
+        },
+        {
+            "name": "rechazado_1.csv",
+            "status": "rejected",
+            "rows": 0,
+            "columns": 0,
+            "separator": ",",
+            "bronze_path": "data/bronze/rechazado_1.csv",
+            "inconsistencies": [],
+        },
+        {
+            "name": "rechazado_2.csv",
+            "status": "rejected",
+            "rows": 0,
+            "columns": 0,
+            "separator": ",",
+            "bronze_path": "data/bronze/rechazado_2.csv",
+            "inconsistencies": [],
+        },
+        {
+            "name": "con_columna_faltante.csv",
+            "status": "ingested",
+            "rows": 5,
+            "columns": 2,
+            "separator": ",",
+            "bronze_path": "data/bronze/con_columna_faltante.csv",
+            "inconsistencies": [{"type": "missing_column", "detail": "falta col x"}],
+        },
+    ]
+
+    inconsistencias = (
+        [{"type": "missing_file", "detail": f"falta archivo {i}"} for i in range(4)]
+        + [{"type": "missing_column", "detail": f"falta columna {i}"} for i in range(4)]
+        + [{"type": "unexpected_file", "detail": f"archivo sobrante {i}"} for i in range(2)]
+    )
+
+    ingestion_report = {
+        "schema_version": "0.1",
+        "client": "ABC",
+        "flow": "ingestion",
+        "success": True,
+        "summary": {"files_declared": 5},
+        "datasets": [{"files": archivos}],
+        "unexpected_files": ["sobrante_1.csv", "sobrante_2.csv"],
+        "inconsistencies": inconsistencias,
+    }
+
+    report_path = ctx.outputs_dir / "030_ingestion/ingestion_report.json"
+    report_path.parent.mkdir(parents=True)
+    report_path.write_text(
+        json.dumps(ingestion_report, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    return ctx
+
+
+def test_profiling_report_dos_ejecuciones_con_mismo_ingestion_report_producen_profiling_report_byte_identico(
+    tmp_path: Path,
+) -> None:
+    """stab_1, caso 20 (CA-21, DS-PRF-7, TSK-32): dos Profiling().run(ctx)
+    independientes, cada una sobre su propio ClientContext (arboles de
+    directorios separados bajo tmp_path/"run_1" y tmp_path/"run_2", mismo
+    patron que el test de determinismo del caso 13), pero alimentadas con
+    EL MISMO ingestion_report.json de fixture (ver
+    _build_ctx_con_ingestion_report_determinismo_pareto_completo: 5 archivos
+    declarados con mezcla de sanos/con-problemas y una lista top-level
+    inconsistencies[] con los 4 tipos, incluido un EMPATE de count entre
+    missing_file y missing_column), producen un profiling_report.json cuyo
+    contenido en disco es EXACTAMENTE byte-idéntico entre ambas ejecuciones
+    (CA-21): se leen los bytes crudos (read_bytes(), no el JSON parseado)
+    de cada profiling_report.json y se comparan con igualdad estricta.
+
+    El fixture ejercita simultaneamente TODO el bloque health (no solo un
+    campo trivial): files_declared/files_healthy/files_with_problems desde
+    la mezcla de datasets[].files[], las 4 claves de problems_by_type desde
+    la lista top-level inconsistencies[], global_score con clamp inferior
+    (penalizacion_total=6.6 > files_declared=5) y, sobre todo, pareto con
+    multiples entradas (filtro count>=1, pct, orden por count descendente Y
+    desempate alfabetico ascendente ante el empate deliberado
+    missing_file==missing_column==4): si el determinismo dependiera de
+    cualquier fuente de no-determinismo real (orden de iteracion de dict no
+    fijado, hash aleatorio de sets/frozensets, timestamps, ids de objeto,
+    etc.) en cualquiera de esos calculos, este test lo detectaria como una
+    diferencia de bytes entre las dos ejecuciones.
+
+    Motivo esperado (NC-1/NC-6, plan.md linea 79, 'Cases sin tarea-codigo
+    propia', que lista explicitamente el caso 20): segun el plan, el
+    determinismo NO tiene tarea-codigo propia (TSK-32 es unicamente de tipo
+    test): lo garantiza la serializacion determinista ya existente y
+    verificada de Flow.write_outputs() (json.dumps(..., ensure_ascii=False,
+    indent=2, sort_keys=True) + '\\n', confirmada byte a byte en el caso 1)
+    combinada con el orden fijo de pareto ya implementado y verificado en
+    los casos 18-19 (sorted(entradas, key=lambda e: (-e['count'],
+    e['type']))), mas la ausencia de cualquier fuente de aleatoriedad/estado
+    mutable compartido en execute()/los helpers privados del modulo (todos
+    puros, sin cache ni variables de modulo mutables). Se ejecuto el test
+    tal como esta escrito contra el profiling.py vigente (sin ningun cambio
+    de produccion) y PASO EN VERDE DE INMEDIATO: no es un rojo accidental
+    invalido ni una decision silenciosa, es la excepcion pre-aprobada por el
+    humano en el gate de plan_builder para este caso especifico (mismo
+    patron que los casos 6/8/9/11/12/13/14/15). Se recomienda saltar
+    tdd_coder para este caso (no hay codigo que escribir) y pasar directo a
+    tdd_refactor; queda a decision de la sesion principal."""
+    ctx_1 = _build_ctx_con_ingestion_report_determinismo_pareto_completo(tmp_path / "run_1")
+    ctx_2 = _build_ctx_con_ingestion_report_determinismo_pareto_completo(tmp_path / "run_2")
+
+    Profiling().run(ctx_1)
+    Profiling().run(ctx_2)
+
+    ruta_reporte_1 = ctx_1.outputs_dir / "040_profiling/profiling_report.json"
+    ruta_reporte_2 = ctx_2.outputs_dir / "040_profiling/profiling_report.json"
+
+    bytes_reporte_1 = ruta_reporte_1.read_bytes()
+    bytes_reporte_2 = ruta_reporte_2.read_bytes()
+
+    assert bytes_reporte_1 == bytes_reporte_2
+
+    reporte_1 = json.loads(bytes_reporte_1.decode("utf-8"))
+    health = reporte_1["health"]
+    assert health["files_declared"] == 5
+    assert health["files_healthy"] == 2
+    assert health["files_with_problems"] == 3
+    assert health["problems_by_type"] == {
+        "missing_file": 4,
+        "unexpected_file": 2,
+        "missing_column": 4,
+        "unexpected_column": 0,
+    }
+    assert health["global_score"] == 0.0
+    assert [entrada["type"] for entrada in health["pareto"]] == [
+        "missing_column",
+        "missing_file",
+        "unexpected_file",
+    ]
+
+
 def test_profiling_validate_sin_ingestion_report_lanza_flowcontracterror_nombrandolo_y_no_escribe_profiling_report(
     tmp_path: Path,
 ) -> None:
