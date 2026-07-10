@@ -1789,7 +1789,7 @@ def test_profiling_report_con_ingestion_success_false_no_lanza_y_reporte_tiene_s
 def test_profiling_validate_sin_ingestion_report_lanza_flowcontracterror_nombrandolo_y_no_escribe_profiling_report(
     tmp_path: Path,
 ) -> None:
-    """Caso 5 (CA-05, TSK-08): sin ingestion_report.json bajo
+    """Caso 22 (CA-23, TSK-34): sin ingestion_report.json bajo
     ctx.outputs_dir/030_ingestion (el unico Artifact de Profiling.requires,
     caso 1), Profiling().validate(ctx) lanza FlowContractError cuyo mensaje
     nombra especificamente el artefacto ausente ("ingestion_report", no un
