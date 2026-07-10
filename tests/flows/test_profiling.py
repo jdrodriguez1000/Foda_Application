@@ -746,6 +746,73 @@ def test_profiling_report_health_global_score_es_0_0_cuando_penalizacion_total_e
     assert reporte["health"]["global_score"] == 0.0
 
 
+def _build_ctx_con_ingestion_report_files_declared_cero(tmp_path: Path) -> ClientContext:
+    """stab_1, caso 12 (CA-04, DS-PRF-2): ClientContext bajo tmp_path con un
+    ingestion_report.json cuyo summary.files_declared==0 (borde: ningun
+    archivo declarado), y una inconsistencia top-level presente (missing_file
+    x1, peso 1.0) para que, si la formula ponderada se aplicara sin la guarda
+    del borde, penalizacion_total/files_declared dividiria por cero
+    (ZeroDivisionError) en vez de devolver 1.0 directamente (CA-04, DS-PRF-2:
+    'si files_declared == 0 -> 1.0'). datasets[]/files[] se dejan vacios: este
+    caso no verifica files_healthy/files_with_problems (ya cubiertos en casos
+    4-6)."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    inconsistencias = [
+        {"type": "missing_file", "detail": "falta archivo 1"},
+    ]
+
+    ingestion_report = {
+        "schema_version": "0.1",
+        "client": "ABC",
+        "flow": "ingestion",
+        "success": True,
+        "summary": {"files_declared": 0},
+        "datasets": [],
+        "unexpected_files": [],
+        "inconsistencies": inconsistencias,
+    }
+
+    report_path = ctx.outputs_dir / "030_ingestion/ingestion_report.json"
+    report_path.parent.mkdir(parents=True)
+    report_path.write_text(
+        json.dumps(ingestion_report, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    return ctx
+
+
+def test_profiling_report_health_global_score_es_1_0_cuando_files_declared_es_cero_borde_sin_division_por_cero(
+    tmp_path: Path,
+) -> None:
+    """stab_1, caso 12 (CA-04, DS-PRF-2, TSK-18/TSK-19): tras
+    Profiling().run(ctx) con un ingestion_report.json cuyo
+    summary.files_declared==0 (ver
+    _build_ctx_con_ingestion_report_files_declared_cero: 0 archivos
+    declarados, con una inconsistencia top-level missing_file presente),
+    profiling_report.json['health']['global_score'] es EXACTAMENTE 1.0 (borde
+    explicito de DS-PRF-2: 'si files_declared == 0 -> 1.0'), sin lanzar
+    ZeroDivisionError ni ninguna otra excepcion, pese a existir una
+    inconsistencia que en cualquier otro caso restaria del score.
+
+    Motivo del rojo esperado (no accidental, sujeto a confirmacion): si
+    Profiling._global_score(...) (ver profiling.py) no aplicara la guarda
+    files_declared==0 antes de dividir por files_declared, la ejecucion
+    lanzaria ZeroDivisionError (fallo por excepcion no capturada, no por
+    ImportError/AttributeError/KeyError, ya que el bloque health y la clave
+    global_score existen desde los casos 2, 9 y 10)."""
+    ctx = _build_ctx_con_ingestion_report_files_declared_cero(tmp_path)
+
+    Profiling().run(ctx)
+
+    ruta_reporte = ctx.outputs_dir / "040_profiling/profiling_report.json"
+    reporte = json.loads(ruta_reporte.read_text(encoding="utf-8"))
+
+    assert reporte["health"]["global_score"] == 1.0
+
+
 def test_profiling_validate_sin_ingestion_report_lanza_flowcontracterror_nombrandolo_y_no_escribe_profiling_report(
     tmp_path: Path,
 ) -> None:
