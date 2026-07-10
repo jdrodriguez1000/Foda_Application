@@ -2,11 +2,11 @@
   "feature": "profiling",
   "band": "stab_2",
   "status": "in_progress",
-  "current_stage": "plan_builder",
+  "current_stage": "spec_writer",
   "stages": {
     "feature_definer":   { "status": "done",    "artifact": "definition.md" },
-    "spec_writer":       { "status": "done",       "artifact": "spec.md",   "gate": "human", "awaiting_approval": false },
-    "plan_builder":      { "status": "done",     "artifact": "plan.md",     "gate": "human", "awaiting_approval": true },
+    "spec_writer":       { "status": "done",       "artifact": "spec.md",   "gate": "human", "awaiting_approval": true, "amended": "config_vendor_owned_fuera_de_clients + riesgos_facturacion R-BILL-1/2 (DS-PRF2-6, DS-PRF2-7)" },
+    "plan_builder":      { "status": "stale",    "artifact": "plan.md",     "gate": "human", "awaiting_approval": false, "note": "re-ajustar tras enmienda de spec: config vendor-owned en 900_vendor/profiling/<name>/ (antes 010_inputs); resolucion fuera de bases de ClientContext" },
     "tdd": {
       "status": "pending",
       "cases": [
