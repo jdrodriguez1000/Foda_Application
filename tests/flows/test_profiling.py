@@ -674,6 +674,78 @@ def test_profiling_report_health_global_score_coincide_con_formula_ponderada_anc
     assert reporte["health"]["global_score"] == 0.875
 
 
+def _build_ctx_con_ingestion_report_penalizacion_excede_files_declared(
+    tmp_path: Path,
+) -> ClientContext:
+    """stab_1, caso 11 (CA-03, DS-PRF-2): ClientContext bajo tmp_path con un
+    ingestion_report.json cuya penalizacion_total pondera por encima de
+    files_declared (ancla sugerida en plan.md, Estrategia de Test):
+    files_declared=1, lista top-level inconsistencies[] con missing_file=1 y
+    unexpected_file=2 (pesos DS-PRF-2: missing_file=1.0, unexpected_file=0.3)
+    => penalizacion_total = 1.0*1 + 0.3*2 = 1.6 > files_declared=1, de forma
+    que 1.0 - 1.6/1 = -0.6 < 0.0 y el clamp inferior max(0.0, ...) debe
+    forzar global_score a 0.0 (CA-03) en vez de un valor negativo.
+    datasets[]/files[] se dejan vacios: este caso no verifica
+    files_healthy/files_with_problems (ya cubiertos en casos 4-6)."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    inconsistencias = [
+        {"type": "missing_file", "detail": "falta archivo 1"},
+        {"type": "unexpected_file", "detail": "archivo sobrante 1"},
+        {"type": "unexpected_file", "detail": "archivo sobrante 2"},
+    ]
+
+    ingestion_report = {
+        "schema_version": "0.1",
+        "client": "ABC",
+        "flow": "ingestion",
+        "success": True,
+        "summary": {"files_declared": 1},
+        "datasets": [],
+        "unexpected_files": [],
+        "inconsistencies": inconsistencias,
+    }
+
+    report_path = ctx.outputs_dir / "030_ingestion/ingestion_report.json"
+    report_path.parent.mkdir(parents=True)
+    report_path.write_text(
+        json.dumps(ingestion_report, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    return ctx
+
+
+def test_profiling_report_health_global_score_es_0_0_cuando_penalizacion_total_excede_files_declared_clamp(
+    tmp_path: Path,
+) -> None:
+    """stab_1, caso 11 (CA-03, DS-PRF-2, TSK-16/TSK-17): tras
+    Profiling().run(ctx) con un ingestion_report.json cuya penalizacion_total
+    pondera por encima de files_declared (ver
+    _build_ctx_con_ingestion_report_penalizacion_excede_files_declared:
+    files_declared=1, missing_file=1, unexpected_file=2 =>
+    penalizacion_total = 1.0*1 + 0.3*2 = 1.6 > 1), profiling_report.json
+    ['health']['global_score'] es EXACTAMENTE 0.0 (clamp inferior), no un
+    valor negativo (1.0 - 1.6/1 = -0.6 sin clamp).
+
+    Motivo del rojo esperado (no accidental): Profiling._global_score(...)
+    (ver profiling.py, caso 10) todavia no aplica el clamp inferior
+    max(0.0, ...) sobre el resultado de la formula ponderada, por lo que con
+    esta fixture devuelve el valor negativo -0.6 en vez de 0.0; la asercion
+    de igualdad exacta debe fallar por valor incorrecto (-0.6 != 0.0), no por
+    ImportError/AttributeError/KeyError (el bloque health y la clave
+    global_score ya existen desde los casos 2, 9 y 10)."""
+    ctx = _build_ctx_con_ingestion_report_penalizacion_excede_files_declared(tmp_path)
+
+    Profiling().run(ctx)
+
+    ruta_reporte = ctx.outputs_dir / "040_profiling/profiling_report.json"
+    reporte = json.loads(ruta_reporte.read_text(encoding="utf-8"))
+
+    assert reporte["health"]["global_score"] == 0.0
+
+
 def test_profiling_validate_sin_ingestion_report_lanza_flowcontracterror_nombrandolo_y_no_escribe_profiling_report(
     tmp_path: Path,
 ) -> None:
