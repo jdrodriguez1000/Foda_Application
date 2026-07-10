@@ -235,10 +235,15 @@ class Profiling(Flow):
         problems_by_type incluyendo solo los tipos con count>=1 (sin
         entradas para los tipos en 0), sin perder informacion: la suma de
         los counts de pareto siempre coincide con la suma de
-        problems_by_type.values(). pct/orden quedan para sus propios casos
-        (17-19)."""
+        problems_by_type.values(). Caso 17 (CA-16, DS-PRF-5): cada entrada
+        incluye ademas pct=round(count/total,4), con total=Σ(
+        problems_by_type.values()); no hay division por cero porque solo se
+        entra a este calculo cuando existe al menos un tipo con count>=1
+        (total>=1 en ese caso). Orden queda para sus propios casos
+        (18-19)."""
+        total = sum(problems_by_type.values())
         return [
-            {"type": tipo, "count": count}
+            {"type": tipo, "count": count, "pct": round(count / total, 4)}
             for tipo, count in problems_by_type.items()
             if count >= 1
         ]
