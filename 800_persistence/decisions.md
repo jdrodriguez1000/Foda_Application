@@ -113,6 +113,12 @@ Cada decisión sigue el formato: **ID**, **título**, **estado** (Propuesta / Ac
 | D-094 | `profiling` `stab_1` — DS-PRF-6: ante `ingestion_report.success==false`, `profiling` calcula igual sobre lo disponible (nunca falla); el `global_score` bajo comunica la mala salud | Aceptada | 2026-07-09 |
 | D-095 | `profiling` `stab_1` — DS-PRF-7: enriquecimiento aditivo del reporte (bloque `health` nuevo) + `schema_version` "0.1"→"0.2" | Aceptada | 2026-07-09 |
 | D-096 | Cierre CONFORME de `profiling` (banda `stab_1`) vía el flujo terminal D-079/D-081 completo: PR #2 → `human_test` (7/7) → `merge_to_main` (humano) | Aceptada | 2026-07-10 |
+| D-097 | `profiling` — reparto de alcance en dos bandas nuevas: `stab_2` ("defectos con score": nulos, duplicados, centinelas, score multi-dimensión) y `stab_3` ("perfil diagnóstico por columna": categórico + numérico, informativo) | Aceptada | 2026-07-10 |
+| D-098 | `profiling` — principio transversal "defectos con score" vs. "perfil diagnóstico informativo": solo los defectos inequívocos penalizan `global_score`; los hallazgos ambiguos se reportan pero no bajan el score | Aceptada | 2026-07-10 |
+| D-099 | `profiling` `stab_2` — rediseño del `global_score` a modelo multi-dimensión (media ponderada de sub-scores normalizados: `structural_score`, `completeness_score`, `validity_score`, `uniqueness_score`) | Aceptada | 2026-07-10 |
+| D-100 | `profiling` `stab_2` — valores centinela parametrizados por cliente vía `profiling_config.yaml` (archivo propio, no dentro de `client.yaml`), catálogo vacío si el cliente no lo define | Aceptada | 2026-07-10 |
+| D-101 | `profiling` `stab_3` — consistencia categórica: Caso A (variantes tipográficas) detectable deterministamente y reportado como candidato; Caso B (equivalencia semántica) declarado FUERA DE ALCANCE de la feature; Profiling audita y señala, nunca corrige (sin LLM) | Aceptada | 2026-07-10 |
+| D-102 | `profiling` `stab_3` — valores atípicos numéricos por método IQR/Tukey, informativo (no penaliza el score), con exclusión de nulos/centinelas antes de calcular cuartiles | Aceptada | 2026-07-10 |
 
 ## 3. Detalle de Decisiones
 
@@ -789,3 +795,45 @@ Cada decisión sigue el formato: **ID**, **título**, **estado** (Propuesta / Ac
 - **Contexto:** `profiling` `stab_1` completó la cadena de 8 agentes (`spec_verifier` CONFORME, 23/23 CA, commit `ba21aab`) en la sesión anterior, con PR #2 abierto y plan de prueba humana (`human_test_plan.md`, 7 casos) verificado empíricamente. Esta sesión ejecutó los dos gates humanos terminales.
 - **Decisión:** El humano ejecutó los casos 1-4 de `human_test_plan.md` (`DEMO_A`/`DEMO_C`/`DEMO_D`/`DEMO_f`), coincidiendo exactamente con los valores esperados. La sesión principal detectó que el caso 5 (`DEMO_e`) había quedado a medio sembrar y completó los casos 5-7 vía CLI: clamp de `global_score` a `0.0` (3 `missing_file`), determinismo byte a byte (SHA-256 idéntico entre corridas sin `--force`), y `FlowContractError` sin `ingestion_report.json` (con y sin `--force`, sin escribir `profiling_report.json`). **7/7 casos CONFORMES.** El usuario mergeó el PR #2 (`gh pr merge`, merge commit `754d931` en `main`); la sesión principal sincronizó `main` local y borró la rama `feature/profiling-stab1` local y remota.
 - **Consecuencias:** `profiling` `stab_1` queda CERRADA en `main`, novena feature completa de punta a punta y SEGUNDA en recorrer el flujo terminal D-079/D-081 completo en la práctica (tras `profiling` `tracer_bullet`, D-087). `state.json` avanza a `status:"done"`/`current_stage:"completed"`. Se registra la práctica de verificar artefactos reales en disco antes de dar por completo un gate humano (ver L-070).
+
+### D-097 — `profiling`: reparto de alcance en dos bandas nuevas (`stab_2`/`stab_3`)
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-10
+- **Contexto:** Con `stab_1` (salud estructural pura, sin leer `bronze/`) cerrada, el análisis de contenido/celda quedó diferido (D-089/D-090). Sesión de diseño/planeación sin código: había que decidir cómo repartir ese endurecimiento en las próximas bandas de `profiling`.
+- **Decisión:** Se reparte en dos bandas nuevas. **`stab_2` = "defectos con score"**: primera lectura de `bronze/`, cubre (1) valores faltantes/nulos, (2) filas duplicadas, (3) valores centinela, más el rediseño del score a modelo multi-dimensión (D-099); todos son defectos inequívocos que penalizan el score. **`stab_3` = "perfil diagnóstico por columna según su tipo"**: informativo, NO penaliza el score; perfil categórico (distribución/dominancia, columnas constantes, cardinalidad, candidatos a casi-duplicado) + perfil numérico (min/max/media/mediana/cuartiles + atípicos).
+- **Consecuencias:** Da alcance concreto a T-040 (`stab_2`, próxima prioritaria) y T-041 (`stab_3`, backlog). `feature_definer` debe actualizar la tabla "Bandas Previstas" del `feature_contract.md` de `profiling` al arrancar `stab_2`. No se arrancó la cadena SDD/TDD en esta sesión.
+
+### D-098 — `profiling`: principio transversal "defectos con score" vs. "perfil diagnóstico informativo"
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-10
+- **Contexto:** Al diseñar `stab_3` (consistencia categórica, atípicos numéricos) surgió la pregunta de si hallazgos ambiguos (un outlier, un desbalance 95/5, una columna 100% un valor) deben penalizar `global_score` igual que los defectos estructurales/de completitud de `stab_1`/`stab_2`.
+- **Decisión:** Profiling emite dos tipos de salida. (a) Defectos inequívocos (estructura, nulos, centinelas, duplicados) → alimentan `global_score`. (b) Hallazgos diagnósticos ambiguos (distribución categórica, dominancia, columnas constantes, alta cardinalidad, candidatos a casi-duplicado, atípicos numéricos) → se reportan pero NO bajan el número global, porque no son necesariamente errores (un outlier o un desbalance pueden ser datos válidos).
+- **Consecuencias:** El `global_score` se mantiene defendible (no colapsa por señales ambiguas). Rige el diseño de `stab_2` (defectos con score) y `stab_3` (perfil informativo). Patrón reutilizable para futuros flujos de auditoría (ver L-071).
+
+### D-099 — `profiling` `stab_2`: rediseño del `global_score` a modelo multi-dimensión
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-10
+- **Contexto:** El `global_score` de `stab_1` es un score plano de una sola dimensión (denominador: archivos). Al incorporar defectos a nivel de celda/fila en `stab_2` (nulos, centinelas, duplicados), sumar esos conteos directamente al score de archivos saturaría el resultado a 0 por incommensurabilidad de granularidad (celdas vs. archivos).
+- **Decisión:** El `global_score` pasa a ser una MEDIA PONDERADA de sub-scores por dimensión, cada uno normalizado a [0,1] sobre su denominador natural: `structural_score` (= el `global_score` actual de `stab_1`, denom: archivos, CAMBIA DE SIGNIFICADO a "una dimensión más"), `completeness_score` = 1 − celdas_nulas/celdas_totales, `validity_score` = 1 − celdas_centinela/celdas_totales, `uniqueness_score` = 1 − filas_duplicadas/filas_totales. `global_score` = Σ(peso_dimensión × sub_score). Pesos iniciales igualitarios como punto de partida a afinar (ver A-021).
+- **Consecuencias:** El score no colapsa por escala y cada dimensión queda comparable/auto-normalizada. Requiere leer `bronze/` con una librería para celdas/filas (ver A-020, dependencia `pandas` propuesta pero no confirmada). El significado de `structural_score` cambia respecto a `stab_1`; hay que documentarlo en el `spec.md` de `stab_2` al construirlo.
+
+### D-100 — `profiling` `stab_2`: valores centinela parametrizados por cliente
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-10
+- **Contexto:** Detectar valores centinela (p. ej. -999, "N/A", 9999-12-31) requiere un catálogo, y ese catálogo varía por cliente (coherente con "YAML como entrada de decisión humana", D-006).
+- **Decisión:** Nuevo artefacto de configuración por cliente `profiling_config.yaml` (archivo propio, NO dentro de `client.yaml`), con tres cajas: `numeric`, `non_numeric` (incluye fechas límite tipo 1900-01-01/9999-12-31), `boolean`. Si el cliente no lo define, Profiling corre igual con catálogo vacío (`validity_score = 1.0`, sin falsos positivos). Detección determinista por catálogo de tokens; se reportan como candidatos, no se clasifican con certeza semántica.
+- **Consecuencias:** Nuevo tipo de artefacto de config por cliente (además de `client.yaml`), a declarar formalmente en `spec.md` de `stab_2`. Sin catálogo, `validity_score` es siempre 1.0 (comportamiento seguro por defecto).
+
+### D-101 — `profiling` `stab_3`: consistencia categórica — Caso A detectable, Caso B fuera de alcance
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-10
+- **Contexto:** El usuario quiere que Profiling informe (no corrija) valor dominante, columnas constantes, alta cardinalidad y posibles casi-duplicados categóricos (p. ej. "pto Col" ~ "pto Colombia"). Se distinguen dos casos: variantes tipográficas (mayúsculas/acentos/puntuación/abreviaturas) vs. equivalencia semántica (p. ej. "Colombia" ⊃ "Puerto Colombia").
+- **Decisión:** **Caso A** (variantes tipográficas): detectable deterministamente vía normalización + similitud de string; se reportan como CANDIDATOS a casi-duplicado. **Caso B** (equivalencia semántica): NO detectable con métodos de string, requeriría LLM (prohibido en Profiling por `system_design.md` §6) o una jerarquía de referencia; se declara FUERA DE ALCANCE de la feature, corresponde a Discovery/Cleaning. Se reafirma la frontera arquitectónica: Profiling AUDITA y SEÑALA, nunca corrige; la corrección/canonicalización de valores es responsabilidad de Cleaning (050); la resolución semántica de entidades necesita Discovery. Profiling se mantiene determinista, sin LLM.
+- **Consecuencias:** Acota el alcance de `stab_3` a lo detectable por string matching determinista; evita que Profiling se convierta en un flujo de limpieza/resolución de entidades. Deja explícito el reparto de responsabilidad con Cleaning/Discovery para cuando se construyan.
+
+### D-102 — `profiling` `stab_3`: valores atípicos numéricos por IQR/Tukey
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-10
+- **Contexto:** Había que elegir un método para detectar valores atípicos en columnas numéricas, informativo (no penaliza el score, D-098) porque un atípico puede ser un dato válido extremo.
+- **Decisión:** Método IQR/Tukey (fences Q1−1.5·IQR / Q3+1.5·IQR) como default: robusto, no asume normalidad, simple (alternativas Z-score/MAD descartadas por ahora). Solo columnas numéricas. Orden de cálculo obligatorio: se EXCLUYEN nulos y centinelas ANTES de calcular cuartiles/IQR (un centinela -999 reventaría los fences).
+- **Consecuencias:** Detección de atípicos coherente con el resto del diseño determinista de Profiling; depende de que `stab_2` ya identifique/excluya nulos y centinelas antes de que `stab_3` calcule cuartiles, estableciendo un orden de dependencia entre las dos bandas.

@@ -56,16 +56,18 @@
 ## 3. Tareas En Progreso
 | ID | Tarea | Prioridad | Notas |
 |---|---|---|---|
-| T-037 | Comando encadenado tipo `foda run <cliente> --flow onboarding→ingestion` | 🟢 Baja | Feature nueva vía SDD/TDD; depende de T-036 (gate de progresión, ahora en implementación dentro de T-038/`profiling`) para tener sentido (encadenar solo si el predecesor puede fallar el gate). |
+| — | _Sin registros aún._ | — | — |
 
 ## 4. Tareas Pendientes
 | ID | Tarea | Prioridad | Notas |
 |---|---|---|---|
-| — | _Sin registros aún._ | — | — |
+| T-040 | Construir `profiling` banda `stab_2` ("defectos con score": nulos, filas duplicadas, valores centinela, score multi-dimensión, `profiling_config.yaml`) ejecutando la cadena de 8 agentes | 🔴 Alta | Próxima tarea prioritaria. Arranca con `feature_definer` (crea rama `feature/profiling-stab2` y actualiza la tabla "Bandas Previstas" del `feature_contract.md` de `profiling` para añadir filas `stab_2`/`stab_3`). Ver D-097 a D-102, A-020, A-021. |
+| T-037 | Comando encadenado tipo `foda run <cliente> --flow onboarding→ingestion` | 🟢 Baja | Feature nueva vía SDD/TDD; depende de T-036 (gate de progresión, ya implementado dentro de T-038/`profiling`) para tener sentido (encadenar solo si el predecesor puede fallar el gate). |
 
 ## 5. Backlog
 | ID | Tarea | Notas |
 |---|---|---|
+| T-041 | Construir `profiling` banda `stab_3` ("perfil diagnóstico por columna": categórico —distribución/dominancia, columnas constantes, cardinalidad, candidatos a casi-duplicado— + numérico con atípicos IQR), informativo, sin penalizar el score | Sigue a T-040 (`stab_2`). Ver D-097, D-098, D-101, D-102. |
 | T-024 | `client_scaffold` banda `stab_n`: escribir test que simule fallo de I/O e implementar el rollback best-effort DS-2.2 (caso 18) | Trabajo diferido por GATE PA-3 opción (c), ver D-032. |
 | T-025 | `client_scaffold` banda `stab_n`: cambiar `created_at` de `client.yaml` de fecha local (`date.today()`) a UTC | Hallazgo no bloqueante F-3 de `spec_verifier`; CA-06 solo valida el patrón de fecha, no la zona horaria. |
 | ~~T-017~~ | ~~Construir los agentes runtime del patrón A/B/C descrito en `980_guideline/` (`foda-governor`, `foda-<flujo>-planner`, `foda-<flujo>-evaluator`)~~ | **Cancelada por D-020** (2026-07-02): el runtime NO es agéntico; lo define exclusivamente `system_design.md`. |
