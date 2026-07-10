@@ -106,6 +106,12 @@ Cada decisión sigue el formato: **ID**, **título**, **estado** (Propuesta / Ac
 | D-087 | Cierre CONFORME de `profiling` (banda `tracer_bullet`) vía el flujo terminal D-079/D-081 completo: PR #1 → `human_test` (6/6) → `merge_to_main` (humano) | Aceptada | 2026-07-09 |
 | D-088 | Próxima feature = `profiling` banda `stab_1` (profundidad sobre amplitud/núcleo LLM/consolidación): primer valor analítico tangible, determinista, terreno para el primer bucle de evaluación offline | Aceptada | 2026-07-09 |
 | D-089 | `profiling` `stab_1` — alcance base: Opción A, salud ESTRUCTURAL calculada solo desde `ingestion_report.json` (sin leer `bronze/`); nivel de datos/celda y comparación contra `client_register.yaml` diferidos | Aceptada | 2026-07-09 |
+| D-090 | `profiling` `stab_1` — DS-PRF-1: alcance estructural puro, limitado a los 4 tipos heredados del vocabulario de `ingestion` (`missing_file`, `unexpected_file`, `missing_column`, `unexpected_column`); análisis de contenido/celda diferido a `stab_2` | Aceptada | 2026-07-09 |
+| D-091 | `profiling` `stab_1` — DS-PRF-2: `global_score` ponderado por severidad (pesos `missing_file`=1.0/`missing_column`=0.5/`unexpected_file`=0.3/`unexpected_column`=0.1), `max(0.0, 1.0 − Σ(peso×conteo)/files_declared)`, redondeo a 4 decimales, borde `files_declared==0`⇒1.0 | Aceptada | 2026-07-09 |
+| D-092 | `profiling` `stab_1` — DS-PRF-3: "archivo sano" = CERO problemas de cualquier tipo (base de `files_healthy`/`files_with_problems`) | Aceptada | 2026-07-09 |
+| D-093 | `profiling` `stab_1` — DS-PRF-4/5: `pareto` = ranking por TIPO de problema (no por archivo), desempate alfabético, entradas `{type, count, pct}` | Aceptada | 2026-07-09 |
+| D-094 | `profiling` `stab_1` — DS-PRF-6: ante `ingestion_report.success==false`, `profiling` calcula igual sobre lo disponible (nunca falla); el `global_score` bajo comunica la mala salud | Aceptada | 2026-07-09 |
+| D-095 | `profiling` `stab_1` — DS-PRF-7: enriquecimiento aditivo del reporte (bloque `health` nuevo) + `schema_version` "0.1"→"0.2" | Aceptada | 2026-07-09 |
 
 ## 3. Detalle de Decisiones
 
@@ -733,3 +739,45 @@ Cada decisión sigue el formato: **ID**, **título**, **estado** (Propuesta / Ac
 - **Contexto:** Definido D-088, había que fijar el alcance concreto de `stab_1`. Se presentaron al humano 3 opciones vía AskUserQuestion: (A) salud estructural (a partir de `ingestion_report.json` únicamente), (B) salud a nivel de datos (leer `bronze/`: nulos, duplicados, tipos, rangos), (C) híbrido de ambas.
 - **Decisión:** Se adopta la **Opción A**: `profiling` `stab_1` calcula salud ESTRUCTURAL del ingreso, con `ingestion_report.json` como fuente ÚNICA (NO se lee `bronze/`). Métricas: `global_score` (indicador global %, fórmula exacta a fijar en el GATE de spec), `files_declared`/`files_healthy`/`files_with_problems`, desglose `problems_by_type` (missing_column, unexpected_column, missing_file, unexpected_file), `pareto` (ranking por frecuencia con count y pct). El `profiling_report.json` se enriquece con un bloque `health`, `schema_version` sube a "0.2", determinismo byte a byte se mantiene (sort_keys, indent=2, newline final). **Fuera de alcance** (diferido): análisis a nivel de datos/celda (nulos, duplicados, tipos, rangos, lectura de `bronze/`) → `stab_2`; comparación contra `client_register.yaml` → banda posterior; exportables csv/xlsx; LLM. **Decisiones abiertas para el GATE de spec** (no resueltas aquí): fórmula exacta de `global_score`; comportamiento cuando `ingestion_report.success==false` (¿salud igual o degradada?); definición precisa de "archivo sano".
 - **Consecuencias:** Alcance acotado y determinista para `stab_1` (NC-2/NC-4); el `feature_definer` de la próxima sesión debe usar esta acta como punto de partida al escribir `definition.md`. Los 3 puntos abiertos deben resolverse explícitamente en el GATE de `spec_writer`, sin decisión silenciosa (NC-6).
+
+### D-090 — `profiling` `stab_1`: DS-PRF-1, alcance estructural puro
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-09
+- **Contexto:** D-089 dejó abierto si `stab_1` cubre solo el vocabulario estructural heredado de `ingestion` o si amplía a algún análisis de contenido/celda.
+- **Decisión:** `stab_1` cubre EXCLUSIVAMENTE los 4 tipos de problema ya existentes en el vocabulario de `ingestion` (`missing_file`, `unexpected_file`, `missing_column`, `unexpected_column`). Cualquier análisis a nivel de contenido/celda (duplicados, nulos, tipos de dato) queda DIFERIDO a `stab_2`.
+- **Consecuencias:** El bloque `health` de `profiling_report.json` se calcula por completo a partir de la lista `inconsistencies[]` y `summary` de `ingestion_report.json`, sin necesitar leer `bronze/` ni datos reales.
+
+### D-091 — `profiling` `stab_1`: DS-PRF-2, fórmula ponderada de `global_score`
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-09
+- **Contexto:** D-089 dejaba abierta la fórmula exacta de `global_score`. Se evaluó un conteo binario (archivos sanos/total) frente a un esquema ponderado por severidad del problema.
+- **Decisión:** El humano prefirió el esquema ponderado, porque un conteo binario castiga igual un problema leve que uno grave. Pesos: `missing_file`=1.0, `missing_column`=0.5, `unexpected_file`=0.3, `unexpected_column`=0.1. Fórmula: `max(0.0, 1.0 − Σ(peso_t × conteo_t) / files_declared)`, redondeado a 4 decimales. Borde `files_declared==0` ⇒ `1.0`.
+- **Consecuencias:** `global_score` refleja la severidad relativa de los problemas, no solo su cantidad; requiere mantener la tabla de pesos como parte del contrato de la feature (documentada en `spec.md`).
+
+### D-092 — `profiling` `stab_1`: DS-PRF-3, definición de "archivo sano"
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-09
+- **Contexto:** D-089 dejaba pendiente definir qué cuenta como "archivo sano" para derivar `files_healthy`/`files_with_problems`.
+- **Decisión:** "Archivo sano" = CERO problemas de cualquiera de los 4 tipos del vocabulario (D-090). `files_healthy` cuenta los archivos declarados sin ningún problema asociado; `files_with_problems` es el complemento.
+- **Consecuencias:** `files_healthy + files_with_problems == files_declared` es un invariante verificable del reporte (CA-09 de `spec.md`).
+
+### D-093 — `profiling` `stab_1`: DS-PRF-4/5, `pareto` por tipo de problema
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-09
+- **Contexto:** Había que decidir si el ranking `pareto` agrupa por archivo o por tipo de problema, y cómo desempatar.
+- **Decisión:** `pareto` es un ranking por TIPO de problema (no por archivo), ordenado por `count` descendente con desempate alfabético por `type` ascendente. Cada entrada es `{type, count, pct}`, con `pct = round(count / Σ, 4)`.
+- **Consecuencias:** El `pareto` es determinista incluso con empates de frecuencia; se excluyen del ranking los tipos con `count == 0`.
+
+### D-094 — `profiling` `stab_1`: DS-PRF-6, comportamiento ante `ingestion_report.success==false`
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-09
+- **Contexto:** D-089 dejaba abierto qué hace `profiling` cuando el reporte de `ingestion` que consume tiene `success:false`.
+- **Decisión:** `profiling` CALCULA IGUAL sobre lo disponible en el reporte, sin fallar ni lanzar excepción; el `global_score` bajo (por la fórmula ponderada de D-091) es la señal de la mala salud del ingreso, no un fallo duro de `profiling`.
+- **Consecuencias:** `Profiling.execute()` no distingue `success` del predecesor como rama de control; el gate de progresión (D-083 a D-086, banda `tracer_bullet`) sigue siendo el único mecanismo de bloqueo entre flujos.
+
+### D-095 — `profiling` `stab_1`: DS-PRF-7, enriquecimiento aditivo del reporte
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-09
+- **Contexto:** Había que decidir si el bloque `health` reemplaza el reporte mínimo de la banda `tracer_bullet` o lo extiende.
+- **Decisión:** Enriquecimiento aditivo: se añade un bloque `health` nuevo (con las 6 claves de D-091 a D-093) a `profiling_report.json`, conservando los campos existentes (`client`, `flow`, `success`); `schema_version` sube de "0.1" a "0.2" para señalar el cambio de esquema.
+- **Consecuencias:** Cualquier consumidor existente del reporte de `tracer_bullet` sigue funcionando (campos preexistentes intactos); un test de integración preexistente que hardcodea `schema_version=="0.1"` queda desactualizado y debe corregirlo `integration_tester` (TSK-36 del plan).

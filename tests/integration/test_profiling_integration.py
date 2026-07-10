@@ -1,12 +1,27 @@
-"""Tests de integracion de Profiling (feature profiling, banda tracer_bullet,
-etapa integration_tester).
+"""Tests de integracion de Profiling (feature profiling, banda stab_1,
+etapa integration_tester, TSK-36).
 
-Fuente: 600_features/profiling/tracer_bullet/spec.md (CA-01..CA-13,
-DS-PROF-1..4) y plan.md (TSK-31, "test de integracion end-to-end: gate +
-ejecucion de profiling via CLI sobre cliente temporal real");
+Fuente: 600_features/profiling/stab_1/spec.md (CA-01..CA-23, DS-PRF-1..7,
+bloque health y schema_version "0.2") y plan.md (TSK-36, "test de
+integracion end-to-end del calculo de salud via flujo/CLI sobre cliente
+temporal real"); 600_features/profiling/tracer_bullet/spec.md (CA-01..CA-13,
+DS-PROF-1..4, gate/CLI ya CONFORME, sin cambios en esta banda);
 700_architecture/system_design.md (SS7 estructura de carpetas, SS8 contrato
 de artefactos multi-flujo D-014, SS9 abstraccion Flow/ClientContext);
 800_persistence/decisions.md (D-080: gate de progresion entre flujos).
+
+Nota (banda stab_1, TSK-36): el bucle TDD de stab_1 (600_features/profiling/
+stab_1/state.json, casos 1-22) endurece Profiling.execute() para que
+calcule un bloque `health` real (global_score, conteos, problems_by_type,
+pareto) y suba schema_version a "0.2", usando UNICAMENTE fixtures de
+ingestion_report.json fabricadas a mano (tests/flows/test_profiling.py).
+Este modulo cierra la regresion conocida desde el caso 1 (el test end-to-end
+de mas abajo fijaba schema_version=="0.1" y el esquema minimo previo a
+health) y agrega un test end-to-end nuevo (TSK-36) que ejercita el bloque
+health completo sobre un ingestion_report.json producido por una corrida
+REAL de Ingestion con problemas estructurales genuinos (missing_column,
+unexpected_file), no fabricados: verifica que el contrato multi-flujo
+D-014 sigue cumpliendose con el nuevo esquema v0.2.
 
 A diferencia de tests/flows/test_profiling.py (unit del Flow, 5 casos),
 tests/test_orchestrator.py (unit de PREDECESSORS/evaluate_predecessor_gate,
@@ -217,6 +232,89 @@ def _preparar_cliente_con_ingestion_success_false(name: str, clients_root: Path)
     return ctx
 
 
+def _contrato_discovery_mixto() -> dict:
+    """Variante de _contrato_discovery() (banda stab_1, TSK-36) con DOS
+    archivos declarados bajo el dataset "ventas": ventas.csv (se deposita
+    completo) y ventas2.csv (se deposita sin la columna requerida
+    'cantidad'), para que Ingestion real produzca un archivo ingested y uno
+    rejected (missing_column) de verdad."""
+    contrato = _contrato_discovery()
+    contrato["historical_data"]["datasets"][0]["files"].append(
+        {
+            "name": "ventas2.csv",
+            "period_start": "2023-01-01",
+            "period_end": "2025-12-31",
+        }
+    )
+    return contrato
+
+
+def _contrato_onboarding_mixto() -> dict:
+    """Variante de _contrato_onboarding_coherente() (banda stab_1, TSK-36)
+    con los mismos DOS archivos que _contrato_discovery_mixto() bajo el
+    dataset "ventas" (mismos fields, homologados por kind)."""
+    contrato = _contrato_onboarding_coherente()
+    contrato["historical_data"]["datasets"][0]["files"].append(
+        {
+            "name": "ventas2.csv",
+            "period_start": "2023-01-01",
+            "period_end": "2025-12-31",
+        }
+    )
+    return contrato
+
+
+def _preparar_cliente_con_ingestion_health_mixta_real(
+    name: str, clients_root: Path
+) -> ClientContext:
+    """Cliente real (banda stab_1, TSK-36) cuyo Ingestion real produce, de
+    verdad, DOS tipos de problema estructural distintos en el mismo run:
+    - ventas2.csv declarado, presente en el landing, pero le falta la
+      columna requerida 'cantidad' -> status "rejected", inconsistencia
+      missing_column real (DS-ING, no fabricada).
+    - sobrante.csv presente en el landing pero NO declarado en el contrato
+      -> unexpected_file real.
+    ventas.csv (declarado, completo) queda "ingested" sin problemas. Sirve
+    para verificar que Profiling calcula health.problems_by_type/
+    global_score/pareto sobre un ingestion_report.json con multiples tipos
+    de inconsistencia genuinos, no sobre una fixture fabricada a mano
+    (a diferencia de tests/flows/test_profiling.py)."""
+    create_client(name, clients_root)
+    ctx = ClientContext(name, clients_root)
+
+    contrato_path = ctx.outputs_dir / "010_discovery/contract_data.json"
+    contrato_path.parent.mkdir(parents=True, exist_ok=True)
+    contrato_path.write_text(
+        json.dumps(_contrato_onboarding_mixto(), ensure_ascii=False),
+        encoding="utf-8",
+    )
+    onboarding_result = Onboarding().run(ctx)
+    assert onboarding_result.success is True
+
+    contrato_path.write_text(
+        json.dumps(_contrato_discovery_mixto(), ensure_ascii=False), encoding="utf-8"
+    )
+
+    landing_dir = ctx.inputs_dir / "030_ingestion"
+    landing_dir.mkdir(parents=True, exist_ok=True)
+    (landing_dir / "ventas.csv").write_text(
+        "\n".join([_VENTAS_HEADER, *_VENTAS_ROWS]) + "\n", encoding="utf-8"
+    )
+    # ventas2.csv sin la columna requerida "cantidad" -> missing_column real.
+    (landing_dir / "ventas2.csv").write_text(
+        "fecha,sede,clase,precio_unitario\n2024-02-01,Sede Centro,Agua 600ml,1200\n",
+        encoding="utf-8",
+    )
+    # sobrante.csv no declarado en el contrato -> unexpected_file real.
+    (landing_dir / "sobrante.csv").write_text(
+        "col_a,col_b\n1,2\n", encoding="utf-8"
+    )
+
+    resultado = Ingestion().run(ctx)
+    assert resultado.success is False
+    return ctx
+
+
 def _make_project(tmp_path: Path) -> Path:
     (tmp_path / "pyproject.toml").write_text(
         "[project]\nname = \"cliente-de-prueba\"\n", encoding="utf-8"
@@ -287,8 +385,12 @@ def test_run_end_to_end_sobre_cliente_real_con_ingestion_report_producido_por_in
     """Profiling().run(ctx) de punta a punta sobre un ClientContext de un
     cliente real, consumiendo un ingestion_report.json producido por una
     corrida REAL de Ingestion (que a su vez depende de un Onboarding real):
-    contrato multi-flujo D-014. El reporte de profiling queda con
-    success=True y campos de identidad correctos."""
+    contrato multi-flujo D-014. El reporte de profiling queda en esquema
+    v0.2 (DS-PRF-7, banda stab_1): schema_version=="0.2", identidad
+    conservada y un bloque health calculado sobre el unico archivo
+    declarado ("ventas.csv", ingested sin inconsistencias) -> global_score
+    1.0, files_declared/files_healthy=1, files_with_problems=0,
+    problems_by_type con las 4 claves en 0 y pareto=[]."""
     clients_root = tmp_path / "clients"
     ctx = _preparar_cliente_con_ingestion_success_true("ABC", clients_root)
 
@@ -302,15 +404,71 @@ def test_run_end_to_end_sobre_cliente_real_con_ingestion_report_producido_por_in
 
     reporte = json.loads(ruta_reporte.read_text(encoding="utf-8"))
     assert reporte == {
-        "schema_version": "0.1",
+        "schema_version": "0.2",
         "client": "ABC",
         "flow": "profiling",
         "success": True,
+        "health": {
+            "global_score": 1.0,
+            "files_declared": 1,
+            "files_healthy": 1,
+            "files_with_problems": 0,
+            "problems_by_type": {
+                "missing_file": 0,
+                "unexpected_file": 0,
+                "missing_column": 0,
+                "unexpected_column": 0,
+            },
+            "pareto": [],
+        },
     }
     # Serializacion deterministica (idem Ingestion/Onboarding).
     assert ruta_reporte.read_text(encoding="utf-8") == (
         json.dumps(reporte, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
     )
+
+
+def test_run_health_completo_sobre_ingestion_report_real_con_missing_column_y_unexpected_file(
+    tmp_path: Path,
+) -> None:
+    """TSK-36 (banda stab_1): Profiling().run(ctx) calcula el bloque health
+    completo (DS-PRF-2..5) sobre un ingestion_report.json producido por una
+    corrida REAL de Ingestion con DOS tipos de problema estructural
+    genuinos (missing_column en ventas2.csv, unexpected_file en
+    sobrante.csv), no una fixture fabricada a mano. Verifica el contrato
+    multi-flujo D-014 con el esquema v0.2 en un escenario no trivial:
+    files_declared=2 (sobrante.csv no cuenta, DS-PRF-3), files_healthy=1
+    (ventas.csv), files_with_problems=1 (ventas2.csv, rejected),
+    problems_by_type={missing_column:1, unexpected_file:1, resto 0},
+    global_score=round(max(0.0,1.0-(0.5*1+0.3*1)/2),4)==0.6 y pareto
+    ordenado por count desc/type asc con empate de count==1 entre
+    'missing_column' y 'unexpected_file' (desempate alfabetico, DS-PRF-5)."""
+    clients_root = tmp_path / "clients"
+    ctx = _preparar_cliente_con_ingestion_health_mixta_real("Wonka", clients_root)
+
+    result = Profiling().run(ctx)
+
+    assert result.success is True
+    ruta_reporte = ctx.outputs_dir / "040_profiling" / "profiling_report.json"
+    reporte = json.loads(ruta_reporte.read_text(encoding="utf-8"))
+
+    assert reporte["schema_version"] == "0.2"
+    assert reporte["success"] is True
+    health = reporte["health"]
+    assert health["files_declared"] == 2
+    assert health["files_healthy"] == 1
+    assert health["files_with_problems"] == 1
+    assert health["problems_by_type"] == {
+        "missing_file": 0,
+        "unexpected_file": 1,
+        "missing_column": 1,
+        "unexpected_column": 0,
+    }
+    assert health["global_score"] == 0.6
+    assert health["pareto"] == [
+        {"type": "missing_column", "count": 1, "pct": 0.5},
+        {"type": "unexpected_file", "count": 1, "pct": 0.5},
+    ]
 
 
 def test_run_falla_temprano_con_flow_contract_error_si_falta_ingestion_report_en_cliente_real(
