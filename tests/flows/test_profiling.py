@@ -1351,6 +1351,116 @@ def test_profiling_report_health_pareto_ordenado_por_count_descendente_orden_dis
     ]
 
 
+def _build_ctx_con_ingestion_report_empate_de_count_para_desempate_pareto(
+    tmp_path: Path,
+) -> ClientContext:
+    """stab_1, caso 19 (CA-14, DS-PRF-5): ClientContext bajo tmp_path con un
+    ingestion_report.json cuya lista top-level inconsistencies[] produce, a
+    proposito, un EMPATE de count entre dos tipos (missing_file=5,
+    missing_column=5) y dos tipos restantes con counts distintos y menores
+    (unexpected_column=3, unexpected_file=1), elegidos para que el desempate
+    alfabetico ascendente por 'type' (CA-14: missing_column < missing_file)
+    sea DISTINTO del orden de insercion de _TIPOS_INCONSISTENCIA (vocabulario
+    fijo missing_file, unexpected_file, missing_column, unexpected_column,
+    donde missing_file aparece ANTES que missing_column): el test es asi
+    genuinamente discriminante de un desempate alfabetico real, no de la
+    estabilidad del sort() sobre el orden del vocabulario (que produciria
+    missing_file antes que missing_column, el orden incorrecto). Los otros
+    dos tipos (unexpected_column=3, unexpected_file=1) quedan con counts
+    unicos y menores que el empate, de forma que el bloque empatado ocupa
+    inequivocamente las 2 primeras posiciones del ranking por count
+    descendente (ya cubierto por el caso 18) y el resto del orden no
+    interfiere con la aserción del desempate. files_declared/
+    datasets[].files[] se dejan minimos y no relacionados con este conteo
+    (igual que en las fixtures de los casos 16-18)."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    inconsistencias = (
+        [{"type": "missing_file", "detail": f"falta archivo {i}"} for i in range(5)]
+        + [{"type": "missing_column", "detail": f"falta columna {i}"} for i in range(5)]
+        + [{"type": "unexpected_column", "detail": f"columna inesperada {i}"} for i in range(3)]
+        + [{"type": "unexpected_file", "detail": "archivo inesperado 0"}]
+    )
+
+    ingestion_report = {
+        "schema_version": "0.1",
+        "client": "ABC",
+        "flow": "ingestion",
+        "success": True,
+        "summary": {"files_declared": 0},
+        "datasets": [],
+        "unexpected_files": [],
+        "inconsistencies": inconsistencias,
+    }
+
+    report_path = ctx.outputs_dir / "030_ingestion/ingestion_report.json"
+    report_path.parent.mkdir(parents=True)
+    report_path.write_text(
+        json.dumps(ingestion_report, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    return ctx
+
+
+def test_profiling_report_health_pareto_ante_empate_de_count_desempata_por_type_alfabetico_ascendente(
+    tmp_path: Path,
+) -> None:
+    """stab_1, caso 19 (CA-14, DS-PRF-5, TSK-29/TSK-30): tras
+    Profiling().run(ctx) con un ingestion_report.json cuyos counts producen
+    un empate entre dos tipos (ver
+    _build_ctx_con_ingestion_report_empate_de_count_para_desempate_pareto:
+    missing_file=5, missing_column=5 empatados en el TOPE del ranking;
+    unexpected_column=3, unexpected_file=1 sin empate),
+    profiling_report.json['health']['pareto'] queda ordenado, en caso de
+    empate de 'count', por 'type' alfabetico ASCENDENTE (CA-14):
+
+    (a) los counts en pareto siguen no crecientes (invariante ya cubierto
+        por el caso 18): [5, 5, 3, 1].
+    (b) dentro del bloque empatado (los dos primeros elementos, ambos
+        count==5), el orden exacto es ["missing_column", "missing_file"]
+        (alfabetico ascendente), NO ["missing_file", "missing_column"] (el
+        orden de insercion de _TIPOS_INCONSISTENCIA que produciria un sort
+        estable sin desempate explicito).
+    (c) la secuencia completa de 'type' en pareto es EXACTAMENTE
+        ["missing_column", "missing_file", "unexpected_column",
+        "unexpected_file"].
+
+    Motivo del rojo esperado (no accidental): Profiling._pareto(...)
+    (src/foda/flows/f040_profiling/profiling.py, caso 18) ordena hoy con
+    sorted(entradas, key=lambda entrada: -entrada["count"]), SIN clave de
+    desempate por 'type'; al ser sorted() estable, un empate de count
+    preserva el orden de insercion previo (el orden de
+    problems_by_type.items(), igual al de _TIPOS_INCONSISTENCIA: missing_file
+    antes que missing_column), por lo que el bloque empatado sale como
+    ["missing_file", "missing_column"] en vez de ["missing_column",
+    "missing_file"]: fallo de valor/orden en la asercion de la secuencia
+    completa de 'type', no ImportError/AttributeError/KeyError (el bloque
+    health, pareto y sus claves type/count/pct ya existen desde los casos 2,
+    7, 16, 17 y 18)."""
+    ctx = _build_ctx_con_ingestion_report_empate_de_count_para_desempate_pareto(tmp_path)
+
+    Profiling().run(ctx)
+
+    ruta_reporte = ctx.outputs_dir / "040_profiling/profiling_report.json"
+    reporte = json.loads(ruta_reporte.read_text(encoding="utf-8"))
+
+    health = reporte["health"]
+    pareto = health["pareto"]
+
+    counts_en_pareto = [entrada["count"] for entrada in pareto]
+    tipos_en_pareto = [entrada["type"] for entrada in pareto]
+
+    assert counts_en_pareto == [5, 5, 3, 1]
+    assert tipos_en_pareto == [
+        "missing_column",
+        "missing_file",
+        "unexpected_column",
+        "unexpected_file",
+    ]
+
+
 def test_profiling_validate_sin_ingestion_report_lanza_flowcontracterror_nombrandolo_y_no_escribe_profiling_report(
     tmp_path: Path,
 ) -> None:
