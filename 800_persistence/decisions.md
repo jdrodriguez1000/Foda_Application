@@ -112,6 +112,7 @@ Cada decisión sigue el formato: **ID**, **título**, **estado** (Propuesta / Ac
 | D-093 | `profiling` `stab_1` — DS-PRF-4/5: `pareto` = ranking por TIPO de problema (no por archivo), desempate alfabético, entradas `{type, count, pct}` | Aceptada | 2026-07-09 |
 | D-094 | `profiling` `stab_1` — DS-PRF-6: ante `ingestion_report.success==false`, `profiling` calcula igual sobre lo disponible (nunca falla); el `global_score` bajo comunica la mala salud | Aceptada | 2026-07-09 |
 | D-095 | `profiling` `stab_1` — DS-PRF-7: enriquecimiento aditivo del reporte (bloque `health` nuevo) + `schema_version` "0.1"→"0.2" | Aceptada | 2026-07-09 |
+| D-096 | Cierre CONFORME de `profiling` (banda `stab_1`) vía el flujo terminal D-079/D-081 completo: PR #2 → `human_test` (7/7) → `merge_to_main` (humano) | Aceptada | 2026-07-10 |
 
 ## 3. Detalle de Decisiones
 
@@ -781,3 +782,10 @@ Cada decisión sigue el formato: **ID**, **título**, **estado** (Propuesta / Ac
 - **Contexto:** Había que decidir si el bloque `health` reemplaza el reporte mínimo de la banda `tracer_bullet` o lo extiende.
 - **Decisión:** Enriquecimiento aditivo: se añade un bloque `health` nuevo (con las 6 claves de D-091 a D-093) a `profiling_report.json`, conservando los campos existentes (`client`, `flow`, `success`); `schema_version` sube de "0.1" a "0.2" para señalar el cambio de esquema.
 - **Consecuencias:** Cualquier consumidor existente del reporte de `tracer_bullet` sigue funcionando (campos preexistentes intactos); un test de integración preexistente que hardcodea `schema_version=="0.1"` queda desactualizado y debe corregirlo `integration_tester` (TSK-36 del plan).
+
+### D-096 — Cierre CONFORME de `profiling` (banda `stab_1`) vía el flujo terminal D-079/D-081 completo
+- **Estado:** Aceptada
+- **Fecha:** 2026-07-10
+- **Contexto:** `profiling` `stab_1` completó la cadena de 8 agentes (`spec_verifier` CONFORME, 23/23 CA, commit `ba21aab`) en la sesión anterior, con PR #2 abierto y plan de prueba humana (`human_test_plan.md`, 7 casos) verificado empíricamente. Esta sesión ejecutó los dos gates humanos terminales.
+- **Decisión:** El humano ejecutó los casos 1-4 de `human_test_plan.md` (`DEMO_A`/`DEMO_C`/`DEMO_D`/`DEMO_f`), coincidiendo exactamente con los valores esperados. La sesión principal detectó que el caso 5 (`DEMO_e`) había quedado a medio sembrar y completó los casos 5-7 vía CLI: clamp de `global_score` a `0.0` (3 `missing_file`), determinismo byte a byte (SHA-256 idéntico entre corridas sin `--force`), y `FlowContractError` sin `ingestion_report.json` (con y sin `--force`, sin escribir `profiling_report.json`). **7/7 casos CONFORMES.** El usuario mergeó el PR #2 (`gh pr merge`, merge commit `754d931` en `main`); la sesión principal sincronizó `main` local y borró la rama `feature/profiling-stab1` local y remota.
+- **Consecuencias:** `profiling` `stab_1` queda CERRADA en `main`, novena feature completa de punta a punta y SEGUNDA en recorrer el flujo terminal D-079/D-081 completo en la práctica (tras `profiling` `tracer_bullet`, D-087). `state.json` avanza a `status:"done"`/`current_stage:"completed"`. Se registra la práctica de verificar artefactos reales en disco antes de dar por completo un gate humano (ver L-070).
