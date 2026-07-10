@@ -1252,6 +1252,105 @@ def test_profiling_report_health_pareto_cada_entrada_tiene_type_count_pct_con_pc
     assert entradas_por_tipo["missing_column"]["pct"] == 0.6667
 
 
+def _build_ctx_con_ingestion_report_counts_distintos_para_orden_pareto(
+    tmp_path: Path,
+) -> ClientContext:
+    """stab_1, caso 18 (CA-13, DS-PRF-5): ClientContext bajo tmp_path con un
+    ingestion_report.json cuya lista top-level inconsistencies[] produce, a
+    proposito, 4 counts DISTINTOS entre si (missing_file=1,
+    unexpected_file=2, missing_column=4, unexpected_column=3) elegidos para
+    que el orden descendente por count esperado (missing_column=4,
+    unexpected_column=3, unexpected_file=2, missing_file=1) sea distinto, en
+    las 4 posiciones, del orden natural de _TIPOS_INCONSISTENCIA (vocabulario
+    fijo missing_file, unexpected_file, missing_column, unexpected_column):
+    el test es asi genuinamente discriminante de un ordenamiento real por
+    count desc, no solo de la presencia de las entradas (ya cubierta desde
+    el caso 16). files_declared/datasets[].files[] se dejan minimos y no
+    relacionados con este conteo (igual que en las fixtures de los casos
+    16-17)."""
+    clients_root = tmp_path / "clients"
+    create_client("ABC", clients_root)
+    ctx = ClientContext("ABC", clients_root)
+
+    inconsistencias = (
+        [{"type": "missing_file", "detail": "falta archivo 0"}]
+        + [{"type": "unexpected_file", "detail": f"archivo inesperado {i}"} for i in range(2)]
+        + [{"type": "missing_column", "detail": f"falta columna {i}"} for i in range(4)]
+        + [{"type": "unexpected_column", "detail": f"columna inesperada {i}"} for i in range(3)]
+    )
+
+    ingestion_report = {
+        "schema_version": "0.1",
+        "client": "ABC",
+        "flow": "ingestion",
+        "success": True,
+        "summary": {"files_declared": 0},
+        "datasets": [],
+        "unexpected_files": [],
+        "inconsistencies": inconsistencias,
+    }
+
+    report_path = ctx.outputs_dir / "030_ingestion/ingestion_report.json"
+    report_path.parent.mkdir(parents=True)
+    report_path.write_text(
+        json.dumps(ingestion_report, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    return ctx
+
+
+def test_profiling_report_health_pareto_ordenado_por_count_descendente_orden_distinto_del_vocabulario(
+    tmp_path: Path,
+) -> None:
+    """stab_1, caso 18 (CA-13, DS-PRF-5, TSK-28): tras Profiling().run(ctx)
+    con un ingestion_report.json cuyos 4 tipos tienen counts distintos entre
+    si (ver _build_ctx_con_ingestion_report_counts_distintos_para_orden_pareto:
+    missing_file=1, unexpected_file=2, missing_column=4,
+    unexpected_column=3), profiling_report.json['health']['pareto'] queda
+    ORDENADO por 'count' de mayor a menor (CA-13):
+
+    (a) [e["count"] for e in pareto] es una secuencia NO creciente (cada
+        elemento >= al siguiente).
+    (b) los valores concretos esperados, en orden, son [4, 3, 2, 1]
+        (missing_column, unexpected_column, unexpected_file, missing_file):
+        el orden descendente por count difiere, en las 4 posiciones, del
+        orden natural del vocabulario cerrado (missing_file, unexpected_file,
+        missing_column, unexpected_column) con el que Profiling._pareto
+        itera problems_by_type.items() hoy, haciendo la ancla genuinamente
+        discriminante de un ordenamiento real (no de una coincidencia con el
+        orden del dict).
+
+    Motivo del rojo esperado (no accidental): Profiling._pareto(...)
+    (src/foda/flows/f040_profiling/profiling.py, casos 16-17) construye hoy
+    la lista de entradas iterando problems_by_type.items() SIN ordenar, por
+    lo que el orden resultante es el orden de insercion del dict (el mismo
+    de _TIPOS_INCONSISTENCIA: missing_file, unexpected_file, missing_column,
+    unexpected_column), dando counts_en_pareto==[1, 2, 4, 3] en vez de
+    [4, 3, 2, 1]: fallo de valor/orden, no ImportError/AttributeError/
+    KeyError (el bloque health, pareto y sus claves type/count/pct ya
+    existen desde los casos 2, 7, 16 y 17)."""
+    ctx = _build_ctx_con_ingestion_report_counts_distintos_para_orden_pareto(tmp_path)
+
+    Profiling().run(ctx)
+
+    ruta_reporte = ctx.outputs_dir / "040_profiling/profiling_report.json"
+    reporte = json.loads(ruta_reporte.read_text(encoding="utf-8"))
+
+    health = reporte["health"]
+    pareto = health["pareto"]
+
+    counts_en_pareto = [entrada["count"] for entrada in pareto]
+
+    assert counts_en_pareto == sorted(counts_en_pareto, reverse=True)
+    assert counts_en_pareto == [4, 3, 2, 1]
+    assert [entrada["type"] for entrada in pareto] == [
+        "missing_column",
+        "unexpected_column",
+        "unexpected_file",
+        "missing_file",
+    ]
+
+
 def test_profiling_validate_sin_ingestion_report_lanza_flowcontracterror_nombrandolo_y_no_escribe_profiling_report(
     tmp_path: Path,
 ) -> None:
