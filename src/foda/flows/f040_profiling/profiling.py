@@ -43,6 +43,13 @@ Banda stab_1 (bucle TDD en curso, red/green/refactor caso a caso):
   fijos del vocabulario cerrado (missing_file, unexpected_file,
   missing_column, unexpected_column). global_score y pareto siguen como
   placeholders minimos (1.0 / []) hasta sus propios casos (9-19).
+- Caso 10 (CA-02, DS-PRF-2): health.global_score ya no es un placeholder
+  fijo; se calcula con la formula ponderada real (pesos missing_file=1.0,
+  missing_column=0.5, unexpected_file=0.3, unexpected_column=0.1) sobre
+  problems_by_type, redondeada a 4 decimales, con el borde
+  files_declared==0 -> 1.0 (sin division por cero, ratificado en spec.md).
+  pareto sigue como placeholder minimo ([]) hasta sus propios casos
+  (15-19).
 
 Nota (NC-6): una version previa del caso 2 adelanto de una vez toda la logica
 de health (DS-PRF-2..5). Por decision del humano se restauro el TDD estricto:
@@ -80,6 +87,14 @@ _TIPOS_INCONSISTENCIA = (
 """Vocabulario cerrado de tipos de inconsistencia (DS-PRF-4): las 4 claves
 fijas que siempre debe tener health.problems_by_type (CA-11, CA-12)."""
 
+_PESOS_GLOBAL_SCORE = {
+    "missing_file": 1.0,
+    "missing_column": 0.5,
+    "unexpected_file": 0.3,
+    "unexpected_column": 0.1,
+}
+"""Pesos ratificados de la formula ponderada de global_score (DS-PRF-2)."""
+
 
 class Profiling(Flow):
     """Flujo 040: analiza el ingreso ingerido y emite reporte de profiling
@@ -106,10 +121,10 @@ class Profiling(Flow):
         "0.2", client, flow, success) + bloque health con las 6 claves fijas.
 
         files_declared (caso 3, DS-PRF-3), files_healthy/files_with_problems
-        (casos 4-5, DS-PRF-3) y problems_by_type (caso 7, DS-PRF-4) ya se
-        derivan del ingestion_report real. global_score y pareto siguen como
-        placeholders minimos (1.0 / []) hasta sus propios casos (9-19), TDD
-        estricto (NC-2)."""
+        (casos 4-5, DS-PRF-3), problems_by_type (caso 7, DS-PRF-4) y
+        global_score (caso 10, DS-PRF-2) ya se derivan del ingestion_report
+        real. pareto sigue como placeholder minimo ([]) hasta sus propios
+        casos (15-19), TDD estricto (NC-2)."""
         files_declared = self._ingestion_report.get("summary", {}).get(
             "files_declared", 0
         )
@@ -118,13 +133,14 @@ class Profiling(Flow):
             self._ingestion_report
         )
         problems_by_type = self._problems_by_type(self._ingestion_report)
+        global_score = self._global_score(files_declared, problems_by_type)
         self._report = {
             "schema_version": "0.2",
             "client": ctx.name,
             "flow": "profiling",
             "success": True,
             "health": {
-                "global_score": 1.0,
+                "global_score": global_score,
                 "files_declared": files_declared,
                 "files_healthy": files_healthy,
                 "files_with_problems": files_with_problems,
@@ -187,6 +203,22 @@ class Profiling(Flow):
             if tipo in conteos:
                 conteos[tipo] += 1
         return conteos
+
+    @staticmethod
+    def _global_score(files_declared: int, problems_by_type: dict) -> float:
+        """Caso 10 (CA-02, DS-PRF-2): formula ponderada de global_score.
+
+        penalizacion_total = Sum(peso[tipo] * problems_by_type[tipo]);
+        global_score = max(0.0, 1.0 - penalizacion_total/files_declared),
+        redondeado a 4 decimales. Borde files_declared==0 -> 1.0 (sin
+        division por cero), ratificado en spec.md DS-PRF-2."""
+        if files_declared == 0:
+            return 1.0
+        penalizacion_total = sum(
+            peso * problems_by_type.get(tipo, 0)
+            for tipo, peso in _PESOS_GLOBAL_SCORE.items()
+        )
+        return round(max(0.0, 1.0 - penalizacion_total / files_declared), 4)
 
     def write_outputs(self, ctx: ClientContext, result: FlowResult) -> None:
         """Escribe profiling_report.json de forma deterministica (sort_keys
