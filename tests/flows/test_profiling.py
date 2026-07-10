@@ -426,6 +426,48 @@ def test_profiling_report_health_files_with_problems_coincide_con_conteo_de_arch
     assert reporte["health"]["files_with_problems"] == 2
 
 
+def test_profiling_report_health_cumple_invariante_files_healthy_mas_files_with_problems_igual_files_declared(
+    tmp_path: Path,
+) -> None:
+    """stab_1, caso 6 (CA-09, DS-PRF-3, TSK-09): tras Profiling().run(ctx) con
+    la fixture MIXTA (ver _build_ctx_con_ingestion_report_mixto: 4 archivos
+    declarados, 2 sanos, 1 con status!="ingested" y 1 con inconsistencies no
+    vacia), se cumple la invariante
+    health['files_healthy'] + health['files_with_problems'] ==
+    health['files_declared'] (2 + 2 == 4): los archivos declarados quedan
+    particionados exactamente entre sanos y con problemas, sin residuo ni
+    doble conteo (DS-PRF-3: "los unexpected_file no rompen la identidad
+    porque no entran en ninguno de los tres terminos").
+
+    Nota (NC-6, plan.md Sec. "Cases sin tarea-codigo propia"): este caso NO
+    tiene tarea-codigo propia asignada a tdd_coder (TSK-09 es solo test). Los
+    casos 4 (TSK-06/TSK-08) y 5 (TSK-07/TSK-08) ya implementaron
+    _contar_archivos_sanos/_contar_archivos_con_problemas como predicados
+    complementarios (De Morgan) sobre la misma particion de
+    datasets[].files[], por lo que la invariante que aqui se verifica es una
+    CONSECUENCIA matematica directa de esa implementacion ya construida, no
+    una funcionalidad nueva. Se documenta explicitamente (NC-1/NC-6) que este
+    test se ejecuta y pasa en VERDE de inmediato (sin que tdd_coder deba
+    escribir codigo de produccion): es un test de CONFIRMACION del invariante
+    ya garantizado por construccion (files_healthy y files_with_problems
+    particionan exactamente el mismo iterable _archivos(ingestion_report)
+    via predicados mutuamente excluyentes y exhaustivos), y su valor esta en
+    dejar el invariante explicito y protegido de regresiones futuras. No es
+    un rojo accidental invalido: es la excepcion pre-aprobada por el humano
+    en el gate de plan_builder (plan.md, casos "sin tarea-codigo propia") para
+    este caso especifico; si en el futuro una refactorizacion rompiera la
+    particion exacta, este test pasaria a fallar y detectaria la regresion."""
+    ctx = _build_ctx_con_ingestion_report_mixto(tmp_path)
+
+    Profiling().run(ctx)
+
+    ruta_reporte = ctx.outputs_dir / "040_profiling/profiling_report.json"
+    reporte = json.loads(ruta_reporte.read_text(encoding="utf-8"))
+
+    health = reporte["health"]
+    assert health["files_healthy"] + health["files_with_problems"] == health["files_declared"]
+
+
 def test_profiling_validate_sin_ingestion_report_lanza_flowcontracterror_nombrandolo_y_no_escribe_profiling_report(
     tmp_path: Path,
 ) -> None:
