@@ -37,6 +37,12 @@ Banda stab_1 (bucle TDD en curso, red/green/refactor caso a caso):
   _archivos() (aplana la estructura anidada) y _es_archivo_sano() (predicado
   unico) para eliminar la duplicacion, sin cambiar el resultado de ninguno
   de los dos contadores.
+- Caso 7 (CA-11, DS-PRF-4): health.problems_by_type ya no es un placeholder
+  fijo; se cuenta, sobre la lista top-level self._ingestion_report
+  ["inconsistencies"], el numero de ocurrencias de cada uno de los 4 tipos
+  fijos del vocabulario cerrado (missing_file, unexpected_file,
+  missing_column, unexpected_column). global_score y pareto siguen como
+  placeholders minimos (1.0 / []) hasta sus propios casos (9-19).
 
 Nota (NC-6): una version previa del caso 2 adelanto de una vez toda la logica
 de health (DS-PRF-2..5). Por decision del humano se restauro el TDD estricto:
@@ -56,6 +62,13 @@ _REQUIRES = [
         relative="030_ingestion/ingestion_report.json",
     ),
 ]
+_TIPOS_INCONSISTENCIA = (
+    "missing_file",
+    "unexpected_file",
+    "missing_column",
+    "unexpected_column",
+)
+
 _PRODUCES = [
     Artifact(
         name="profiling_report",
@@ -103,6 +116,7 @@ class Profiling(Flow):
         files_with_problems = self._contar_archivos_con_problemas(
             self._ingestion_report
         )
+        problems_by_type = self._problems_by_type(self._ingestion_report)
         self._report = {
             "schema_version": "0.2",
             "client": ctx.name,
@@ -113,7 +127,7 @@ class Profiling(Flow):
                 "files_declared": files_declared,
                 "files_healthy": files_healthy,
                 "files_with_problems": files_with_problems,
-                "problems_by_type": {},
+                "problems_by_type": problems_by_type,
                 "pareto": [],
             },
         }
@@ -159,6 +173,19 @@ class Profiling(Flow):
             1 for archivo in cls._archivos(ingestion_report)
             if not cls._es_archivo_sano(archivo)
         )
+
+    @staticmethod
+    def _problems_by_type(ingestion_report: dict) -> dict:
+        """Caso 7 (CA-11, DS-PRF-4): cuenta, sobre la lista top-level
+        ingestion_report["inconsistencies"], las ocurrencias de cada uno de
+        los 4 tipos fijos del vocabulario cerrado. Siempre devuelve las 4
+        claves, incluso en 0 (CA-12)."""
+        conteos = {tipo: 0 for tipo in _TIPOS_INCONSISTENCIA}
+        for inconsistencia in ingestion_report.get("inconsistencies", []):
+            tipo = inconsistencia.get("type")
+            if tipo in conteos:
+                conteos[tipo] += 1
+        return conteos
 
     def write_outputs(self, ctx: ClientContext, result: FlowResult) -> None:
         """Escribe profiling_report.json de forma deterministica (sort_keys
